@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R3F UFO Shooter</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; color: #0ff; font-family: sans-serif; }
+    #root { width: 100vw; height: 100vh; }
+  </style>
+  <!-- React and ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX processing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- ThreeJS and React Three Fiber -->
+  <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+  <script src="https://unpkg.com/@react-three/fiber@8.13.5/dist/react-three-fiber.umd.js"></script>
+  <script src="https://unpkg.com/@react-three/drei@9.74.3/dist/drei.umd.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { Canvas, useFrame } = ReactThreeFiber;
+    const { OrbitControls, Html } = drei;
+
+    function Starfield() {
+      const stars = React.useMemo(() => {
+        const positions = [];
+        for (let i = 0; i < 1000; i++) {
+          const x = (Math.random() - 0.5) * 200;
+          const y = (Math.random() - 0.5) * 200;
+          const z = (Math.random() - 0.5) * 200;
+          positions.push(x, y, z);
+        }
+        return new THREE.Float32BufferAttribute(positions, 3);
+      }, []);
+      return (
+        <points>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[stars, 3]} />
+          </bufferGeometry>
+          <pointsMaterial color="white" size={0.5} />
+        </points>
+      );
+    }
+
+    const Bullet = React.forwardRef(({ position }, ref) => {
+      useFrame((_, delta) => {
+        if (!ref.current) return;
+        ref.current.position.y += 10 * delta;
+        if (ref.current.position.y > 10) ref.current.userData.remove();
+      });
+      return (
+        <mesh ref={ref} position={position}>
+          <sphereGeometry args={[0.1, 8, 8]} />
+          <meshStandardMaterial color="yellow" />
+        </mesh>
+      );
+    });
+
+    const Enemy = React.forwardRef(({ position }, ref) => {
+      useFrame((_, delta) => {
+        if (!ref.current) return;
+        ref.current.position.y -= 2 * delta;
+        if (ref.current.position.y < -10) ref.current.userData.remove();
+      });
+      return (
+        <mesh ref={ref} position={position}>
+          <octahedronGeometry args={[0.5]} />
+          <meshStandardMaterial color="red" />
+        </mesh>
+      );
+    });
+
+    function Player({ onShoot }, ref) {
+      useFrame(() => {
+        if (!ref.current) return;
+        ref.current.rotation.z += 0.01;
+      });
+      return (
+        <mesh ref={ref} position={[0, -4, 0]}>
+          <coneGeometry args={[0.5, 1, 32]} />
+          <meshStandardMaterial color="hotpink" />
+        </mesh>
+      );
+    }
+    const ForwardPlayer = React.forwardRef(Player);
+
+    function Game() {
+      const [bullets, setBullets] = React.useState([]);
+      const [enemies, setEnemies] = React.useState([]);
+      const [score, setScore] = React.useState(0);
+      const playerRef = React.useRef();
+      const bulletRefs = React.useRef({});
+      const enemyRefs = React.useRef({});
+      const keys = React.useRef({});
+      const shootCooldown = React.useRef(0);
+      const spawnTimer = React.useRef(0);
+
+      React.useEffect(() => {
+        const down = (e) => { keys.current[e.key] = true; };
+        const up = (e) => { keys.current[e.key] = false; };
+        window.addEventListener('keydown', down);
+        window.addEventListener('keyup', up);
+        return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+      }, []);
+
+      useFrame((_, delta) => {
+        if (!playerRef.current) return;
+
+        if (keys.current['ArrowLeft']) playerRef.current.position.x -= 5 * delta;
+        if (keys.current['ArrowRight']) playerRef.current.position.x += 5 * delta;
+        playerRef.current.position.x = THREE.MathUtils.clamp(playerRef.current.position.x, -8, 8);
+
+        shootCooldown.current -= delta;
+        if (keys.current[' '] && shootCooldown.current <= 0) {
+          const pos = playerRef.current.position.clone();
+          const id = Date.now() + Math.random();
+          setBullets(b => [...b, { id, position: pos }]);
+          shootCooldown.current = 0.3;
+        }
+
+        spawnTimer.current += delta;
+        if (spawnTimer.current > 1) {
+          const id = Date.now() + Math.random();
+          const pos = new THREE.Vector3((Math.random() - 0.5) * 16, 8, 0);
+          setEnemies(e => [...e, { id, position: pos }]);
+          spawnTimer.current = 0;
+        }
+
+        // collision detection
+        Object.keys(bulletRefs.current).forEach(bid => {
+          const b = bulletRefs.current[bid];
+          if (!b) return;
+          Object.keys(enemyRefs.current).forEach(eid => {
+            const e = enemyRefs.current[eid];
+            if (!e) return;
+            if (b.position.distanceTo(e.position) < 0.6) {
+              b.userData.remove();
+              e.userData.remove();
+              setScore(s => s + 10);
+            }
+          });
+        });
+
+        Object.keys(enemyRefs.current).forEach(eid => {
+          const e = enemyRefs.current[eid];
+          if (!e) return;
+          if (e.position.distanceTo(playerRef.current.position) < 0.6) {
+            setScore(0);
+            setEnemies([]);
+            setBullets([]);
+          }
+        });
+      });
+
+      const removeBullet = (id) => {
+        setBullets(b => b.filter(bb => bb.id !== id));
+        delete bulletRefs.current[id];
+      };
+
+      const removeEnemy = (id) => {
+        setEnemies(e => e.filter(ee => ee.id !== id));
+        delete enemyRefs.current[id];
+      };
+
+      return (
+        <>
+          {bullets.map(b => (
+            <Bullet key={b.id} position={b.position} ref={ref => { if (ref) { bulletRefs.current[b.id] = ref; ref.userData.remove = () => removeBullet(b.id); } }} />
+          ))}
+          {enemies.map(e => (
+            <Enemy key={e.id} position={e.position} ref={ref => { if (ref) { enemyRefs.current[e.id] = ref; ref.userData.remove = () => removeEnemy(e.id); } }} />
+          ))}
+          <ForwardPlayer ref={playerRef} />
+          <Html position={[-9, 7, 0]} style={{ color: '#0ff' }}>{`Score: ${score}`}</Html>
+        </>
+      );
+    }
+
+    function App() {
+      return (
+        <Canvas camera={{ position: [0, 0, 10] }}>
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
+          <Starfield />
+          <Game />
+          <OrbitControls enablePan={false} enableZoom={false} />
+        </Canvas>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
