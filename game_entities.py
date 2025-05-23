@@ -10,8 +10,10 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0) # Default UFO Alpha color
 CYAN = (0, 255, 255) # Player with rapid fire / UFO Beta color
 RED = (255, 0, 0)
-ORANGE = (255, 165, 0)
+ORANGE = (255, 165, 0) # RapidFire Power-up item color
 MAGENTA = (255, 0, 255) # UFO Beta bullet color
+SHIELD_BLUE = (0, 180, 255) # Shield Power-up item color / Player shield visual
+GOLD = (255, 215, 0) # Alternative for player shield visual
 
 # UFO Types Configuration
 UFO_TYPES = {
@@ -91,6 +93,9 @@ class Player(pygame.sprite.Sprite):
         self.rapid_fire_active = False
         self.rapid_fire_end_time = 0
         
+        self.has_shield = False
+        # self.shield_visual_color = GOLD # Or SHIELD_BLUE, if different from item
+        
         self.health = 1 # For future use
 
     def move(self, direction):
@@ -114,10 +119,21 @@ class Player(pygame.sprite.Sprite):
         self.rapid_fire_active = True
         self.rapid_fire_end_time = pygame.time.get_ticks() + POWER_UP_DURATION_MS
         self.current_shoot_cooldown = self.shoot_cooldown_rapid
-        self.current_display_color = CYAN # Rapid fire visual override (universal for all UFOs for now)
+        # Visual update handled in update()
+
+    def activate_shield(self):
+        self.has_shield = True
+        # Visual update handled in update()
+
+    def lose_shield(self):
+        self.has_shield = False
+        # Visual update handled in update()
 
     def update(self):
-        if self.rapid_fire_active:
+        # Determine display color based on state precedence: Shield > RapidFire > Base
+        if self.has_shield:
+            self.current_display_color = GOLD # Shield visual takes precedence
+        elif self.rapid_fire_active:
             current_time = pygame.time.get_ticks()
             if current_time > self.rapid_fire_end_time:
                 self.rapid_fire_active = False
@@ -125,9 +141,10 @@ class Player(pygame.sprite.Sprite):
                 self.current_display_color = self.base_color # Revert to UFO's base color
             else: 
                  self.current_display_color = CYAN # Keep rapid fire color
-        else: 
+                 self.current_shoot_cooldown = self.shoot_cooldown_rapid # Ensure cooldown stays rapid
+        else: # No shield, no active rapid fire
             self.current_shoot_cooldown = self.shoot_cooldown_normal
-            self.current_display_color = self.base_color # Ensure it's the base color
+            self.current_display_color = self.base_color 
         
         self.image.fill(self.current_display_color)
 
@@ -204,9 +221,14 @@ class PowerUpItem(pygame.sprite.Sprite):
         super().__init__()
         self.power_up_type = power_up_type
         self.radius = POWER_UP_RADIUS
-        # Create a circular image - this is a bit more complex than a rect
+        
+        item_color = ORANGE # Default for RapidFire
+        if self.power_up_type == "SHIELD":
+            item_color = SHIELD_BLUE
+            self.radius = POWER_UP_RADIUS + 2 # Shield item slightly larger
+
         self.image = pygame.Surface([self.radius * 2, self.radius * 2], pygame.SRCALPHA)
-        pygame.draw.circle(self.image, ORANGE, (self.radius, self.radius), self.radius)
+        pygame.draw.circle(self.image, item_color, (self.radius, self.radius), self.radius)
         self.rect = self.image.get_rect(center=(center_x, center_y))
         self.speed = POWER_UP_SPEED
 
@@ -218,4 +240,6 @@ class PowerUpItem(pygame.sprite.Sprite):
     def apply_effect(self, player):
         if self.power_up_type == "RapidFire":
             player.activate_rapid_fire()
-        self.kill() # Remove after applying effect
+        elif self.power_up_type == "SHIELD":
+            player.activate_shield()
+        self.kill()
