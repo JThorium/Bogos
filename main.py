@@ -7,12 +7,57 @@ import json
 # --- Pygame Initialization ---
 pygame.init()
 pygame.font.init()
+try:
+    pygame.mixer.init()
+    print("Pygame mixer initialized successfully.")
+    mixer_initialized = True
+except pygame.error as e:
+    print(f"Warning: Pygame mixer could not be initialized: {e}")
+    mixer_initialized = False
+
+# --- Sound Effect Placeholders & Loading ---
+sounds = {}
+def load_sound(name, filename):
+    if not mixer_initialized:
+        sounds[name] = None
+        return
+    try:
+        # Assuming a 'sounds' directory. Create it if it doesn't exist for testing.
+        # import os
+        # if not os.path.exists("sounds"):
+        #     os.makedirs("sounds")
+        # For actual use, sound files should be present in "sounds/"
+        sound_path = f"sounds/{filename}" 
+        sounds[name] = pygame.mixer.Sound(sound_path)
+        print(f"Attempted to load sound: {name} from {sound_path}")
+    except pygame.error as e:
+        sounds[name] = None
+        print(f"Warning: Could not load sound '{name}' from {sound_path}: {e}")
+
+load_sound("player_shoot", "player_shoot.wav")
+load_sound("enemy_explode", "enemy_explode.wav")
+load_sound("player_explode", "player_explode.wav")
+load_sound("shield_hit", "shield_hit.wav")
+load_sound("powerup_collect", "powerup_collect.wav")
+load_sound("powerup_spawn", "powerup_spawn.wav")
+load_sound("ui_navigate", "ui_navigate.wav")
+load_sound("ui_confirm", "ui_confirm.wav")
+load_sound("ui_locked", "ui_locked.wav")
+load_sound("game_start", "game_start.wav") 
+load_sound("game_over_sound", "game_over_sound.wav") 
+
+def play_sound(name):
+    if mixer_initialized and sounds.get(name):
+        sounds[name].play()
+    # else:
+    #     print(f"Debug: Sound '{name}' not played (mixer_init: {mixer_initialized}, sound_loaded: {sounds.get(name) is not None})")
+
 
 # --- Constants ---
 SAVE_FILE = "save_data.json"
 UFO_UNLOCK_CRITERIA = { # Score needed to unlock
     "BETA": 500,
-    # "GAMMA": 2000 # Example for future UFO
+    "GAMMA": 1500 
 }
 
 # --- Screen and Display ---
@@ -79,10 +124,11 @@ enemy_speed_y_drop = 5
 enemy_base_shoot_chance = 0.001 
 
 # Power-up spawning configuration
-TOTAL_POWER_UP_SPAWN_CHANCE = 0.15 # Overall chance a power-up drops
+TOTAL_POWER_UP_SPAWN_CHANCE = 0.18 # Slightly increased total chance
 POWER_UP_WEIGHTS = { # Relative likelihood of each type if a drop occurs
-    "RapidFire": 60, # e.g., 60% chance for RapidFire
-    "SHIELD": 40     # e.g., 40% chance for Shield
+    "RapidFire": 45, 
+    "SHIELD": 30,
+    "SPREAD_SHOT": 25 
 }
 
 # --- Save/Load Game Data ---
@@ -193,20 +239,31 @@ while running:
                     chosen_ufo_key = selectable_ufo_keys[current_selection_index]
                     if chosen_ufo_key in unlocked_ufos_list:
                         initialize_new_game(chosen_ufo_key)
-                        game_over_processed_this_session = False # Reset for new game
+                        play_sound("ui_confirm") # Or "game_start"
+                        # game_over_processed_this_session is reset in initialize_new_game
                     else:
-                        print(f"{chosen_ufo_key} is locked!") # Add sound effect later
+                        print(f"{chosen_ufo_key} is locked!") 
+                        play_sound("ui_locked")
+                elif event.key == pygame.K_UP or event.key == pygame.K_LEFT: # Moved sound play here
+                    current_selection_index = (current_selection_index - 1) % len(selectable_ufo_keys)
+                    play_sound("ui_navigate")
+                elif event.key == pygame.K_DOWN or event.key == pygame.K_RIGHT: # Moved sound play here
+                    current_selection_index = (current_selection_index + 1) % len(selectable_ufo_keys)
+                    play_sound("ui_navigate")
+
 
         elif game_state == PLAYING:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     if player: 
-                        player.shoot(all_sprites, player_bullets_group)
+                        if player.shoot(all_sprites, player_bullets_group): # Player.shoot() must return True if shot
+                            play_sound("player_shoot")
         elif game_state == GAME_OVER:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                     game_state = SELECTION_SCREEN
-                    current_selection_index = 0 # Reset selection for a fresh menu display
+                    current_selection_index = 0 
+                    # play_sound("ui_navigate") # Optional: sound for going back to menu
 
     # --- Game Logic ---
     if game_state == PLAYING:
@@ -226,9 +283,12 @@ while running:
             if enemies_group: # Check if enemies exist
                 for enemy_sprite in enemies_group: 
                     enemy_sprite.update_movement(enemy_current_speed_x) 
-                    enemy_sprite.shoot(all_sprites, enemy_bullets_group, enemy_base_shoot_chance)
+                    enemy_sprite.shoot(all_sprites, enemy_bullets_group, enemy_base_shoot_chance) # Enemy shooting sound could be in Enemy.shoot()
                     if enemy_sprite.rect.bottom >= SCREEN_HEIGHT:
+                        if game_state != GAME_OVER : # Play only once on transition
+                            play_sound("game_over_sound")
                         game_state = GAME_OVER
+                        game_over_processed_this_session = False # Ensure game over logic runs
                         break 
             if game_state == GAME_OVER: 
                 pass 
@@ -249,10 +309,13 @@ while running:
                             break
                 if not enemies_group: 
                     print("VICTORY! (For now, just ends game state)") 
+                    if game_state != GAME_OVER: play_sound("game_start") # Placeholder for victory
                     game_state = GAME_OVER 
+                    game_over_processed_this_session = False
+
 
             # --- Collision Detection ---
-            if player: # Ensure player exists for collision checks
+            if player: 
                 # Player bullets vs Enemies
                 for bullet in player_bullets_group:
                     hit_enemies = pygame.sprite.spritecollide(bullet, enemies_group, False) 
@@ -260,9 +323,9 @@ while running:
                         bullet.kill() 
                         if enemy_hit.take_damage(): # True if enemy died
                             score += enemy_hit.points
+                            play_sound("enemy_explode")
                             # Power-up Spawning Logic
                             if random.random() < TOTAL_POWER_UP_SPAWN_CHANCE:
-                                # Choose which power-up to spawn
                                 choice = random.choices(
                                     list(POWER_UP_WEIGHTS.keys()), 
                                     weights=list(POWER_UP_WEIGHTS.values()), 
@@ -271,22 +334,27 @@ while running:
                                 pu = PowerUpItem(enemy_hit.rect.centerx, enemy_hit.rect.centery, choice)
                                 all_sprites.add(pu)
                                 power_ups_group.add(pu)
+                                play_sound("powerup_spawn")
                         break 
 
                 # Enemy bullets vs Player
-                collided_bullets = pygame.sprite.spritecollide(player, enemy_bullets_group, True) # True: kill bullet
+                collided_bullets = pygame.sprite.spritecollide(player, enemy_bullets_group, True) 
                 if collided_bullets:
                     if player.has_shield:
                         player.lose_shield()
+                        play_sound("shield_hit")
                         print("Shield absorbed a hit!")
                     else:
+                        if game_state != GAME_OVER: play_sound("player_explode") # Or game_over_sound
                         game_state = GAME_OVER
+                        game_over_processed_this_session = False 
                         print("Player hit by enemy bullet!") 
 
                 # Player vs Power-ups
-                collected_power_ups = pygame.sprite.spritecollide(player, power_ups_group, True) # True: kill item
+                collected_power_ups = pygame.sprite.spritecollide(player, power_ups_group, True) 
                 for pu_item in collected_power_ups:
                     pu_item.apply_effect(player) 
+                    play_sound("powerup_collect")
 
     # --- Drawing ---
     screen.fill(BLACK)

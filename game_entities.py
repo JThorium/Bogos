@@ -14,6 +14,11 @@ ORANGE = (255, 165, 0) # RapidFire Power-up item color
 MAGENTA = (255, 0, 255) # UFO Beta bullet color
 SHIELD_BLUE = (0, 180, 255) # Shield Power-up item color / Player shield visual
 GOLD = (255, 215, 0) # Alternative for player shield visual
+PURPLE = (128, 0, 128) # UFO Gamma color
+BRIGHT_YELLOW = (255, 255, 102) # UFO Gamma bullet color
+SPREAD_ITEM_COLOR = (30, 200, 30) # Distinct green for Spread Shot item
+PLAYER_SPREAD_COLOR = (240, 240, 240) # Near white for player when spread is active
+
 
 # UFO Types Configuration
 UFO_TYPES = {
@@ -35,8 +40,19 @@ UFO_TYPES = {
         "shoot_cooldown_normal": 450, # Slightly faster base shooting
         "shoot_cooldown_rapid": 120, # Slightly faster rapid shooting
         "bullet_speed": -12, # Faster bullets
-        "bullet_color": MAGENTA, # Different bullet color
-        "width": 50, # Same size for now
+        "bullet_color": MAGENTA, 
+        "width": 50, 
+        "height": 50,
+    },
+    "GAMMA": {
+        "name": "Gamma",
+        "color": PURPLE,
+        "speed": 6, # Faster than Alpha
+        "shoot_cooldown_normal": 500, # Same as Alpha
+        "shoot_cooldown_rapid": 150,  # Same as Alpha
+        "bullet_speed": -15, # Significantly faster bullets
+        "bullet_color": BRIGHT_YELLOW,
+        "width": 50,
         "height": 50,
     }
 }
@@ -50,7 +66,8 @@ ENEMY_BULLET_SPEED = 5   # Positive goes down
 # Power-up settings
 POWER_UP_RADIUS = 10
 POWER_UP_SPEED = 2
-POWER_UP_DURATION_MS = 7000
+POWER_UP_RAPID_FIRE_DURATION_MS = 7000 # Renamed for clarity
+POWER_UP_SPREAD_SHOT_DURATION_MS = 8000 # Spread shot duration
 
 # Enemy settings (from main.py, might be centralized better later)
 ENEMY_TYPES = {
@@ -92,9 +109,10 @@ class Player(pygame.sprite.Sprite):
         self.last_shot_time = 0
         self.rapid_fire_active = False
         self.rapid_fire_end_time = 0
+        self.is_spread_shot_active = False
+        self.spread_shot_end_time = 0
         
         self.has_shield = False
-        # self.shield_visual_color = GOLD # Or SHIELD_BLUE, if different from item
         
         self.health = 1 # For future use
 
@@ -108,41 +126,64 @@ class Player(pygame.sprite.Sprite):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.current_shoot_cooldown:
             self.last_shot_time = current_time
-            # Use UFO-specific bullet properties
-            bullet = Bullet(self.rect.centerx, self.rect.top, self.bullet_speed, self.bullet_color)
-            all_sprites_group.add(bullet)
-            bullets_group.add(bullet)
-            return True 
-        return False 
+            bullet_dx_main = 0
+            bullet_dy_main = self.bullet_speed # UFO-specific vertical speed
+
+            if self.is_spread_shot_active:
+                # Main bullet (center)
+                bullet_center = Bullet(self.rect.centerx, self.rect.top, bullet_dx_main, bullet_dy_main, self.bullet_color)
+                # Left bullet
+                bullet_left = Bullet(self.rect.centerx, self.rect.top, -3, bullet_dy_main * 0.9, self.bullet_color)
+                # Right bullet
+                bullet_right = Bullet(self.rect.centerx, self.rect.top, 3, bullet_dy_main * 0.9, self.bullet_color)
+                
+                all_sprites_group.add(bullet_center, bullet_left, bullet_right)
+                bullets_group.add(bullet_center, bullet_left, bullet_right)
+            else: # Normal shot
+                bullet = Bullet(self.rect.centerx, self.rect.top, bullet_dx_main, bullet_dy_main, self.bullet_color)
+                all_sprites_group.add(bullet)
+                bullets_group.add(bullet)
+            return True # Indicates a shot was fired
+        return False # Indicates cooldown or other restriction prevented shooting
 
     def activate_rapid_fire(self):
         self.rapid_fire_active = True
-        self.rapid_fire_end_time = pygame.time.get_ticks() + POWER_UP_DURATION_MS
+        self.rapid_fire_end_time = pygame.time.get_ticks() + POWER_UP_RAPID_FIRE_DURATION_MS
         self.current_shoot_cooldown = self.shoot_cooldown_rapid
-        # Visual update handled in update()
 
     def activate_shield(self):
         self.has_shield = True
-        # Visual update handled in update()
 
     def lose_shield(self):
         self.has_shield = False
-        # Visual update handled in update()
+        
+    def activate_spread_shot(self):
+        self.is_spread_shot_active = True
+        self.spread_shot_end_time = pygame.time.get_ticks() + POWER_UP_SPREAD_SHOT_DURATION_MS
+
+    def deactivate_spread_shot(self):
+        self.is_spread_shot_active = False
 
     def update(self):
-        # Determine display color based on state precedence: Shield > RapidFire > Base
+        current_time = pygame.time.get_ticks()
+
+        # Handle timers first
+        if self.rapid_fire_active and current_time > self.rapid_fire_end_time:
+            self.rapid_fire_active = False
+            self.current_shoot_cooldown = self.shoot_cooldown_normal
+        
+        if self.is_spread_shot_active and current_time > self.spread_shot_end_time:
+            self.deactivate_spread_shot()
+
+        # Determine display color based on state precedence: Shield > SpreadShot > RapidFire > Base
         if self.has_shield:
-            self.current_display_color = GOLD # Shield visual takes precedence
+            self.current_display_color = GOLD 
+        elif self.is_spread_shot_active:
+            self.current_display_color = PLAYER_SPREAD_COLOR
         elif self.rapid_fire_active:
-            current_time = pygame.time.get_ticks()
-            if current_time > self.rapid_fire_end_time:
-                self.rapid_fire_active = False
-                self.current_shoot_cooldown = self.shoot_cooldown_normal
-                self.current_display_color = self.base_color # Revert to UFO's base color
-            else: 
-                 self.current_display_color = CYAN # Keep rapid fire color
-                 self.current_shoot_cooldown = self.shoot_cooldown_rapid # Ensure cooldown stays rapid
-        else: # No shield, no active rapid fire
+            self.current_display_color = CYAN 
+            self.current_shoot_cooldown = self.shoot_cooldown_rapid # Ensure cooldown is rapid if this state is active
+        else: # No active power-ups affecting color, or rapid fire expired
             self.current_shoot_cooldown = self.shoot_cooldown_normal
             self.current_display_color = self.base_color 
         
@@ -194,26 +235,30 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed_y, color, type="player"): # type can be "player" or "enemy"
+    def __init__(self, x, y, dx, dy, color, type="player"): # dx for horizontal, dy for vertical
         super().__init__()
         self.width = BULLET_WIDTH if type == "player" else ENEMY_BULLET_WIDTH
         self.height = BULLET_HEIGHT if type == "player" else ENEMY_BULLET_HEIGHT
         self.image = pygame.Surface([self.width, self.height])
         self.image.fill(color)
         self.rect = self.image.get_rect()
-        self.rect.centerx = x
-        self.rect.centery = y # Start from center y of shooter for player, bottom for enemy
-        if type == "player":
-            self.rect.bottom = y # Player bullet starts at player's top
-        else: # Enemy bullet
-            self.rect.top = y # Enemy bullet starts at enemy's bottom
+        
+        self.dx = dx
+        self.dy = dy
 
-        self.speed_y = speed_y
+        if type == "player":
+            self.rect.centerx = x
+            self.rect.bottom = y # Player bullet starts at player's top
+        else: # Enemy bullet (assumes dx=0 for now for enemies)
+            self.rect.centerx = x
+            self.rect.top = y 
 
     def update(self):
-        self.rect.y += self.speed_y
-        if self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT:
-            self.kill() # Remove from all groups if off-screen
+        self.rect.x += self.dx
+        self.rect.y += self.dy
+        if self.rect.bottom < 0 or self.rect.top > SCREEN_HEIGHT or \
+           self.rect.left > SCREEN_WIDTH or self.rect.right < 0:
+            self.kill() 
 
 
 class PowerUpItem(pygame.sprite.Sprite):
@@ -222,13 +267,16 @@ class PowerUpItem(pygame.sprite.Sprite):
         self.power_up_type = power_up_type
         self.radius = POWER_UP_RADIUS
         
-        item_color = ORANGE # Default for RapidFire
+        item_color = ORANGE 
         if self.power_up_type == "SHIELD":
             item_color = SHIELD_BLUE
-            self.radius = POWER_UP_RADIUS + 2 # Shield item slightly larger
+            self.radius = POWER_UP_RADIUS + 2 
+        elif self.power_up_type == "SPREAD_SHOT":
+            item_color = SPREAD_ITEM_COLOR
+            self.radius = POWER_UP_RADIUS # Standard size or new size
 
         self.image = pygame.Surface([self.radius * 2, self.radius * 2], pygame.SRCALPHA)
-        pygame.draw.circle(self.image, item_color, (self.radius, self.radius), self.radius)
+        pygame.draw.circle(self.image, item_color, (self.radius, self.radius), self.radius) # Draw as circle
         self.rect = self.image.get_rect(center=(center_x, center_y))
         self.speed = POWER_UP_SPEED
 
@@ -242,4 +290,6 @@ class PowerUpItem(pygame.sprite.Sprite):
             player.activate_rapid_fire()
         elif self.power_up_type == "SHIELD":
             player.activate_shield()
+        elif self.power_up_type == "SPREAD_SHOT":
+            player.activate_spread_shot()
         self.kill()
