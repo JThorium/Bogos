@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bogos Invaders v2</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: black; }
+        canvas { display: block; }
+        #score { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; font-size: 20px; }
+        #lives { position: absolute; top: 10px; right: 10px; color: white; font-family: Arial, sans-serif; font-size: 20px; }
+         #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            font-size: 48px;
+            text-align: center;
+            display: none; /* Hidden by default */
+        }
+        #restartButton {
+            font-size: 24px;
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="lives">Lives: 3 | High Score: 0</div> <!-- Placeholder, will be updated by JS -->
+    <button id="hangarButton" style="position: absolute; top: 50px; left: 10px; color: white; background-color: #333; padding: 5px;">Hangar</button>
+    <div id="hangar" style="display: none; position: absolute; top: 80px; left: 10px; color: white; background-color: rgba(50,50,50,0.8); padding: 15px; border-radius: 5px;">
+        <h2>UFO Hangar</h2>
+        <p id="playerStarsDisplay">Your Stars: 0</p>
+        <div id="ufoList"></div>
+        <button id="closeHangarButton">Close</button>
+    </div>
+    <div id="gameOverScreen">
+        GAME OVER
+        <button id="restartButton">Restart</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let player, bullets = [], enemyBullets = [];
+        let enemies = [], activeEnemies = [];
+        let score = 0, lives = 3; 
+        let highScore = 0; 
+        let stars = 0; // Added stars variable
+
+        const ufoConfigs = [
+            { id: 'scout', name: 'Scout', path: 'models/ufo_scout.glb', cost: 0, unlocked: true, description: 'Fast and agile scout ship.' },
+            { id: 'destroyer', name: 'Destroyer', path: 'models/ufo_destroyer.glb', cost: 0, unlocked: true, description: 'Heavy-duty destroyer.' },
+            { id: 'mothership', name: 'Mothership', path: 'models/ufo_mothership.glb', cost: 0, unlocked: true, description: 'The command mothership.' },
+            { id: 'ufo4', name: 'Interceptor', path: 'models/ufo_interceptor.glb', cost: 100, unlocked: false, description: 'High-speed interceptor.' },
+            { id: 'ufo6', name: 'Bomber', path: 'models/ufo_bomber.glb', cost: 150, unlocked: false, description: 'Carries a heavy payload.' },
+            { id: 'ufo8', name: 'Stealth Ship', path: 'models/ufo_stealth.glb', cost: 200, unlocked: false, description: 'Cloaking capabilities.' },
+            { id: 'ufo10', name: 'Cruiser', path: 'models/ufo_cruiser.glb', cost: 250, unlocked: false, description: 'Balanced attack and defense.' },
+            { id: 'ufo11', name: 'Fighter', path: 'models/ufo_fighter.glb', cost: 120, unlocked: false, description: 'Standard combat fighter.' },
+            { id: 'ufo12', name: 'Battlecruiser', path: 'models/ufo_battlecruiser.glb', cost: 300, unlocked: false, description: 'A formidable warship.' },
+            { id: 'ufo15', name: 'Alien Saucer', path: 'models/ufo_alien_saucer.glb', cost: 500, unlocked: false, description: 'Classic alien design.' }
+        ];
+        let selectedUFO = ufoConfigs[0]; // Default to scout
+
+        let enemySpeed = 0.005; // Base speed
+        let enemyDropSpeed = 0.1;
+        let enemyDirection = 1; // 1 for right, -1 for left
+        let lastShotTime = 0;
+        let lastEnemyShotTime = 0; // For global enemy shooting cooldown
+        let keys = {};
+        let bulletGeometry, playerBulletMaterial, enemyBulletMaterial;
+        let enemyGeometry, enemyMaterial;
+        let gameOver = false;
+        let boss = null;
+        let bossFightTime = 60; // Boss appears after 60 seconds
+        let gameStartTime = Date.now() / 1000; // Game start time in seconds
+
+        // Sound effect placeholders - in a real game, these would be <audio> elements or Web Audio API
+        const soundEffects = {
+            'shoot': { play: () => console.log('SFX: Player Shoot') },
+            'enemyShoot': { play: () => console.log('SFX: Enemy Shoot') }, // Not used yet directly
+            'explosion': { play: () => console.log('SFX: Explosion') },
+            'playerHit': { play: () => console.log('SFX: Player Hit') },
+            'gameOver': { play: () => console.log('SFX: Game Over') }
+        };
+
+        function playSound(soundName) {
+            if (soundEffects[soundName] && typeof soundEffects[soundName].play === 'function') {
+                soundEffects[soundName].play();
+            }
+        }
+
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Load high score
+            highScore = parseInt(localStorage.getItem('bogosV2HighScore')) || 0;
+            updateDisplay(); // Call new display function to show initial state (including highScore)
+
+            // Player
+            const playerGeometry = new THREE.ConeGeometry(0.5, 1, 4); // Looks like a simple ship
+            playerGeometry.rotateX(Math.PI / 2); 
+            const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            player = new THREE.Mesh(playerGeometry, playerMaterial);
+            player.position.y = -7;
+            scene.add(player);
+
+            // Bullet materials
+            bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            playerBulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            enemyBulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+            // Enemy material
+            enemyGeometry = new THREE.BoxGeometry(1, 1, 1); // Simple cube for enemies
+            enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red enemies
+
+            spawnEnemies();
+
+            camera.position.z = 10;
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.getElementById('restartButton').addEventListener('click', restartGame);
+            document.getElementById('hangarButton').addEventListener('click', showHangar);
+            document.getElementById('closeHangarButton').addEventListener('click', hideHangar);
+
+
+            animate();
+        }
+
+        function showHangar() {
+            const hangarDiv = document.getElementById('hangar');
+            const starsDisplay = document.getElementById('playerStarsDisplay');
+            const ufoListDiv = document.getElementById('ufoList');
+            
+            starsDisplay.textContent = `Your Stars: ${stars}`;
+            
+            // Populate UFO list
+            ufoListDiv.innerHTML = ''; // Clear previous list
+            ufoConfigs.forEach(ufo => {
+                if (ufo.id === 'scout' || ufo.id === 'destroyer' || ufo.id === 'mothership') {
+                    // These are defaults and typically not "bought" or "selected" from a list of unlockables in the same way
+                    // But we can show them as owned.
+                    const ufoItem = document.createElement('div');
+                    ufoItem.innerHTML = `<strong>${ufo.name}</strong> (Owned) - <em>${ufo.description}</em>`;
+                    ufoListDiv.appendChild(ufoItem);
+                    return; // Skip adding select/buy buttons for defaults in this Hangar view
+                }
+
+                const ufoItem = document.createElement('div');
+                ufoItem.style.marginBottom = '10px';
+                ufoItem.innerHTML = `
+                    <strong>${ufo.name}</strong> - Cost: ${ufo.cost} Stars <br>
+                    <em>${ufo.description}</em><br>
+                `;
+                
+                if (ufo.unlocked) {
+                    const selectButton = document.createElement('button');
+                    selectButton.textContent = 'Select';
+                    selectButton.onclick = () => selectUFO(ufo.id);
+                    ufoItem.appendChild(selectButton);
+                } else if (stars >= ufo.cost) {
+                    const buyButton = document.createElement('button');
+                    buyButton.textContent = 'Buy';
+                    buyButton.onclick = () => buyUFO(ufo.id);
+                    ufoItem.appendChild(buyButton);
+                } else {
+                    const lockedButton = document.createElement('button');
+                    lockedButton.textContent = 'Locked';
+                    lockedButton.disabled = true;
+                    ufoItem.appendChild(lockedButton);
+                }
+                ufoListDiv.appendChild(ufoItem);
+            });
+            
+            hangarDiv.style.display = 'block';
+            // Potentially pause game animation loop here if hangar is a modal screen
+        }
+
+        function hideHangar() {
+            const hangarDiv = document.getElementById('hangar');
+            hangarDiv.style.display = 'none';
+            // Potentially resume game animation loop here
+        }
+
+        function selectUFO(ufoId) {
+            const ufo = ufoConfigs.find(u => u.id === ufoId);
+            if (ufo && ufo.unlocked) {
+                selectedUFO = ufo;
+                console.log(`${ufo.name} selected.`);
+                // Here you would change the player's ship model/texture
+                // For example: player.geometry = new THREE.SphereGeometry(0.5, 16, 16); // Placeholder
+                // player.material.color.setHex(Math.random() * 0xffffff); // Placeholder
+                hideHangar();
+            } else {
+                console.log("UFO not available or not unlocked.");
+            }
+        }
+
+        function buyUFO(ufoId) {
+            const ufo = ufoConfigs.find(u => u.id === ufoId);
+            if (ufo && !ufo.unlocked && stars >= ufo.cost) {
+                stars -= ufo.cost;
+                ufo.unlocked = true;
+                updateDisplay(); // Update star count in main UI
+                showHangar(); // Refresh hangar to show "Select" button
+                console.log(`${ufo.name} purchased and unlocked!`);
+            } else {
+                console.log("Cannot buy UFO. Not enough stars or already unlocked.");
+            }
+        }
+
+
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            bullets = [];
+            enemyBullets = [];
+            activeEnemies.forEach(enemy => scene.remove(enemy));
+            activeEnemies = [];
+            enemies = []; // Clear the main enemies array as well
+            if (boss) {
+                scene.remove(boss);
+                boss = null;
+            }
+            enemySpeed = 0.005; // Reset speed
+            enemyDirection = 1;
+            gameStartTime = Date.now() / 1000; // Reset timer for boss
+
+            updateDisplay(); // Update score, lives, and high score display
+            document.getElementById('gameOverScreen').style.display = 'none';
+            
+            player.position.set(0, -7, 0); // Reset player position
+
+            spawnEnemies(); // Respawn initial enemies
+            animate(); // Restart animation loop
+        }
+
+
+        function spawnEnemies() {
+            if (boss) return; // Don't spawn regular enemies if boss is active
+
+            const rows = 5;
+            const cols = 10;
+            const spacingX = 1.5;
+            const spacingY = 1;
+            const startX = - (cols - 1) * spacingX / 2;
+            const startY = 5;
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial.clone()); // Clone material to change color later if needed
+                    enemy.position.x = startX + j * spacingX;
+                    enemy.position.y = startY - i * spacingY;
+                    enemy.userData = { type: 'standard', health: 100 }; // Example: health
+                    scene.add(enemy);
+                    enemies.push(enemy); // Keep a reference for movement logic
+                    activeEnemies.push(enemy); // For collision detection and shooting
+                }
+            }
+        }
+        
+        function spawnBoss() {
+            if (boss) return; // Don't spawn if already active
+            // Clear existing enemies
+            activeEnemies.forEach(enemy => scene.remove(enemy));
+            activeEnemies = [];
+            enemies = [];
+
+            const bossGeometry = new THREE.BoxGeometry(3, 2, 2); // Larger than regular enemies
+            const bossMaterial = new THREE.MeshBasicMaterial({ color: 0x800080 }); // Purple boss
+            boss = new THREE.Mesh(bossGeometry, bossMaterial);
+            boss.position.set(0, 6, 0); // Position it at the top center
+            boss.userData = { health: 1000 }; // Boss has more health
+            scene.add(boss);
+            console.log("Boss has spawned!");
+        }
+
+
+        function onKeyDown(event) {
+            keys[event.key] = true;
+            if (event.key === ' ' && !gameOver) { // Space bar
+                const currentTime = Date.now() / 1000;
+                if (currentTime - lastShotTime > 0.5) { // Cooldown of 0.5 seconds
+                    shoot();
+                    lastShotTime = currentTime;
+                }
+            }
+        }
+
+        function onKeyUp(event) {
+            keys[event.key] = false;
+        }
+
+        function shoot() {
+            const bullet = new THREE.Mesh(bulletGeometry, playerBulletMaterial);
+            bullet.position.copy(player.position);
+            bullet.position.y += 0.5; // Start slightly above the player
+            scene.add(bullet);
+            bullets.push(bullet);
+            playSound('shoot');
+        }
+
+        // New function to update the score, lives, and high score display
+        function updateDisplay() {
+            // Ensure highScore used for display is always the latest from localStorage or the current session's updated one
+            const currentHighScoreForDisplay = parseInt(localStorage.getItem('bogosV2HighScore')) || highScore || 0;
+            document.getElementById('score').innerText = `Score: ${score}`;
+            document.getElementById('lives').innerText = `Lives: ${lives} | High Score: ${currentHighScoreForDisplay}`;
+            // If stars were part of the main UI, it would be updated here too.
+            // For now, playerStarsDisplay in hangar is updated when hangar is shown.
+        }
+
+        function updateScore(points) {
+            score += points;
+            updateDisplay(); // Use the new display function
+        }
+        
+        function updateLives(change) {
+            lives += change;
+            if (lives <= 0 && !gameOver) {
+                gameOver = true; // Game over logic will be expanded in next step
+                document.getElementById('gameOverScreen').style.display = 'block';
+                playSound('gameOver');
+                updateDisplay(); // Show final stats including lives as 0
+            } else if (!gameOver) {
+                 updateDisplay(); // Update display if game is not over
+            }
+            // If game is over, updateDisplay will be called by handleGameOver or similar later
+        }
+
+
+        function animate() {
+            if (gameOver) {
+                return; // Stop animation if game over
+            }
+            requestAnimationFrame(animate);
+            const time = Date.now() / 1000; // Current time in seconds
+            const elapsedTimeSinceStart = time - gameStartTime;
+
+            // Player movement
+            if (keys['ArrowLeft'] && player.position.x > -9) player.position.x -= 0.1;
+            if (keys['ArrowRight'] && player.position.x < 9) player.position.x += 0.1;
+
+            // Move bullets
+            bullets.forEach((bullet, index) => {
+                bullet.position.y += 0.2;
+                if (bullet.position.y > 10) {
+                    scene.remove(bullet);
+                    bullets.splice(index, 1);
+                }
+            });
+
+            // Enemy logic
+            if (!boss && elapsedTimeSinceStart > bossFightTime) {
+                spawnBoss();
+            }
+            
+            if (boss) {
+                // Boss movement (example: simple side to side)
+                boss.position.x = Math.sin(time * 0.5) * 5; // Moves side to side
+
+                // Boss shooting logic (example: fires targeted shots less frequently)
+                if (time - lastEnemyShotTime > 0.5) { // Boss fires every 0.5 seconds
+                    lastEnemyShotTime = time;
+                    const bullet = new THREE.Mesh(bulletGeometry, enemyBulletMaterial);
+                    bullet.position.copy(boss.position);
+                    bullet.position.y -=1; // Start slightly below the boss
+                    
+                    // Simple targeting (adjust dx for more sophisticated patterns)
+                    bullet.userData.velocity = new THREE.Vector3((player.position.x - boss.position.x) * 0.03, -0.1, 0);
+                    
+                    scene.add(bullet);
+                    enemyBullets.push(bullet);
+                    playSound('shoot'); // Assuming boss shoot sound is same for now
+                }
+            } else {
+                 // Move enemies
+                let- hitBoundary = false;
+                activeEnemies.forEach(enemy => {
+                    enemy.position.x += enemySpeed * enemyDirection;
+                    if (enemy.position.x > 9 || enemy.position.x < -9) {
+                        hitBoundary = true;
+                    }
+                });
+
+                if (hitBoundary) {
+                    enemyDirection *= -1; // Change direction
+                    activeEnemies.forEach(enemy => {
+                        enemy.position.y -= enemyDropSpeed; // Move down
+                        if (enemy.position.y < -7 && !gameOver) { 
+                            gameOver = true; // Game over logic will be expanded in next step
+                            document.getElementById('gameOverScreen').style.display = 'block';
+                            playSound('gameOver');
+                            updateDisplay(); // Show final stats
+                        }
+                    });
+                }
+                // Enemy shooting logic
+            if (boss) {
+                if (time - lastEnemyShotTime > 0.5) { // Boss fires every 0.5 seconds
+                    lastEnemyShotTime = time;
+                    const bullet = new THREE.Mesh(bulletGeometry, enemyBulletMaterial);
+                    bullet.position.copy(boss.position);
+                    bullet.position.y -= 1; // Start slightly below the boss
+
+                    // Calculate direction vector from boss to player
+                    let directionX = player.position.x - boss.position.x;
+                    let directionY = player.position.y - boss.position.y;
+                    
+                    // Normalize the direction vector
+                    const length = Math.sqrt(directionX * directionX + directionY * directionY);
+                    if (length > 0) { // Avoid division by zero
+                        directionX /= length;
+                        directionY /= length;
+                    }
+
+                    const bossBulletSpeed = 0.1; // Consistent bullet speed for boss
+                    
+                    bullet.userData.velocity = new THREE.Vector3(
+                        directionX * bossBulletSpeed,
+                        directionY * bossBulletSpeed, 
+                        0); // Assuming Z is not used for 2D movement plane
+                    
+                    scene.add(bullet);
+                    enemyBullets.push(bullet);
+                    playSound('shoot'); // Using generic 'shoot' for boss too
+                }
+            } else {
+                // Regular enemy firing - each enemy has an independent chance
+                activeEnemies.forEach(enemy => {
+                    if (Math.random() < 0.0005) { // Low random chance for each enemy to fire per frame
+                        const bullet = new THREE.Mesh(bulletGeometry, enemyBulletMaterial);
+                        bullet.position.copy(enemy.position);
+                        bullet.position.y -= 1; // Start slightly below the enemy
+                        
+                        // Regular enemy bullets shoot straight down
+                        bullet.userData.velocity = new THREE.Vector3(0, -0.1, 0); // Store velocity for consistent movement logic
+                        
+                        scene.add(bullet);
+                        enemyBullets.push(bullet);
+                        playSound('shoot'); // Using generic 'shoot' for enemies
+                    }
+                });
+                }
+            }
+
+            // Move enemy bullets
+            enemyBullets.forEach((bullet, index) => {
+            // All bullets now use their stored velocity vector for movement
+            if (bullet.userData.velocity) {
+                    bullet.position.add(bullet.userData.velocity);
+            } else {
+                // Fallback for any bullets created without userData.velocity (should not happen with new logic)
+                // This might occur if old bullets from before this change are still in array, though unlikely.
+                console.warn("Enemy bullet missing velocity data, moving straight down as fallback.");
+                bullet.position.y -= 0.1; 
+                }
+
+            // Remove bullets that go off-screen (expanded to check X bounds as well for boss shots)
+            if (bullet.position.y < -10 || bullet.position.y > 10 || bullet.position.x < -12 || bullet.position.x > 12) { 
+                    scene.remove(bullet);
+                    enemyBullets.splice(index, 1);
+                }
+            });
+
+            // Collision detection
+            // Player bullets vs enemies
+            bullets.forEach((bullet, bIndex) => {
+                let targetHit = false;
+                if (boss) {
+                    const distance = bullet.position.distanceTo(boss.position);
+                    if (distance < 1.5) { // Boss hitbox approx
+                        scene.remove(bullet);
+                        bullets.splice(bIndex, 1);
+                        boss.userData.health -= 20; // Player bullets do 20 damage
+                        playSound('explosion');
+                        targetHit = true;
+                        if (boss.userData.health <= 0) {
+                            scene.remove(boss);
+                            boss = null; // Boss defeated
+                            updateScore(1000); // Bonus for defeating boss
+                            // Potentially spawn more regular enemies or end level
+                            console.log("Boss defeated!");
+                            // For now, let's just respawn regular enemies after a delay
+                            setTimeout(spawnEnemies, 3000); 
+                            gameStartTime = Date.now() / 1000 + 3; // Reset timer for next boss wave
+                        }
+                    }
+                } else {
+                    activeEnemies.forEach((enemy, eIndex) => {
+                        if (!targetHit) { // Ensure one bullet doesn't hit multiple enemies
+                            const distance = bullet.position.distanceTo(enemy.position);
+                            if (distance < 0.75) { // Enemy hitbox approx
+                                scene.remove(bullet);
+                                bullets.splice(bIndex, 1);
+                                scene.remove(enemy);
+                                activeEnemies.splice(eIndex, 1);
+                                playSound('explosion');
+                                updateScore(100);
+                                targetHit = true;
+                                // Remove from main 'enemies' array if necessary, though activeEnemies is primary for gameplay
+                                const mainIndex = enemies.indexOf(enemy);
+                                if (mainIndex > -1) enemies.splice(mainIndex, 1);
+                            }
+                        }
+                    });
+                }
+                 if (activeEnemies.length === 0 && !boss && enemies.length === 0) { // Check if all enemies cleared (and no boss active)
+                    // This condition might need adjustment if enemies are dynamically added
+                    console.log("Wave cleared, spawning new wave.");
+                    enemySpeed += 0.001; // Increase speed for next wave
+                    spawnEnemies();
+                }
+            });
+
+            // Enemy bullets vs player
+            enemyBullets.forEach((bullet, index) => {
+                const distance = bullet.position.distanceTo(player.position);
+                if (distance < 0.5) { // Player hitbox approx
+                    scene.remove(bullet);
+                    enemyBullets.splice(index, 1);
+                    playSound('playerHit');
+                    updateLives(-1);
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
