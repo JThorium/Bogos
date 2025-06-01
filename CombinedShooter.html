@@ -173,8 +173,8 @@
             <hr>
             <h3>Galactic Upgrades</h3>
             <div id="upgradeOptions"></div>
-            <button id="startGameButton">Launch into Battle (SpaceShooter)</button>
-            <button id="highScoresButton">High Scores (SpaceShooter)</button>
+            <button id="startGameButton">Launch into Battle</button>
+            <button id="highScoresButton">High Scores</button>
         </div>
 
         <div class="menu pauseMenu" id="pauseMenu" style="display:none;">
@@ -223,6 +223,7 @@
         let starLayers = [];
         let audioCtx;
         let musicOscillator, musicGain, musicTime = 0;
+        let lastSelectedUfoType = 'scout'; // Default UFO
 
         const ufoShader = {
             uniforms: {
@@ -274,14 +275,14 @@
             `
         };
 
-        let scoutGeometry, destroyerGeometry, mothershipGeometry;
-        let scoutMaterial, destroyerMaterial, mothershipMaterial;
-        const ufoConfigs = [ // Define UFO configurations
-            { id: 'scout', name: 'Scout', geometry: new THREE.CylinderGeometry(0.4, 0.8, 0.2, 32), material: null, stats: { moveSpeed: 0.2, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, thrusterColor: 0x00ffff },
-            { id: 'destroyer', name: 'Destroyer', geometry: new THREE.CylinderGeometry(0.6, 1.2, 0.4, 32), material: null, stats: { moveSpeed: 0.15, health: 2, shotCooldown: 0.3, superchargePower: 3, drones: 0 }, thrusterColor: 0xff69b4 },
-            { id: 'mothership', name: 'Mothership', geometry: new THREE.SphereGeometry(1, 32, 32), material: null, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.3, superchargePower: 1, drones: 2 }, thrusterColor: 0xffd700 }
-        ];
+        let scoutGeometry, destroyerGeometry, mothershipGeometry; // Defined in init
+        let scoutMaterial, destroyerMaterial, mothershipMaterial; // Defined in init
 
+        const ufoConfigs = [
+            { id: 'scout', name: 'Scout', geometry: null, material: null, stats: { moveSpeed: 0.2, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, thrusterColor: 0x00ffff },
+            { id: 'destroyer', name: 'Destroyer', geometry: null, material: null, stats: { moveSpeed: 0.15, health: 2, shotCooldown: 0.3, superchargePower: 3, drones: 0 }, thrusterColor: 0xff69b4 },
+            { id: 'mothership', name: 'Mothership', geometry: null, material: null, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.3, superchargePower: 1, drones: 2 }, thrusterColor: 0xffd700 }
+        ];
 
         let previewScenes = {};
         let previewCamera, previewLight;
@@ -301,36 +302,26 @@
         const rows = 5;
         const cols = 11;
         let totalEnemies = rows * cols;
-        const enemyGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-        const enemyMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0xff3333, emissiveIntensity: 0.3 });
+        let enemyGeometry; // Defined in init
+        let enemyMaterial; // Defined in init
 
         const enemyBullets = [];
         let enemyDirection = 1;
         let enemySpeed = 0.005;
 
-        const bulletGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-        const playerBulletMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const enemyBulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        let bulletGeometry; // Defined in init
+        let playerBulletMaterial; // Defined in init
+        // enemyBulletMaterial is already defined globally for enemies/boss
         const playerBullets = [];
 
         let lastShotTime = 0;
         let lastEnemyShotTime = 0;
         let lastPowerUpTime = 0;
-        // currentPowerUp was renamed to activePowerUpName
-        // powerUpTimer was renamed to activePowerUpTimer
         let shotCooldown = 0.3;
 
         let boss = null;
-        const bossGeometry = new THREE.SphereGeometry(3, 64, 64);
-        const bossMaterial = new THREE.ShaderMaterial({
-            uniforms: THREE.UniformsUtils.clone(ufoShader.uniforms),
-            vertexShader: ufoShader.vertexShader,
-            fragmentShader: ufoShader.fragmentShader
-        });
-        bossMaterial.uniforms.isBoss.value = 1;
-        bossMaterial.uniforms.colorBase.value.set(0.5, 0, 1);
-        bossMaterial.uniforms.colorAccent.value.set(1, 0.5, 0);
-        bossMaterial.uniforms.patternType.value = 0;
+        let bossGeometry; // Defined in init
+        let bossMaterial;   // Defined in init
         let bossHealth = 0;
 
         let shakeTime = 0;
@@ -344,33 +335,27 @@
         let flashPass;
 
         const powerUps = [];
-        const powerUpGeometry = new THREE.SphereGeometry(0.4, 16, 16);
-        const powerUpMaterials = {
-            fastShot: new THREE.MeshBasicMaterial({ color: 0xffff00 }),
-            extraLife: new THREE.MeshBasicMaterial({ color: 0x00ffff }),
-            shield: new THREE.MeshBasicMaterial({ color: 0xff00ff }),
-            drone: new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-        };
+        let powerUpGeometry; // Defined in init
+        let powerUpMaterials; // Defined in init
         let activePowerUpName = null;
         let activePowerUpTimer = 0;
 
         const drones = [];
-        const droneGeometry = new THREE.CylinderGeometry(0.2, 0.4, 0.2, 16);
-        const droneMaterial = new THREE.ShaderMaterial(ufoShader);
+        let droneGeometry; // Defined in init
+        let droneMaterial; // Defined in init
 
         let particleGeometry, particleMaterial, particles;
         let particleCount = 100;
         let particlePositions, particleVelocities, particleLifetimes;
 
-        // UI Element References from SpaceShooter Structure
+        // UI Element References
         let scoreDisplay, livesDisplay, starsDisplay, powerUpDisplay, enemyProgressDisplay;
-        let startMenu, pauseMenu, gameOverMenu, highScoresMenu;
-        // Specific menu buttons
-        let selectScoutBtn, selectDestroyerBtn, selectMothershipBtn, startGameButton, highScoresButton_StartMenu;
+        let startMenu_UI, pauseMenu_UI, gameOverMenu_UI, highScoresMenu_UI; // Renamed to avoid conflict with JS vars
+        let selectScoutBtn, selectDestroyerBtn, selectMothershipBtn, launchBattleButton, highScoresButton_StartMenu;
         let resumeButton, hangarButton;
         let restartButton_GameOver;
         let clearScoresButton, backButton_HighScores;
-        let mainPauseButton; // The emoji one from SpaceShooter
+        let mainPauseButton;
 
 
         function createEnemies() {
@@ -390,7 +375,6 @@
                     enemies.push(enemy);
                 }
             }
-            // console.log("Created " + enemies.length + " enemies.");
         }
 
         function init() {
@@ -459,18 +443,49 @@
             }
             musicOscillator.start();
 
-            // Assign materials to ufoConfigs
+            // Define geometries
+            scoutGeometry = new THREE.CylinderGeometry(0.4, 0.8, 0.2, 32);
+            destroyerGeometry = new THREE.CylinderGeometry(0.6, 1.2, 0.4, 32);
+            mothershipGeometry = new THREE.SphereGeometry(1, 32, 32);
+            enemyGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            bulletGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+            powerUpGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+            droneGeometry = new THREE.CylinderGeometry(0.2, 0.4, 0.2, 16);
+
+            // Define materials
+            enemyMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0xff3333, emissiveIntensity: 0.3 });
+            playerBulletMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            // enemyBulletMaterial is already defined globally
+            powerUpMaterials = {
+                fastShot: new THREE.MeshBasicMaterial({ color: 0xffff00 }),
+                extraLife: new THREE.MeshBasicMaterial({ color: 0x00ffff }),
+                shield: new THREE.MeshBasicMaterial({ color: 0xff00ff }),
+                drone: new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+            };
+            droneMaterial = new THREE.ShaderMaterial(ufoShader); // ufoShader is global
+
+            ufoConfigs[0].geometry = scoutGeometry;
             ufoConfigs[0].material = new THREE.ShaderMaterial({uniforms: THREE.UniformsUtils.clone(ufoShader.uniforms), vertexShader: ufoShader.vertexShader, fragmentShader: ufoShader.fragmentShader });
             ufoConfigs[0].material.uniforms.colorBase.value.set(0, 0.5, 0.5); ufoConfigs[0].material.uniforms.colorAccent.value.set(1, 0.5, 0); ufoConfigs[0].material.uniforms.patternType.value = 1;
-            scoutMaterial = ufoConfigs[0].material; // Keep separate ref if needed elsewhere
 
+            ufoConfigs[1].geometry = destroyerGeometry;
             ufoConfigs[1].material = new THREE.ShaderMaterial({uniforms: THREE.UniformsUtils.clone(ufoShader.uniforms), vertexShader: ufoShader.vertexShader, fragmentShader: ufoShader.fragmentShader });
             ufoConfigs[1].material.uniforms.colorBase.value.set(0, 0, 0); ufoConfigs[1].material.uniforms.colorAccent.value.set(1, 0, 1); ufoConfigs[1].material.uniforms.patternType.value = 2;
-            destroyerMaterial = ufoConfigs[1].material;
 
+            ufoConfigs[2].geometry = mothershipGeometry;
             ufoConfigs[2].material = new THREE.ShaderMaterial({uniforms: THREE.UniformsUtils.clone(ufoShader.uniforms), vertexShader: ufoShader.vertexShader, fragmentShader: ufoShader.fragmentShader });
             ufoConfigs[2].material.uniforms.colorBase.value.set(0.5, 0, 1); ufoConfigs[2].material.uniforms.colorAccent.value.set(1, 0.5, 0); ufoConfigs[2].material.uniforms.patternType.value = 0;
-            mothershipMaterial = ufoConfigs[2].material;
+
+            bossGeometry = new THREE.SphereGeometry(3, 64, 64);
+            bossMaterial = new THREE.ShaderMaterial({
+                uniforms: THREE.UniformsUtils.clone(ufoShader.uniforms),
+                vertexShader: ufoShader.vertexShader,
+                fragmentShader: ufoShader.fragmentShader
+            });
+            bossMaterial.uniforms.isBoss.value = 1;
+            bossMaterial.uniforms.colorBase.value.set(0.5, 0, 1);
+            bossMaterial.uniforms.colorAccent.value.set(1, 0.5, 0);
+            bossMaterial.uniforms.patternType.value = 0;
 
 
             previewCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
@@ -527,33 +542,32 @@
                 particleLifetimes[i/3] = 0;
             }
             particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-            particleMaterial = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.2, transparent: true, opacity: 0 }); // Start with opacity 0
+            particleMaterial = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.2, transparent: true, opacity: 0 });
             particles = new THREE.Points(particleGeometry, particleMaterial);
             particles.visible = false;
             scene.add(particles);
 
-            // UI Element References
             scoreDisplay = document.getElementById('scoreDisplay');
             livesDisplay = document.getElementById('livesDisplay');
             starsDisplay = document.getElementById('starsDisplay');
             powerUpDisplay = document.getElementById('powerUpDisplay');
             enemyProgressDisplay = document.getElementById('enemyProgressDisplay');
 
-            startMenu = document.getElementById('startMenu');
-            pauseMenu = document.getElementById('pauseMenu');
-            gameOverMenu = document.getElementById('gameOverMenu');
-            highScoresMenu = document.getElementById('highScoresMenu');
+            startMenu_UI = document.getElementById('startMenu');
+            pauseMenu_UI = document.getElementById('pauseMenu');
+            gameOverMenu_UI = document.getElementById('gameOverMenu');
+            highScoresMenu_UI = document.getElementById('highScoresMenu');
 
             selectScoutBtn = document.getElementById('selectScoutBtn');
             selectDestroyerBtn = document.getElementById('selectDestroyerBtn');
             selectMothershipBtn = document.getElementById('selectMothershipBtn');
-            // startGameButton = document.getElementById('startGameButton'); // This is SpaceShooter's original, might remove or repurpose
+            launchBattleButton = document.getElementById('startGameButton');
             highScoresButton_StartMenu = document.getElementById('highScoresButton');
             resumeButton = document.getElementById('resumeButton');
             hangarButton = document.getElementById('hangarButton');
             restartButton_GameOver = document.getElementById('restartButton');
-            clearScoresButton = document.getElementById('clearScoresButton');
-            backButton_HighScores = document.getElementById('backButton');
+            clearScoresButton = document.getElementById('clearScoresButton'); // Assuming it exists
+            backButton_HighScores = document.getElementById('backButton');    // Assuming it exists
             mainPauseButton = document.getElementById('pauseButton');
 
 
@@ -566,12 +580,11 @@
             setupUIEventListeners();
             setupControls_Bogos();
 
-            // Initial UI State
-            if(startMenu) startMenu.style.display = 'flex';
-            if(pauseMenu) pauseMenu.style.display = 'none';
-            if(gameOverMenu) gameOverMenu.style.display = 'none';
-            if(highScoresMenu) highScoresMenu.style.display = 'none';
-            isPaused = true; // Start paused
+            if(startMenu_UI) startMenu_UI.style.display = 'flex';
+            if(pauseMenu_UI) pauseMenu_UI.style.display = 'none';
+            if(gameOverMenu_UI) gameOverMenu_UI.style.display = 'none';
+            if(highScoresMenu_UI) highScoresMenu_UI.style.display = 'none';
+            isPaused = true;
 
             updateHUD();
             console.log("CombinedShooter fully initialized.");
@@ -670,7 +683,6 @@
                 scene.add(bullet);
                 playerBullets.push(bullet);
                 drone.userData.lastShot = bogoTime;
-                 // playSound_Bogos('shoot'); // Optional: Drone shoot sound
             }
         });
     }
@@ -692,10 +704,9 @@
                     enemies.push(enemy);
                 }
             }
-           // console.log("Created " + enemies.length + " enemies.");
         }
 
-        function takeDamage_Bogos(enemy, damage) { // For regular enemies
+        function takeDamage_Bogos(enemy, damage) {
             if (!enemy.visible) return;
             enemy.visible = false;
             if(enemy.parent) scene.remove(enemy);
@@ -744,8 +755,8 @@
         function updateHUD() {
             if (scoreDisplay) scoreDisplay.textContent = gameScore;
             if (livesDisplay) livesDisplay.textContent = lives;
-            if (starsDisplay) starsDisplay.textContent = gameStars; // Added for SpaceShooter HUD
-            if (powerUpDisplay) powerUpDisplay.textContent = activePowerUpName || 'None'; // Added for SpaceShooter HUD
+            if (starsDisplay) starsDisplay.textContent = gameStars;
+            if (powerUpDisplay) powerUpDisplay.textContent = activePowerUpName || 'None';
 
             if (boss && boss.visible) {
                  if (enemyProgressDisplay) enemyProgressDisplay.textContent = `Boss: ${Math.max(0, bossHealth)} HP`;
@@ -760,7 +771,7 @@
                     if (enemyProgressDisplay) enemyProgressDisplay.textContent = 'Enemies: N/A';
                  }
             }
-            const oldUiElement = document.getElementById('ui'); // Hide old BogosV1 UI
+            const oldUiElement = document.getElementById('ui');
             if(oldUiElement) oldUiElement.style.display = 'none';
         }
 
@@ -769,9 +780,9 @@
             particles.position.copy(position);
             particles.visible = true;
             particleMaterial.opacity = 1;
-            const localPositions = particleGeometry.attributes.position.array; // Renamed for clarity
-            const localVelocities = particleVelocities; // Direct ref
-            const localLifetimes = particleLifetimes; // Direct ref
+            const localPositions = particleGeometry.attributes.position.array;
+            const localVelocities = particleVelocities;
+            const localLifetimes = particleLifetimes;
             for (let i = 0; i < particleCount; i++) {
                 localPositions[i * 3] = 0;
                 localPositions[i * 3 + 1] = 0;
@@ -830,7 +841,6 @@
                  if (audioCtx.state === 'suspended') audioCtx.resume();
                 isPaused = !isPaused;
                 pauseButtonBogo.style.background = isPaused ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)';
-               // console.log("BogosV1 pause toggled: " + isPaused);
             });
 
             document.addEventListener('keydown', (e) => { keys[e.code] = true; });
@@ -851,10 +861,10 @@
             }
         }
 
-        window.startGame = function(ufoType) { // Made global for menu buttons
-            if (startMenu) startMenu.style.display = 'none';
-            if (gameOverMenu) gameOverMenu.style.display = 'none';
-            if (pauseMenu) pauseMenu.style.display = 'none';
+        window.startGame = function(ufoType) {
+            if (startMenu_UI) startMenu_UI.style.display = 'none';
+            if (gameOverMenu_UI) gameOverMenu_UI.style.display = 'none';
+            if (pauseMenu_UI) pauseMenu_UI.style.display = 'none';
 
             gameScore = 0;
             gameStars = 0;
@@ -875,12 +885,11 @@
             enemyBullets.length = 0;
             powerUps.length = 0;
             drones.length = 0;
-            // enemies array is cleared and repopulated in createEnemies()
 
             const selectedConfig = ufoConfigs.find(c => c.id === ufoType);
             if (!selectedConfig) {
                 console.error("UFO config not found:", ufoType);
-                if(startMenu) startMenu.style.display = 'flex';
+                if(startMenu_UI) startMenu_UI.style.display = 'flex';
                 return;
             }
 
@@ -888,11 +897,11 @@
             player.position.set(0, -15, 0);
             player.visible = true;
             scene.add(player);
-            playerStats = { ...selectedConfig.stats }; // Deep copy stats
+            playerStats = { ...selectedConfig.stats };
             lives = playerStats.health;
             shotCooldown = playerStats.shotCooldown;
 
-            if (thrusters) player.add(thrusters); // Add existing thrusters
+            if (thrusters) player.add(thrusters);
             if (shield) player.add(shield);
 
             if (ufoType === 'mothership') {
@@ -914,48 +923,52 @@
         };
 
         function setupUIEventListeners() {
-            if (selectScoutBtn) selectScoutBtn.addEventListener('click', () => window.startGame('scout'));
-            if (selectDestroyerBtn) selectDestroyerBtn.addEventListener('click', () => window.startGame('destroyer'));
-            if (selectMothershipBtn) selectMothershipBtn.addEventListener('click', () => window.startGame('mothership'));
+            if (selectScoutBtn) selectScoutBtn.addEventListener('click', () => { lastSelectedUfoType = 'scout'; window.startGame(lastSelectedUfoType); });
+            if (selectDestroyerBtn) selectDestroyerBtn.addEventListener('click', () => { lastSelectedUfoType = 'destroyer'; window.startGame(lastSelectedUfoType); });
+            if (selectMothershipBtn) selectMothershipBtn.addEventListener('click', () => { lastSelectedUfoType = 'mothership'; window.startGame(lastSelectedUfoType); });
+
+            if (launchBattleButton) { // This is SpaceShooter's #startGameButton
+                launchBattleButton.addEventListener('click', () => {
+                    window.startGame(lastSelectedUfoType);
+                });
+            }
 
             if (highScoresButton_StartMenu) highScoresButton_StartMenu.addEventListener('click', () => {
-                if(startMenu) startMenu.style.display = 'none';
-                if(highScoresMenu) highScoresMenu.style.display = 'flex';
-                // TODO: Render high scores if that logic is added
+                if(startMenu_UI) startMenu_UI.style.display = 'none';
+                if(highScoresMenu_UI) highScoresMenu_UI.style.display = 'flex';
             });
 
             if (mainPauseButton) mainPauseButton.addEventListener('click', () => {
                 isPaused = !isPaused;
                 if (isPaused) {
-                    if(pauseMenu) pauseMenu.style.display = 'flex';
+                    if(pauseMenu_UI) pauseMenu_UI.style.display = 'flex';
                 } else {
-                    if(pauseMenu) pauseMenu.style.display = 'none';
-                    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); // Resume audio on unpause
+                    if(pauseMenu_UI) pauseMenu_UI.style.display = 'none';
+                    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
                 }
             });
 
             if (resumeButton) resumeButton.addEventListener('click', () => {
                 isPaused = false;
-                if(pauseMenu) pauseMenu.style.display = 'none';
+                if(pauseMenu_UI) pauseMenu_UI.style.display = 'none';
                 if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             });
 
             if (hangarButton) hangarButton.addEventListener('click', () => {
-                if(pauseMenu) pauseMenu.style.display = 'none';
-                if(startMenu) startMenu.style.display = 'flex';
+                if(pauseMenu_UI) pauseMenu_UI.style.display = 'none';
+                if(startMenu_UI) startMenu_UI.style.display = 'flex';
                 isPaused = true;
-                // Optionally reset more game state here, or rely on startGame to do it
             });
 
             if (restartButton_GameOver) restartButton_GameOver.addEventListener('click', () => {
-                if(gameOverMenu) gameOverMenu.style.display = 'none';
-                if(startMenu) startMenu.style.display = 'flex';
+                if(gameOverMenu_UI) gameOverMenu_UI.style.display = 'none';
+                if(startMenu_UI) startMenu_UI.style.display = 'flex';
                 isPaused = true;
             });
 
             if (backButton_HighScores) backButton_HighScores.addEventListener('click', () => {
-                if(highScoresMenu) highScoresMenu.style.display = 'none';
-                if(startMenu) startMenu.style.display = 'flex';
+                if(highScoresMenu_UI) highScoresMenu_UI.style.display = 'none';
+                if(startMenu_UI) startMenu_UI.style.display = 'flex';
             });
         }
 
@@ -963,7 +976,7 @@
         let bogoTime = 0;
         const clock = new THREE.Clock();
 
-        function animate() { // This is the main combined animate function
+        function animate() {
             requestAnimationFrame(animate);
             const dt = clock.getDelta();
             bogoTime += dt;
@@ -972,8 +985,8 @@
             [scoutMaterial, destroyerMaterial, mothershipMaterial].forEach(mat => {
                 if (mat && mat.uniforms && mat.uniforms.time) mat.uniforms.time.value = bogoTime;
             });
-            drones.forEach(drone => {
-                if (drone.material && drone.material.uniforms && drone.material.uniforms.time) {
+             drones.forEach(drone => {
+                if (drone.material && drone.material.uniforms && drone.material.uniforms.time) { // Check drone material specifically
                     drone.material.uniforms.time.value = bogoTime;
                 }
             });
@@ -1053,7 +1066,7 @@
                 }
 
                 // Drones logic
-                updateDrones_Logic(dt); // Call helper
+                updateDrones_Logic(dt);
 
                 // Enemy movement
                 formationTime += dt;
@@ -1108,8 +1121,8 @@
                             if (lives <= 0) {
                                 if(player.parent) scene.remove(player); player.visible = false;
                                 const GOMenu = document.getElementById('gameOverMenu');
-                                const FSDisplay = document.getElementById('finalScore'); // Corrected ID
-                                const FStarsDisplay = document.getElementById('finalStars'); // New ID for Game Over stars
+                                const FSDisplay = document.getElementById('finalScore');
+                                const FStarsDisplay = document.getElementById('finalStars');
                                 if(FSDisplay) FSDisplay.textContent = gameScore;
                                 if(FStarsDisplay) FStarsDisplay.textContent = gameStars;
                                 if(GOMenu) GOMenu.style.display = 'flex';
@@ -1167,10 +1180,10 @@
                         }
                     }
                     if (!hitTarget) {
-                        for (let j = enemies.length - 1; j >= 0; j--) { // Iterate over original enemies array
+                        for (let j = enemies.length - 1; j >= 0; j--) {
                             const enemy = enemies[j];
                             if (enemy.visible && bullet.position.distanceTo(enemy.position) < 0.8) {
-                                takeDamage_Bogos(enemy, bullet.userData.power || 1); // takeDamage_Bogos handles visibility and scene removal
+                                takeDamage_Bogos(enemy, bullet.userData.power || 1);
                                 if(bullet.parent) scene.remove(bullet); playerBullets.splice(i, 1); hitTarget = true;
                                 shakeTime = 0.1; flashTime = 0.1; spawnParticles_Bogos(enemy.position.clone()); playSound_Bogos('hit');
                                 break;
@@ -1212,28 +1225,24 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             if (composer) composer.setSize(window.innerWidth, window.innerHeight);
-            // Preview renderers might need individual resizing if their container size changes
              Object.values(previewRenderers).forEach(r => {
-                if (r.domElement.parentElement) { // Check if canvas is in DOM and has parent
+                if (r.domElement.parentElement) {
                      const newWidth = r.domElement.parentElement.clientWidth || 100;
                      const newHeight = r.domElement.parentElement.clientHeight || 100;
                      r.setSize(newWidth, newHeight);
                 }
              });
-             if (previewCamera) { // Update preview camera aspect if it's shared
-                 // previewCamera.aspect = newWidth / newHeight; // This needs to be per-preview if aspect varies
+             if (previewCamera) {
+                 // previewCamera.aspect = newWidth / newHeight;
                  // previewCamera.updateProjectionMatrix();
              }
         });
 
-        // Initialize and start animation
         init();
-        animate(); // Main game loop
-        animatePreviews(); // Separate loop for UI previews
-        console.log("CombinedShooter with BogosV1 core systems started.");
+        animate();
+        animatePreviews();
+        console.log("CombinedShooter with BogosV1 core systems, power-ups, and refined UI logic started.");
 
     </script>
 </body>
 </html>
-
-[end of CombinedShooter.html]
