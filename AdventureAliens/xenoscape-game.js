@@ -121,6 +121,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameActive = false;
     let player;
     let keys = {};
+    let projectiles = [];
+    let enemies = [];
+    let particles = [];
+    let dnaDrops = [];
+    let platforms = [];
+    let enemySpawnTimer = 0;
+    const enemySpawnInterval = 120; // Spawn an enemy every 2 seconds at 60fps
+    let runState = { score: 0, dnaCollected: 0 };
 
     function saveState() {
         localStorage.setItem('xenoscapePlayerState', JSON.stringify(playerState));
@@ -207,29 +215,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    class Player {
-        constructor() {
-            this.width = 40;
-            this.height = 30;
-            this.x = 100;
-            this.y = canvas.height / 2 - this.height / 2;
-            this.speed = 5;
-            this.color = '#9333ea'; // A distinct purple for Xylar
+    class Particle {
+        constructor(x, y, color, size, lifespan) {
+            this.x = x;
+            this.y = y;
+            this.speedX = (Math.random() - 0.5) * 3;
+            this.speedY = (Math.random() - 0.5) * 3;
+            this.color = color;
+            this.size = Math.random() * size + 2;
+            this.lifespan = lifespan;
+            this.maxLifespan = lifespan;
         }
 
-        update(keys) {
-            let vy = 0;
-            if (keys['w'] || keys['ArrowUp']) {
-                vy = -this.speed;
-            }
-            if (keys['s'] || keys['ArrowDown']) {
-                vy = this.speed;
-            }
-            this.y += vy;
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            this.lifespan--;
+        }
 
-            // Boundary checks
-            if (this.y < 0) this.y = 0;
-            if (this.y > canvas.height - this.height) this.y = canvas.height - this.height;
+        draw(context) {
+            context.save();
+            context.globalAlpha = this.lifespan / this.maxLifespan;
+            context.fillStyle = this.color;
+            context.beginPath();
+            context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+        }
+    }
+
+    class DnaDrop {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.size = 8;
+            this.color = '#10b981'; // Emerald-500
+            this.value = Math.floor(Math.random() * 5 + 5); // 5-9 DNA
+            this.speedY = 0.5;
+        }
+
+        update() {
+            this.y += this.speedY;
+        }
+
+        draw(context) {
+            context.fillStyle = this.color;
+            context.beginPath();
+            context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            context.fill();
+            context.strokeStyle = '#a7f3d0'; // Emerald-200
+            context.lineWidth = 2;
+            context.stroke();
+        }
+    }
+
+    class Projectile {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.width = 15;
+            this.height = 5;
+            this.speed = 10;
+            this.color = '#34d399'; // Emerald-400
+        }
+
+        update() {
+            this.x += this.speed;
         }
 
         draw(context) {
@@ -238,27 +289,322 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    class Player {
+        constructor() {
+            this.width = 40;
+            this.height = 30;
+            this.x = 100;
+            this.y = canvas.height / 2 - this.height / 2;
+            this.vx = 0;
+            this.vy = 0;
+            this.maxSpeed = 7;
+            this.friction = 0.85;
+            this.gravity = 0.6;
+            this.jumpStrength = -14;
+            this.isOnGround = false;
+
+            this.color = '#9333ea'; // A distinct purple for Xylar
+            this.shootCooldown = 0;
+
+            // Apply upgrades
+            const fireRateLevel = playerState.upgrades.rapidFireModule || 0;
+            this.fireRate = 15 - fireRateLevel; // Each level reduces cooldown
+
+            this.maxHealth = 100 + (playerState.upgrades.exoskeletonPlating || 0) * 10;
+            this.health = this.maxHealth;
+            this.maxShield = (playerState.upgrades.shieldEmitter || 0) * 5;
+            this.shield = this.maxShield;
+
+            // Emergency Warp ability
+            this.warpUnlocked = (playerState.upgrades.emergencyWarp || 0) > 0;
+            this.warpCooldown = 0;
+            const warpLevel = playerState.upgrades.emergencyWarp || 0;
+            this.warpMaxCooldown = (10 - warpLevel * 1.5) * 60; // Cooldown in frames
+            this.isWarping = false;
+        }
+
+        update(keys) {
+            // --- Horizontal Movement ---
+            if (keys['a'] || keys['ArrowLeft']) this.vx -= 1.2;
+            if (keys['d'] || keys['ArrowRight']) this.vx += 1.2;
+
+            // --- Jumping ---
+            if ((keys['w'] || keys['ArrowUp']) && this.isOnGround) {
+                this.vy = this.jumpStrength;
+                this.isOnGround = false;
+            }
+
+            // --- Emergency Warp (Dash) ---
+            if (this.warpCooldown > 0) this.warpCooldown--;
+            if ((keys['Shift']) && this.warpUnlocked && this.warpCooldown <= 0) {
+                this.warp();
+            }
+
+            // --- Apply Physics ---
+            this.vx *= this.friction;
+            if (Math.abs(this.vx) > this.maxSpeed) this.vx = Math.sign(this.vx) * this.maxSpeed;
+            if (Math.abs(this.vx) < 0.1) this.vx = 0;
+
+            this.vy += this.gravity; // Apply gravity
+
+            this.x += this.vx;
+            this.y += this.vy;
+
+            this.isOnGround = false; // Assume not on ground until collision check
+
+            // Shooting
+            if (this.shootCooldown > 0) this.shootCooldown--;
+            if (keys[' '] && this.shootCooldown <= 0) { // Spacebar to shoot
+                this.shoot();
+            }
+
+            if (this.y > canvas.height) gameOver(); // Fell off the world
+        }
+
+        shoot() {
+            projectiles.push(new Projectile(this.x + this.width, this.y + this.height / 2 - 2.5));
+            this.shootCooldown = this.fireRate;
+        }
+
+        warp() {
+            const warpDirection = this.vx === 0 ? 1 : Math.sign(this.vx);
+            this.vx = 25 * warpDirection; // Powerful burst of speed
+            this.vy = -2; // Slight upward lift
+            this.warpCooldown = this.warpMaxCooldown;
+            this.isWarping = true;
+            createParticles(this.x, this.y, '#f0abfc', 20); // Warp effect
+            setTimeout(() => this.isWarping = false, 200); // Warp effect duration
+        }
+
+        hit(damage) {
+            // Cannot be hit while warping
+            if (this.isWarping) {
+                return;
+            }
+
+            if (this.shield > 0) {
+                this.shield -= damage;
+                if (this.shield < 0) {
+                    // If damage exceeds shield, carry over to health
+                    this.health += this.shield;
+                    this.shield = 0;
+                }
+            } else {
+                this.health -= damage;
+            }
+
+            createParticles(this.x + this.width / 2, this.y + this.height / 2, '#facc15', 10); // Yellow hit spark
+
+            if (this.health <= 0) {
+                this.health = 0;
+                gameOver();
+            }
+        }
+
+        draw(context) {
+            if (this.isWarping) {
+                context.fillStyle = '#f0abfc'; // Fuchsia-300
+                context.globalAlpha = 0.5;
+                context.fillRect(this.x, this.y, this.width, this.height);
+                context.globalAlpha = 1.0;
+            }
+            context.fillStyle = this.color; context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    class FlyingEnemy { // Renamed from Enemy for clarity
+        constructor() {
+            this.width = 30;
+            this.height = 30;
+            this.x = canvas.width;
+            this.y = Math.random() * (canvas.height - this.height);
+            this.speed = Math.random() * 2 + 1; // Random speed
+            this.color = '#ef4444'; // Red-500
+            this.health = 1;
+            this.dnaValue = 10;
+            this.scoreValue = 100;
+        }
+
+        update() {
+            this.x -= this.speed;
+        }
+
+        draw(context) {
+            context.fillStyle = this.color;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    class GroundEnemy {
+        constructor(platform) {
+            this.width = 40;
+            this.height = 40;
+            // Spawn randomly on the given platform
+            this.x = platform.x + Math.random() * (platform.width - this.width);
+            this.y = platform.y - this.height; // Position on top of the platform
+            this.speed = 1.5;
+            this.direction = Math.random() < 0.5 ? 1 : -1; // 1 for right, -1 for left
+            this.color = '#8b5cf6'; // Violet-500
+            this.health = 2; // A bit tougher than flying enemies
+            this.dnaValue = 15;
+            this.scoreValue = 150;
+            this.platform = platform; // Keep a reference to the platform it's on
+        }
+
+        update() {
+            this.x += this.speed * this.direction;
+
+            // Reverse direction if hitting platform edges
+            if (this.x <= this.platform.x || this.x + this.width >= this.platform.x + this.platform.width) {
+                this.direction *= -1;
+                // Nudge back to prevent sticking at the edge
+                this.x = Math.max(this.platform.x, Math.min(this.x, this.platform.x + this.platform.width - this.width));
+            }
+        }
+
+        draw(context) {
+            context.fillStyle = this.color;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    function createParticles(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(x, y, color, 5, 30));
+        }
+    }
+
+    function handleEnemies(context) {
+        // Spawning
+        enemySpawnTimer++;
+        if (enemySpawnTimer > enemySpawnInterval) {
+            // Introduce a chance to spawn different enemy types
+            if (Math.random() < 0.7) { // 70% chance for flying enemy
+                enemies.push(new FlyingEnemy());
+            } else { // 30% chance for ground enemy
+                // Find the main ground platform to spawn on
+                const groundPlatform = platforms.find(p => p.y === canvas.height - 20);
+                if (groundPlatform) { enemies.push(new GroundEnemy(groundPlatform)); }
+            }
+            enemySpawnTimer = 0;
+        }
+
+        // Update and draw
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
+            enemy.update();
+            enemy.draw(context);
+            if (enemy instanceof FlyingEnemy && enemy.x + enemy.width < 0) { // Only flying enemies go off-screen
+                enemies.splice(i, 1);
+            }
+        }
+    }
+
+    function handlePlatforms(context) {
+        for (const platform of platforms) {
+            context.fillStyle = '#4a044e'; // Dark purple for platforms
+            context.fillRect(platform.x, platform.y, platform.width, platform.height);
+        }
+    }
+
+    function checkPlatformCollisions() {
+        for (const platform of platforms) {
+            if (player.x < platform.x + platform.width && player.x + player.width > platform.x && player.y < platform.y + platform.height && player.y + player.height > platform.y && player.vy >= 0 && (player.y + player.height - player.vy) <= platform.y + 1) {
+                player.y = platform.y - player.height; player.vy = 0; player.isOnGround = true;
+            }
+        }
+    }
+
+    function checkCollisions() {
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const p = projectiles[i];
+                const e = enemies[j];
+                if (p.x < e.x + e.width && p.x + p.width > e.x && p.y < e.y + e.height && p.y + p.height > e.y) {
+                    projectiles.splice(i, 1);
+
+                    e.health--;
+                    if (e.health <= 0) {
+                        createParticles(e.x + e.width / 2, e.y + e.height / 2, e.color, 15);
+                        dnaDrops.push(new DnaDrop(e.x + e.width / 2, e.y + e.height / 2));
+                        runState.score += e.scoreValue;
+                        enemies.splice(j, 1);
+                    }
+
+                    break; // Projectile can only hit one enemy
+                }
+            }
+        }
+
+        // Player vs Enemy
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            if (player.x < e.x + e.width && player.x + player.width > e.x && player.y < e.y + e.height && player.y + player.height > e.y) {
+                createParticles(e.x + e.width / 2, e.y + e.height / 2, e.color, 15); enemies.splice(i, 1);
+                enemies.splice(i, 1);
+                player.hit(20); // Player takes 20 damage on collision
+            }
+        }
+
+        // Player vs DnaDrop
+        for (let i = dnaDrops.length - 1; i >= 0; i--) {
+            const d = dnaDrops[i];
+            const dnaMagnetLevel = playerState.upgrades.dnaMagnet || 0;
+            const collectionRadius = (player.width / 2 + d.size) + (dnaMagnetLevel * 15);
+            const dist = Math.hypot(player.x + player.width / 2 - d.x, player.y + player.height / 2 - d.y); if (dist < collectionRadius) {
+                runState.dnaCollected += d.value;
+                dnaDrops.splice(i, 1);
+            }
+        }
+    }
+
     function startGame() {
         gameActive = true;
         player = new Player();
-        // Reset run-specific stats here in the future
+        enemies = [];
+        projectiles = [];
+        particles = [];
+        dnaDrops = [];
+        enemySpawnTimer = 0;
+        platforms = [
+            // Ground
+            { x: 0, y: canvas.height - 20, width: canvas.width, height: 20 },
+            // Floating platforms
+            { x: 200, y: canvas.height - 150, width: 150, height: 20 },
+            { x: 450, y: canvas.height - 250, width: 200, height: 20 },
+            { x: 700, y: canvas.height - 100, width: 100, height: 20 },
+            { x: 900, y: canvas.height - 200, width: 180, height: 20 },
+        ];
+        runState = { score: 0, dnaCollected: 0 };
+        updateHud();
         gameLoop();
-    }
-
-    function gameLoop() {
-        if (!gameActive) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        player.update(keys);
-        player.draw(ctx);
-
-        requestAnimationFrame(gameLoop);
     }
 
     function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+    }
+
+    function gameOver() {
+        gameActive = false;
+        createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color, 50); // Player explosion
+
+        // Add collected DNA to total and save
+        playerState.dna += runState.dnaCollected;
+        saveState();
+
+        // Return to main menu after a delay
+        setTimeout(() => {
+            gameContainer.style.display = 'none';
+            mainMenu.style.display = 'block';
+        }, 2000);
+    }
+
+    function updateHud() {
+        healthBar.style.width = `${(player.health / player.maxHealth) * 100}%`;
+        shieldBar.style.width = player.maxShield > 0 ? `${(player.shield / player.maxShield) * 100}%` : '0%';
+        runDnaCounter.textContent = runState.dnaCollected;
+        scoreCounter.textContent = runState.score;
     }
 
     // --- INITIALIZATION ---
@@ -297,6 +643,52 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('keyup', (e) => keys[e.key] = false);
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update and draw particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.update();
+            p.draw(ctx);
+            if (p.lifespan <= 0) {
+                particles.splice(i, 1);
+            }
+        }
+
+        // Update and draw DNA drops
+        for (let i = dnaDrops.length - 1; i >= 0; i--) {
+            const d = dnaDrops[i];
+            d.update();
+            d.draw(ctx);
+            if (d.y > canvas.height) {
+                dnaDrops.splice(i, 1);
+            }
+        }
+
+        // Update and draw projectiles
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i];
+            p.update();
+            p.draw(ctx);
+            if (p.x > canvas.width) {
+                projectiles.splice(i, 1);
+            }
+        }
+
+        handlePlatforms(ctx);
+        handleEnemies(ctx);
+        player.update(keys);
+        player.draw(ctx);
+        checkPlatformCollisions();
+        checkCollisions();
+        updateHud();
+
+        requestAnimationFrame(gameLoop);
     }
 
     init();
