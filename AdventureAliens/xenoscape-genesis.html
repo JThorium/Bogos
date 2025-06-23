@@ -78,46 +78,7 @@
                 <!-- Outfit Upgrades Section -->
                 <div id="outfitUpgradesSection" class="upgrade-section">
                     <div id="outfitUpgradeGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- JS will populate this. Example cards below: -->
-                        <div class="upgrade-card p-3 rounded-lg flex flex-col justify-between">
-                            <div>
-                                <h4 class="text-md md:text-lg text-yellow-300 mb-1">Exoskeleton Plating</h4>
-                                <p class="text-xs text-gray-400 mb-2">Reinforces Xylar's suit, increasing maximum health.</p>
-                                <p class="text-sm text-cyan-300">Level: <span class="current-level">2</span>/<span class="max-level">10</span></p>
-                                <p class="text-sm text-white">Current Effect: <span class="current-effect">+20 Health</span></p>
-                                <p class="text-sm text-gray-300">Next: <span class="next-effect">+10 Health</span></p>
-                            </div>
-                            <div class="mt-3 flex justify-between items-center">
-                                <span class="text-sm text-green-400 font-bold">Cost: <span class="cost-value">150</span> DNA</span>
-                                <button class="menu-button bg-green-600 text-white px-4 py-1 rounded-md text-sm upgrade-button">UPGRADE</button>
-                            </div>
-                        </div>
-                        <div class="upgrade-card p-3 rounded-lg flex flex-col justify-between">
-                            <div>
-                                <h4 class="text-md md:text-lg text-yellow-300 mb-1">Jetpack Efficiency</h4>
-                                <p class="text-xs text-gray-400 mb-2">Improves fuel consumption for longer flight time.</p>
-                                <p class="text-sm text-cyan-300">Level: <span class="current-level">0</span>/<span class="max-level">5</span></p>
-                                <p class="text-sm text-white">Current Effect: <span class="current-effect">Base Efficiency</span></p>
-                                <p class="text-sm text-gray-300">Next: <span class="next-effect">+15% Efficiency</span></p>
-                            </div>
-                            <div class="mt-3 flex justify-between items-center">
-                                <span class="text-sm text-red-400 font-bold">Cost: <span class="cost-value">2000</span> DNA</span>
-                                <button class="menu-button bg-green-600 text-white px-4 py-1 rounded-md text-sm upgrade-button" disabled>UPGRADE</button>
-                            </div>
-                        </div>
-                        <div class="upgrade-card p-3 rounded-lg flex flex-col justify-between">
-                            <div>
-                                <h4 class="text-md md:text-lg text-yellow-300 mb-1">DNA Magnet</h4>
-                                <p class="text-xs text-gray-400 mb-2">Increases the collection radius for DNA drops.</p>
-                                <p class="text-sm text-cyan-300">Level: <span class="current-level">5</span>/<span class="max-level">5</span></p>
-                                <p class="text-sm text-white">Current Effect: <span class="current-effect">+100% Radius</span></p>
-                                <p class="text-sm text-gray-300">Next: <span class="next-effect">---</span></p>
-                            </div>
-                            <div class="mt-3 flex justify-between items-center">
-                                <span class="text-sm text-gray-500 font-bold">Cost: <span class="cost-value">---</span></span>
-                                <button class="menu-button bg-gray-600 text-white px-4 py-1 rounded-md text-sm" disabled>MAXED</button>
-                            </div>
-                        </div>
+                        <!-- JavaScript will populate this grid -->
                     </div>
                 </div>
 
@@ -131,34 +92,7 @@
         </div>
     </div>
 
-    <script>
-        // Basic interactivity for the mockup
-        const mainMenu = document.getElementById('mainMenu');
-        const evolutionChamberContainer = document.getElementById('evolutionChamberContainer');
-        const openBtn = document.getElementById('openEvolutionChamberButton');
-        const closeBtn = document.getElementById('closeEvolutionChamberButton');
-        const outfitTab = document.getElementById('outfitUpgradesTab');
-        const weaponTab = document.getElementById('weaponUpgradesTab');
-        const outfitSection = document.getElementById('outfitUpgradesSection');
-        const weaponSection = document.getElementById('weaponUpgradesSection');
-
-        openBtn.addEventListener('click', () => { evolutionChamberContainer.style.display = 'flex'; });
-        closeBtn.addEventListener('click', () => { evolutionChamberContainer.style.display = 'none'; });
-
-        outfitTab.addEventListener('click', () => {
-            outfitTab.classList.add('active');
-            weaponTab.classList.remove('active');
-            outfitSection.style.display = 'block';
-            weaponSection.style.display = 'none';
-        });
-
-        weaponTab.addEventListener('click', () => {
-            weaponTab.classList.add('active');
-            outfitTab.classList.remove('active');
-            weaponSection.style.display = 'block';
-            outfitSection.style.display = 'none';
-        });
-    </script>
+    <script src="xenoscape-game.js"></script>
 
 </body>
 </html>
