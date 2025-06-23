@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Xenoscape: Genesis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Press Start 2P', cursive; background-color: #0c0a14; color: white; }
+        .modal-container {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .modal {
+            background-color: rgba(18, 16, 33, 0.9);
+            border: 2px solid #4a044e;
+            box-shadow: 0 0 20px rgba(192, 38, 211, 0.5);
+        }
+        .menu-button {
+            transition: transform 0.2s ease, filter 0.2s ease;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+        .menu-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+        .menu-button:disabled {
+            background-color: #4b5563;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .upgrade-card {
+            background-color: #1e1b34;
+            border: 1px solid #3b0764;
+        }
+        .tab-button.active {
+            background-color: #a21caf; /* Fuchsia-700 */
+            border-bottom: 2px solid #f0abfc; /* Fuchsia-300 */
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex items-center justify-center overflow-hidden">
+
+    <!-- This would be the main menu or a Relay Point screen -->
+    <div id="mainMenu" class="text-center">
+        <h1 class="text-4xl text-fuchsia-400 mb-8">XENOSCAPE: GENESIS</h1>
+        <button id="openEvolutionChamberButton" class="menu-button bg-purple-800 text-white font-bold py-3 px-6 rounded-lg text-lg">
+            ENTER EVOLUTION CHAMBER
+        </button>
+    </div>
+
+    <!-- The Evolution Chamber Modal -->
+    <div id="evolutionChamberContainer" class="modal-container" style="display: none;">
+        <div id="evolutionChamber" class="modal flex flex-col h-full max-h-[90vh] w-full max-w-5xl p-4 rounded-xl">
+            <!-- Header -->
+            <div class="flex-shrink-0 border-b-2 border-fuchsia-800 pb-3 mb-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl md:text-4xl text-green-400">EVOLUTION CHAMBER</h2>
+                    <button id="closeEvolutionChamberButton" class="text-2xl text-gray-400 hover:text-white">&times;</button>
+                </div>
+                <p class="text-base md:text-lg mt-1 text-green-300">XENO-DNA: <span id="dnaCounter">1250</span></p>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="flex-grow min-h-0 overflow-y-auto">
+                <!-- Category Tabs -->
+                <div class="flex justify-center space-x-2 md:space-x-4 mb-4">
+                    <button id="outfitUpgradesTab" class="tab-button active menu-button bg-blue-700 text-white font-bold py-2 px-4 rounded-t-lg text-sm">OUTFIT</button>
+                    <button id="weaponUpgradesTab" class="tab-button menu-button bg-red-700 text-white font-bold py-2 px-4 rounded-t-lg text-sm">WEAPONS</button>
+                </div>
+
+                <!-- Outfit Upgrades Section -->
+                <div id="outfitUpgradesSection" class="upgrade-section">
+                    <div id="outfitUpgradeGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- JS will populate this. Example cards below: -->
+                        <div class="upgrade-card p-3 rounded-lg flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-md md:text-lg text-yellow-300 mb-1">Exoskeleton Plating</h4>
+                                <p class="text-xs text-gray-400 mb-2">Reinforces Xylar's suit, increasing maximum health.</p>
+                                <p class="text-sm text-cyan-300">Level: <span class="current-level">2</span>/<span class="max-level">10</span></p>
+                                <p class="text-sm text-white">Current Effect: <span class="current-effect">+20 Health</span></p>
+                                <p class="text-sm text-gray-300">Next: <span class="next-effect">+10 Health</span></p>
+                            </div>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-sm text-green-400 font-bold">Cost: <span class="cost-value">150</span> DNA</span>
+                                <button class="menu-button bg-green-600 text-white px-4 py-1 rounded-md text-sm upgrade-button">UPGRADE</button>
+                            </div>
+                        </div>
+                        <div class="upgrade-card p-3 rounded-lg flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-md md:text-lg text-yellow-300 mb-1">Jetpack Efficiency</h4>
+                                <p class="text-xs text-gray-400 mb-2">Improves fuel consumption for longer flight time.</p>
+                                <p class="text-sm text-cyan-300">Level: <span class="current-level">0</span>/<span class="max-level">5</span></p>
+                                <p class="text-sm text-white">Current Effect: <span class="current-effect">Base Efficiency</span></p>
+                                <p class="text-sm text-gray-300">Next: <span class="next-effect">+15% Efficiency</span></p>
+                            </div>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-sm text-red-400 font-bold">Cost: <span class="cost-value">2000</span> DNA</span>
+                                <button class="menu-button bg-green-600 text-white px-4 py-1 rounded-md text-sm upgrade-button" disabled>UPGRADE</button>
+                            </div>
+                        </div>
+                        <div class="upgrade-card p-3 rounded-lg flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-md md:text-lg text-yellow-300 mb-1">DNA Magnet</h4>
+                                <p class="text-xs text-gray-400 mb-2">Increases the collection radius for DNA drops.</p>
+                                <p class="text-sm text-cyan-300">Level: <span class="current-level">5</span>/<span class="max-level">5</span></p>
+                                <p class="text-sm text-white">Current Effect: <span class="current-effect">+100% Radius</span></p>
+                                <p class="text-sm text-gray-300">Next: <span class="next-effect">---</span></p>
+                            </div>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-sm text-gray-500 font-bold">Cost: <span class="cost-value">---</span></span>
+                                <button class="menu-button bg-gray-600 text-white px-4 py-1 rounded-md text-sm" disabled>MAXED</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weapon Upgrades Section (Initially hidden) -->
+                <div id="weaponUpgradesSection" class="upgrade-section" style="display: none;">
+                    <div id="weaponUpgradeGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- JS will populate this with weapon upgrades -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Basic interactivity for the mockup
+        const mainMenu = document.getElementById('mainMenu');
+        const evolutionChamberContainer = document.getElementById('evolutionChamberContainer');
+        const openBtn = document.getElementById('openEvolutionChamberButton');
+        const closeBtn = document.getElementById('closeEvolutionChamberButton');
+        const outfitTab = document.getElementById('outfitUpgradesTab');
+        const weaponTab = document.getElementById('weaponUpgradesTab');
+        const outfitSection = document.getElementById('outfitUpgradesSection');
+        const weaponSection = document.getElementById('weaponUpgradesSection');
+
+        openBtn.addEventListener('click', () => { evolutionChamberContainer.style.display = 'flex'; });
+        closeBtn.addEventListener('click', () => { evolutionChamberContainer.style.display = 'none'; });
+
+        outfitTab.addEventListener('click', () => {
+            outfitTab.classList.add('active');
+            weaponTab.classList.remove('active');
+            outfitSection.style.display = 'block';
+            weaponSection.style.display = 'none';
+        });
+
+        weaponTab.addEventListener('click', () => {
+            weaponTab.classList.add('active');
+            outfitTab.classList.remove('active');
+            weaponSection.style.display = 'block';
+            outfitSection.style.display = 'none';
+        });
+    </script>
+
+</body>
+</html>
