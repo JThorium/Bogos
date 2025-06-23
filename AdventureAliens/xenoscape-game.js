@@ -44,6 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
             getNextEffect: (level) => `+${(level + 1) * 5} Shield HP`,
             category: 'outfit'
         },
+        emergencyWarp: {
+            name: "Emergency Warp",
+            description: "Unlocks a short-range dash to evade attacks. Upgrades reduce cooldown.",
+            maxLevel: 5,
+            baseCost: 1000,
+            costMultiplier: 2.5,
+            getEffect: (level) => `Cooldown: ${10 - level * 1.5}s`,
+            getNextEffect: (level) => `Cooldown: ${10 - (level + 1) * 1.5}s`,
+            category: 'outfit'
+        },
         // WEAPON UPGRADES
         laserCoreOvercharge: {
             name: "Laser Core Overcharge",
@@ -65,6 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
             getNextEffect: (level) => `+${(level + 1) * 7}% Fire Rate`,
             category: 'weapon'
         },
+        unlockPlasmaBlaster: {
+            name: "Unlock: Plasma Blaster",
+            description: "Unlocks the Plasma Blaster. Slower, high-damage explosive shots.",
+            maxLevel: 1,
+            baseCost: 2500,
+            costMultiplier: 1,
+            getEffect: (level) => level > 0 ? 'Unlocked' : 'Locked',
+            getNextEffect: (level) => 'Unlock Weapon',
+            category: 'weapon'
+        },
     };
 
     // --- PLAYER STATE ---
@@ -74,11 +94,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- DOM ELEMENTS ---
+    const mainMenu = document.getElementById('mainMenu');
+    const gameContainer = document.getElementById('gameContainer');
+    const startGameButton = document.getElementById('startGameButton');
+
     const evolutionChamberContainer = document.getElementById('evolutionChamberContainer');
     const openBtn = document.getElementById('openEvolutionChamberButton');
     const closeBtn = document.getElementById('closeEvolutionChamberButton');
     const dnaCounter = document.getElementById('dnaCounter');
     
+    // HUD elements
+    const healthBar = document.getElementById('healthBar');
+    const shieldBar = document.getElementById('shieldBar');
+    const scoreCounter = document.getElementById('scoreCounter');
+    const runDnaCounter = document.getElementById('runDnaCounter');
+    const currentWeaponDisplay = document.getElementById('currentWeaponDisplay');
+
     const outfitTab = document.getElementById('outfitUpgradesTab');
     const weaponTab = document.getElementById('weaponUpgradesTab');
     const outfitSection = document.getElementById('outfitUpgradesSection');
@@ -87,6 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const weaponGrid = document.getElementById('weaponUpgradeGrid');
 
     // --- STATE MANAGEMENT ---
+    let gameActive = false;
+    let player;
+    let keys = {};
+
     function saveState() {
         localStorage.setItem('xenoscapePlayerState', JSON.stringify(playerState));
     }
@@ -168,11 +203,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- GAME LOGIC ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    class Player {
+        constructor() {
+            this.width = 40;
+            this.height = 30;
+            this.x = 100;
+            this.y = canvas.height / 2 - this.height / 2;
+            this.speed = 5;
+            this.color = '#9333ea'; // A distinct purple for Xylar
+        }
+
+        update(keys) {
+            let vy = 0;
+            if (keys['w'] || keys['ArrowUp']) {
+                vy = -this.speed;
+            }
+            if (keys['s'] || keys['ArrowDown']) {
+                vy = this.speed;
+            }
+            this.y += vy;
+
+            // Boundary checks
+            if (this.y < 0) this.y = 0;
+            if (this.y > canvas.height - this.height) this.y = canvas.height - this.height;
+        }
+
+        draw(context) {
+            context.fillStyle = this.color;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    function startGame() {
+        gameActive = true;
+        player = new Player();
+        // Reset run-specific stats here in the future
+        gameLoop();
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        player.update(keys);
+        player.draw(ctx);
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
     // --- INITIALIZATION ---
     function init() {
         loadState();
-        openBtn.addEventListener('click', () => { renderAll(); evolutionChamberContainer.style.display = 'flex'; });
+
+        // --- Main Menu & Screen Transitions ---
+        startGameButton.addEventListener('click', () => {
+            mainMenu.style.display = 'none';
+            evolutionChamberContainer.style.display = 'none'; // Ensure it's hidden
+            gameContainer.style.display = 'block';
+            startGame();
+        });
+
+        openBtn.addEventListener('click', () => {
+            renderAll();
+            evolutionChamberContainer.style.display = 'flex';
+        });
         closeBtn.addEventListener('click', () => { evolutionChamberContainer.style.display = 'none'; });
+
+        // --- Tab Logic ---
         outfitTab.addEventListener('click', () => {
             outfitTab.classList.add('active'); weaponTab.classList.remove('active');
             outfitSection.style.display = 'block'; weaponSection.style.display = 'none';
@@ -181,7 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
             weaponTab.classList.add('active'); outfitTab.classList.remove('active');
             weaponSection.style.display = 'block'; outfitSection.style.display = 'none';
         });
+
+        // --- Purchase Logic ---
         evolutionChamberContainer.addEventListener('click', handlePurchase);
+
+        // --- Input Listeners ---
+        window.addEventListener('keydown', (e) => keys[e.key] = true);
+        window.addEventListener('keyup', (e) => keys[e.key] = false);
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
     }
 
     init();
