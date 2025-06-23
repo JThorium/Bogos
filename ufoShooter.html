@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R3F UFO Shooter</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+    #root { width: 100vw; height: 100vh; }
+  </style>
+  <!-- React and ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX processing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- ThreeJS and React Three Fiber -->
+  <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+  <script src="https://unpkg.com/@react-three/fiber@8.13.5/dist/react-three-fiber.umd.js"></script>
+  <script src="https://unpkg.com/@react-three/drei@9.74.3/dist/drei.umd.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { Canvas, useFrame } = ReactThreeFiber;
+    const { OrbitControls } = drei;
+
+    function Spaceship() {
+      const ref = React.useRef();
+      useFrame(({ clock }) => {
+        ref.current.rotation.x = clock.elapsedTime;
+        ref.current.rotation.y = clock.elapsedTime * 0.5;
+      });
+      return (
+        <mesh ref={ref} position={[0, 0, 0]}>
+          <coneGeometry args={[1, 2, 32]} />
+          <meshStandardMaterial color="hotpink" />
+        </mesh>
+      );
+    }
+
+    function Starfield() {
+      const stars = React.useMemo(() => {
+        const positions = [];
+        for (let i = 0; i < 1000; i++) {
+          const x = (Math.random() - 0.5) * 200;
+          const y = (Math.random() - 0.5) * 200;
+          const z = (Math.random() - 0.5) * 200;
+          positions.push(x, y, z);
+        }
+        return new THREE.Float32BufferAttribute(positions, 3);
+      }, []);
+      return (
+        <points>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[stars, 3]} />
+          </bufferGeometry>
+          <pointsMaterial color="white" size={0.5} />
+        </points>
+      );
+    }
+
+    function App() {
+      return (
+        <Canvas camera={{ position: [0, 0, 5] }}>
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
+          <Starfield />
+          <Spaceship />
+          <OrbitControls enablePan={false} />
+        </Canvas>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

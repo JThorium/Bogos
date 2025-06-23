@@ -1,0 +1,2786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cosmic UFO Battle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a1a; font-size: 0; }
+    canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+    .touch-controls {
+      position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; pointer-events: none; z-index: 10;
+    }
+    .touch-area {
+      width: 50%; height: 100px; pointer-events: auto; display: flex; align-items: center; justify-content: center;
+    }
+    .touch-button {
+      font-size: 40px; color: #00ffff; background: rgba(0, 255, 255, 0.2); border: 2px solid #00ffff; border-radius: 10px;
+      padding: 10px 20px; opacity: 0.5; text-shadow: 0 0 10px #00ffff; pointer-events: none;
+    }
+    .hud {
+      position: absolute; top: 10px; left: 10px; color: #00ffff; font-family: 'Orbitron', sans-serif; font-size: 16px; z-index: 10;
+      text-shadow: 0 0 10px #00ffff; background: rgba(0, 255, 255, 0.1); padding: 8px 12px; border-radius: 5px; border: 1px solid #00ffff;
+    }
+    .menu, .pauseMenu, .gameOverMenu, .highScoresMenu {
+      position: absolute; top: 0; left: 0; background: linear-gradient(135deg, rgba(10, 10, 50, 0.9), rgba(50, 0, 100, 0.9));
+      color: #00ffff; font-family: 'Orbitron', sans-serif; width: 100%; height: 100%; overflow-y: auto; padding: 20px;
+      box-sizing: border-box; z-index: 20; display: flex; flex-direction: column; align-items: center; text-shadow: 0 0 10px #00ffff;
+      backdrop-filter: blur(5px); pointer-events: auto;
+    }
+    #ufoGrid {
+      display: flex; flex-wrap: wrap; gap: 10px; max-height: 50vh; overflow-y: auto; justify-content: center;
+    }
+    .ufoPreview {
+      width: 100px; height: 100px; background: rgba(0, 0, 50, 0.8); border: 2px solid #ff00ff; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; color: #00ffff; font-size: 12px; flex-direction: column;
+      cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; pointer-events: auto;
+    }
+    .ufoPreview:hover { transform: scale(1.15); box-shadow: 0 0 20px #ff00ff; }
+    .ufoPreview.locked { filter: brightness(0.3); border-color: #555; color: #00ffff; }
+    #pauseButton {
+      position: absolute; top: 10px; right: 10px; font-size: 24px; color: #00ffff; background: none; border: none; z-index: 11;
+      text-shadow: 0 0 10px #00ffff; cursor: pointer; transition: transform 0.3s; pointer-events: auto;
+    }
+    #pauseButton:hover { transform: scale(1.3); }
+    #notification {
+      position: absolute; top: 50px; left: 50%; transform: translateX(-50%) scale(1); background: linear-gradient(135deg, #ff00ff, #00ffff);
+      color: #0a0a1a; font-family: 'Orbitron', sans-serif; font-weight: bold; padding: 12px 24px; border-radius: 12px;
+      display: none; z-index: 30; animation: notify 1.5s ease-in-out;
+    }
+    button {
+      padding: 10px 20px; margin: 8px; font-family: 'Orbitron', sans-serif; font-size: 16px; color: #0a0a1a;
+      background: linear-gradient(135deg, #00ffff, #ff00ff); border: none; border-radius: 8px; cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s; box-shadow: 0 0 15px #00ffff; pointer-events: auto;
+    }
+    button:hover { transform: scale(1.15); box-shadow: 0 0 20px #00ffff; }
+    @keyframes notify {
+      0% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+      20% { transform: translateX(-50%) scale(1.1); opacity: 1; }
+      80% { transform: translateX(-50%) scale(1); opacity: 1; }
+      100% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="touch-controls">
+    <div id="left" class="touch-area"><div class="touch-button">◄</div></div>
+    <div id="right" class="touch-area"><div class="touch-button">►</div></div>
+  </div>
+  <div class="hud" id="hud"></div>
+  <div class="menu" id="startMenu">
+    <h2>Choose Your Starship</h2>
+    <div id="ufoGrid"></div>
+    <h3>Galactic Upgrades</h3>
+    <div id="upgradeOptions"></div>
+    <button id="startGameButton">Launch into Battle</button>
+    <button id="highScoresButton">High Scores</button>
+  </div>
+  <div class="menu pauseMenu" id="pauseMenu" style="display:none">
+    <h2>Battle Paused</h2>
+    <div id="pauseUpgrades"></div>
+    <button id="resumeButton">Resume Mission</button>
+    <button id="hangarButton">Return to Hangar</button>
+  </div>
+  <div class="menu gameOverMenu" id="gameOverMenu" style="display:none">
+    <h2>Starship Destroyed</h2>
+    <p id="finalScore"></p>
+    <p id="starsEarned"></p>
+    <div id="highScores"></div>
+    <button id="restartButton">Return to Base</button>
+  </div>
+  <div class="menu highScoresMenu" id="highScoresMenu" style="display:none">
+    <h2>Galactic Legends</h2>
+    <div id="highScoresList"></div>
+    <button id="clearScoresButton">Clear Scores</button>
+    <button id="backButton">Back</button>
+  </div>
+  <button id="pauseButton">⏸️</button>
+  <div id="notification"></div>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+
+    let scene, camera, renderer, audioCtx, sounds = {};
+    let player, playerTrail, shieldMesh, drones = [], bullets = [], enemyBullets = [], enemies = [], starsOnField = [], powerUps = [], particles = [];
+    let lastShot = 0, lastSpawn = 0, lastHit = 0, lastFrame = 0, bossActive = false, boss = null;
+    let paused = true, gameOver = false;
+    let stars = parseInt(localStorage.getItem('stars')) || 0;
+    let score = 0;
+    let playerShields = 0, bulletLevel = 0;
+    let heartAnim = 0;
+    const heartCycle = ['🩷', '❤️', '♥️', '❤️', '🩷'];
+    let keys = {}, moveLeft = false, moveRight = false;
+
+    const shootPatterns = {
+      single: (ufo, position) => {
+        createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1), angle: 0 });
+        playSound('laser');
+      },
+      spread: (ufo, position) => {
+        [-0.2, 0, 0.2].forEach(angle => createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1), angle }));
+        playSound('laser');
+      },
+      homing: (ufo, position) => {
+        const bullet = createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1) });
+        bullet.userData.homing = true;
+        playSound('laser');
+      },
+      burst: (ufo, position) => {
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1) }), i * 100);
+        }
+        playSound('laser');
+      },
+      laser: (ufo, position) => {
+        createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1) * 2, angle: 0, speed: 0.5 });
+        playSound('laser');
+      },
+      wave: (ufo, position) => {
+        [-0.15, 0, 0.15].forEach(angle => {
+          const bullet = createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1), angle });
+          bullet.userData.wave = true;
+        });
+        playSound('laser');
+      },
+      explosive: (ufo, position) => {
+        const bullet = createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1) * 1.5, angle: 0 });
+        bullet.userData.explosive = true;
+        playSound('laser');
+      },
+      triple: (ufo, position) => {
+        [-0.1, 0, 0.1].forEach(angle => createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1), angle }));
+        playSound('laser');
+      },
+      arc: (ufo, position) => {
+        [-0.3, -0.15, 0, 0.15, 0.3].forEach(angle => createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1) * 0.8, angle }));
+        playSound('laser');
+      },
+      spiral: (ufo, position) => {
+        const angle = Date.now() / 1000 % (Math.PI * 2);
+        [angle, angle + Math.PI].forEach(a => createBullet(position, { damage: ufo.stats.superchargePower * (bulletLevel + 1), angle: a }));
+        playSound('laser');
+      }
+    };
+
+// UFO data (50 UFOs, geometries halved)
+const ufos = [
+  { id: 'scout', name: 'Stellar Scout', geometry: new THREE.CylinderGeometry(0.2, 0.4, 0.1, 32), colors: [1, 0, 0, 0, 1, 0], pattern: 2, stats: { moveSpeed: 0.2, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0x00ff00, unlocked: true, cost: 0 },
+  { id: 'destroyer', name: 'Nebula Destroyer', geometry: new THREE.SphereGeometry(0.4, 32, 32), colors: [0.7, 0.7, 0.7, 0, 0, 1], pattern: 1, stats: { moveSpeed: 0.15, health: 2, shotCooldown: 0.3, superchargePower: 3, drones: 0 }, shoot: 'spread', thrusterColor: 0x0000ff, unlocked: true, cost: 0 },
+  { id: 'mothership', name: 'Cosmic Mothership', geometry: new THREE.SphereGeometry(0.5, 32, 32), colors: [0.5, 0, 1, 1, 1, 0], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.3, superchargePower: 1, drones: 2 }, shoot: 'homing', thrusterColor: 0xffff00, unlocked: true, cost: 0 },
+  { id: 'ufo4', name: 'Starfire Blazer', geometry: new THREE.CylinderGeometry(0.25, 0.5, 0.15, 32), colors: [0, 0.5, 0.5, 1, 0.5, 0], pattern: 1, stats: { moveSpeed: 0.18, health: 1, shotCooldown: 0.15, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0xffa500, unlocked: false, cost: 25 },
+  { id: 'ufo5', name: 'Quantum Cube', geometry: new THREE.BoxGeometry(0.4, 0.4, 0.4), colors: [0, 0, 0, 1, 0, 1], pattern: 2, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 1 }, shoot: 'single', thrusterColor: 0xff00ff, unlocked: false, cost: 30 },
+  { id: 'ufo6', name: 'Tetra Blitz', geometry: new THREE.TetrahedronGeometry(0.4), colors: [1, 0.8, 0, 0, 1, 1], pattern: 0, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'burst', thrusterColor: 0x00ffff, unlocked: false, cost: 35 },
+  { id: 'ufo7', name: 'Dodeca Defender', geometry: new THREE.DodecahedronGeometry(0.35), colors: [1, 1, 1, 1, 0, 1], pattern: 0, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.4, superchargePower: 2, drones: 0 }, shoot: 'spread', thrusterColor: 0xff0000, unlocked: false, cost: 40 },
+  { id: 'ufo8', name: 'Emerald Orb', geometry: new THREE.SphereGeometry(0.45, 32, 32), colors: [0, 1, 0, 0.5, 0, 1], pattern: 1, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'homing', thrusterColor: 0x800080, unlocked: false, cost: 45 },
+  { id: 'ufo9', name: 'Hex Pulse', geometry: new THREE.CylinderGeometry(0.3, 0.3, 0.1, 6), colors: [0, 0, 1, 1, 0, 0], pattern: 1, stats: { moveSpeed: 0.16, health: 1, shotCooldown: 0.35, superchargePower: 1, drones: 0 }, shoot: 'burst', thrusterColor: 0xff0000, unlocked: false, cost: 50 },
+  { id: 'ufo10', name: 'Void Lancer', geometry: new THREE.SphereGeometry(0.4, 32, 32), colors: [1, 0.5, 0, 0, 0, 0], pattern: 1, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.6, superchargePower: 3, drones: 0 }, shoot: 'laser', thrusterColor: 0x000000, unlocked: false, cost: 55 },
+  { id: 'ufo11', name: 'Wave Rider', geometry: new THREE.CylinderGeometry(0.25, 0.35, 0.2, 32), colors: [1, 0, 0.5, 0, 0.5, 0.5], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'wave', thrusterColor: 0x00ff00, unlocked: false, cost: 60 },
+  { id: 'ufo12', name: 'Nova Bomber', geometry: new THREE.ConeGeometry(0.35, 0.5, 32), colors: [1, 1, 0, 0.5, 0, 0.5], pattern: 1, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'explosive', thrusterColor: 0x800080, unlocked: false, cost: 65 },
+  { id: 'ufo13', name: 'Astral Fortress', geometry: new THREE.BoxGeometry(0.45, 0.45, 0.45), colors: [0, 1, 1, 1, 0.8, 0], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.4, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0xffd700, unlocked: false, cost: 70 },
+  { id: 'ufo14', name: 'Comet Striker', geometry: new THREE.CylinderGeometry(0.3, 0.6, 0.2, 32), colors: [1, 0, 0, 1, 1, 1], pattern: 0, stats: { moveSpeed: 0.17, health: 1, shotCooldown: 0.1, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0xffffff, unlocked: false, cost: 75 },
+  { id: 'ufo15', name: 'Triad Enforcer', geometry: new THREE.ConeGeometry(0.3, 0.6, 32), colors: [0, 0, 0, 0, 1, 0], pattern: 2, stats: { moveSpeed: 0.15, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'triple', thrusterColor: 0x00ff00, unlocked: false, cost: 80 },
+  { id: 'ufo16', name: 'Arc Vortex', geometry: new THREE.TorusGeometry(0.3, 0.1, 16, 32), colors: [0.5, 0.5, 0.5, 1, 0, 0], pattern: 1, stats: { moveSpeed: 0.16, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'arc', thrusterColor: 0xff0000, unlocked: false, cost: 85 },
+  { id: 'ufo17', name: 'Spiral Phantom', geometry: new THREE.IcosahedronGeometry(0.35), colors: [0, 1, 1, 1, 0, 1], pattern: 0, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.4, superchargePower: 2, drones: 0 }, shoot: 'spiral', thrusterColor: 0xff00ff, unlocked: false, cost: 90 },
+  { id: 'ufo18', name: 'Meteor Skirmisher', geometry: new THREE.CylinderGeometry(0.25, 0.45, 0.15, 32), colors: [1, 0, 1, 0, 1, 0], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0x00ff00, unlocked: false, cost: 95 },
+  { id: 'ufo19', name: 'Seeker Sphere', geometry: new THREE.SphereGeometry(0.4, 32, 32), colors: [0, 0, 1, 1, 0.5, 0], pattern: 1, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.35, superchargePower: 1, drones: 0 }, shoot: 'homing', thrusterColor: 0xffa500, unlocked: false, cost: 100 },
+  { id: 'ufo20', name: 'Burst Guardian', geometry: new THREE.BoxGeometry(0.35, 0.35, 0.35), colors: [1, 1, 0, 0, 0, 1], pattern: 0, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'burst', thrusterColor: 0x0000ff, unlocked: false, cost: 110 },
+  { id: 'ufo21', name: 'Trident Fury', geometry: new THREE.ConeGeometry(0.3, 0.5, 32), colors: [0, 1, 0, 1, 0.8, 0], pattern: 2, stats: { moveSpeed: 0.17, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'triple', thrusterColor: 0xff0000, unlocked: false, cost: 120 },
+  { id: 'ufo22', name: 'Starshot Crusader', geometry: new THREE.TetrahedronGeometry(0.4), colors: [1, 0, 0.5, 0, 1, 1], pattern: 1, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'spread', thrusterColor: 0x00ffff, unlocked: false, cost: 130 },
+  { id: 'ufo23', name: 'Laser Sentinel', geometry: new THREE.DodecahedronGeometry(0.35), colors: [0.5, 0, 1, 1, 1, 0], pattern: 0, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'laser', thrusterColor: 0xffff00, unlocked: false, cost: 140 },
+  { id: 'ufo24', name: 'Wavebreaker', geometry: new THREE.CylinderGeometry(0.25, 0.4, 0.15, 32), colors: [0, 0.5, 0.5, 1, 0, 1], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'wave', thrusterColor: 0xff00ff, unlocked: false, cost: 150 },
+  { id: 'ufo25', name: 'Detonator', geometry: new THREE.SphereGeometry(0.45, 32, 32), colors: [1, 0.5, 0, 0, 1, 0], pattern: 1, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'explosive', thrusterColor: 0x800080, unlocked: false, cost: 160 },
+  { id: 'ufo26', name: 'Gravity Bastion', geometry: new THREE.BoxGeometry(0.4, 0.4, 0.4), colors: [0, 0, 1, 1, 0.8, 0], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.4, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0xffd700, unlocked: false, cost: 170 },
+  { id: 'ufo27', name: 'Arc Predator', geometry: new THREE.ConeGeometry(0.35, 0.6, 32), colors: [1, 0, 0, 0, 0.5, 0.5], pattern: 2, stats: { moveSpeed: 0.16, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'arc', thrusterColor: 0x00ff00, unlocked: false, cost: 180 },
+  { id: 'ufo28', name: 'Spiral Wraith', geometry: new THREE.TorusGeometry(0.3, 0.1, 16, 32), colors: [0.5, 1, 0, 1, 0, 0], pattern: 1, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'spiral', thrusterColor: 0xff0000, unlocked: false, cost: 190 },
+  { id: 'ufo29', name: 'Homing Specter', geometry: new THREE.IcosahedronGeometry(0.35), colors: [0, 1, 1, 1, 0.5, 0], pattern: 0, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.35, superchargePower: 1, drones: 0 }, shoot: 'homing', thrusterColor: 0xffa500, unlocked: false, cost: 200 },
+  { id: 'ufo30', name: 'Pulse Interceptor', geometry: new THREE.CylinderGeometry(0.25, 0.45, 0.15, 32), colors: [1, 0, 1, 0, 1, 0], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0x0000ff, unlocked: false, cost: 210 },
+  { id: 'ufo31', name: 'Blast Orbiter', geometry: new THREE.SphereGeometry(0.4, 32, 32), colors: [0, 0.5, 0.5, 1, 0, 1], pattern: 1, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'burst', thrusterColor: 0xffff00, unlocked: false, cost: 220 },
+  { id: 'ufo32', name: 'Triad Vanguard', geometry: new THREE.BoxGeometry(0.35, 0.35, 0.35), colors: [1, 1, 0, 0, 0, 1], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.4, superchargePower: 1, drones: 0 }, shoot: 'triple', thrusterColor: 0xff00ff, unlocked: false, cost: 230 },
+  { id: 'ufo33', name: 'Scatter Storm', geometry: new THREE.ConeGeometry(0.3, 0.5, 32), colors: [0, 1, 0, 1, 0.8, 0], pattern: 2, stats: { moveSpeed: 0.17, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'spread', thrusterColor: 0x800080, unlocked: false, cost: 240 },
+  { id: 'ufo34', name: 'Beam Marauder', geometry: new THREE.TetrahedronGeometry(0.4), colors: [1, 0, 0.5, 0, 1, 1], pattern: 1, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'laser', thrusterColor: 0xffd700, unlocked: false, cost: 250 },
+  { id: 'ufo35', name: 'Ripple Enigma', geometry: new THREE.DodecahedronGeometry(0.35), colors: [0.5, 0, 1, 1, 0, 0], pattern: 0, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.35, superchargePower: 1, drones: 0 }, shoot: 'wave', thrusterColor: 0x00ff00, unlocked: false, cost: 260 },
+  { id: 'ufo36', name: 'Shockwave Titan', geometry: new THREE.CylinderGeometry(0.25, 0.4, 0.15, 32), colors: [0, 0, 1, 1, 0.5, 0], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'explosive', thrusterColor: 0xff0000, unlocked: false, cost: 270 },
+  { id: 'ufo37', name: 'Flare Dominator', geometry: new THREE.SphereGeometry(0.45, 32, 32), colors: [1, 0.5, 0, 0, 1, 0], pattern: 1, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'single', thrusterColor: 0xffa500, unlocked: false, cost: 280 },
+  { id: 'ufo38', name: 'Crescent Avenger', geometry: new THREE.BoxGeometry(0.4, 0.4, 0.4), colors: [0, 0.5, 0.5, 1, 0, 1], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.4, superchargePower: 1, drones: 0 }, shoot: 'arc', thrusterColor: 0x0000ff, unlocked: false, cost: 290 },
+  { id: 'ufo39', name: 'Helix Stalker', geometry: new THREE.ConeGeometry(0.35, 0.6, 32), colors: [1, 0, 0, 0, 0.5, 0.5], pattern: 2, stats: { moveSpeed: 0.16, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'spiral', thrusterColor: 0xffff00, unlocked: false, cost: 300 },
+  { id: 'ufo40', name: 'Tracker Nebula', geometry: new THREE.TorusGeometry(0.3, 0.1, 16, 32), colors: [0.5, 1, 0, 1, 0, 0], pattern: 1, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'homing', thrusterColor: 0xff00ff, unlocked: false, cost: 310 },
+  { id: 'ufo41', name: 'Aether Striker', geometry: new THREE.IcosahedronGeometry(0.35), colors: [0, 1, 1, 1, 0.8, 0], pattern: 0, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.35, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0x800080, unlocked: false, cost: 320 },
+  { id: 'ufo42', name: 'Volley Reaper', geometry: new THREE.CylinderGeometry(0.25, 0.45, 0.15, 32), colors: [1, 0, 1, 0, 1, 0], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'burst', thrusterColor: 0xffd700, unlocked: false, cost: 330 },
+  { id: 'ufo43', name: 'Triad Monarch', geometry: new THREE.SphereGeometry(0.4, 32, 32), colors: [0, 0.5, 0.5, 1, 0, 1], pattern: 1, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'triple', thrusterColor: 0x00ff00, unlocked: false, cost: 340 },
+  { id: 'ufo44', name: 'Fanfire Juggernaut', geometry: new THREE.BoxGeometry(0.35, 0.35, 0.35), colors: [1, 1, 0, 0, 0, 1], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.4, superchargePower: 1, drones: 0 }, shoot: 'spread', thrusterColor: 0xff0000, unlocked: false, cost: 350 },
+  { id: 'ufo45', name: 'Ray Sovereign', geometry: new THREE.ConeGeometry(0.3, 0.5, 32), colors: [0, 1, 0, 1, 0.8, 0], pattern: 2, stats: { moveSpeed: 0.17, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'laser', thrusterColor: 0xffa500, unlocked: false, cost: 360 },
+  { id: 'ufo46', name: 'Surge Pathfinder', geometry: new THREE.TetrahedronGeometry(0.4), colors: [1, 0, 0.5, 0, 1, 1], pattern: 1, stats: { moveSpeed: 0.14, health: 2, shotCooldown: 0.3, superchargePower: 1, drones: 0 }, shoot: 'wave', thrusterColor: 0x0000ff, unlocked: false, cost: 370 },
+  { id: 'ufo47', name: 'Core Devastator', geometry: new THREE.DodecahedronGeometry(0.35), colors: [0.5, 0, 1, 1, 0, 0], pattern: 0, stats: { moveSpeed: 0.13, health: 2, shotCooldown: 0.35, superchargePower: 1, drones: 0 }, shoot: 'explosive', thrusterColor: 0xffff00, unlocked: false, cost: 380 },
+  { id: 'ufo48', name: 'Swift Nebula', geometry: new THREE.CylinderGeometry(0.25, 0.4, 0.15, 32), colors: [0, 0, 1, 1, 0.5, 0], pattern: 2, stats: { moveSpeed: 0.15, health: 1, shotCooldown: 0.25, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0xff00ff, unlocked: false, cost: 390 },
+  { id: 'ufo49', name: 'Crimson Halo', geometry: new THREE.SphereGeometry(0.45, 32, 32), colors: [1, 0.5, 0, 0, 1, 0], pattern: 1, stats: { moveSpeed: 0.12, health: 2, shotCooldown: 0.5, superchargePower: 2, drones: 0 }, shoot: 'arc', thrusterColor: 0x800080, unlocked: false, cost: 400 },
+  { id: 'ufo50', name: 'Vortex Emperor', geometry: new THREE.BoxGeometry(0.4, 0.4, 0.4), colors: [0, 0.5, 0.5, 1, 0, 1], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.4, superchargePower: 1, drones: 0 }, shoot: 'spiral', thrusterColor: 0xffd700, unlocked: false, cost: 420 }
+];
+// Load persisted unlocks
+const unlockedUFOs = JSON.parse(localStorage.getItem('unlockedUFOs')) || {};
+ufos.forEach(ufo => {
+  if (unlockedUFOs[ufo.id]) ufo.unlocked = true;
+});
+let currentUFO = ufos.find(ufo => ufo.unlocked) || ufos[0];
+
+    function initAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const loadSound = (url, key, loop = false) => {
+        fetch(url).then(res => res.arrayBuffer()).then(data => audioCtx.decodeAudioData(data)).then(buffer => {
+          sounds[key] = { buffer, loop };
+          if (loop) playSound(key, true);
+        }).catch(e => console.error(`Failed to load sound ${url}:`, e));
+      };
+    }
+
+    function playSound(key, loop = false) {
+      if (!sounds[key]) return;
+      const source = audioCtx.createBufferSource();
+      source.buffer = sounds[key].buffer;
+      source.loop = loop || sounds[key].loop;
+      source.connect(audioCtx.destination);
+      source.start(0);
+      return source;
+    }
+
+    function createUFO(ufo) {
+      const mat = new THREE.MeshPhongMaterial({
+        color: new THREE.Color(...ufo.colors.slice(0, 3)),
+        emissive: new THREE.Color(...ufo.colors.slice(3)).multiplyScalar(0.3),
+        shininess: 100
+      });
+      const mesh = new THREE.Mesh(ufo.geometry || new THREE.CylinderGeometry(0.2, 0.4, 0.1, 32), mat);
+      mesh.userData = { rotationSpeed: 0.05 };
+      const trailGeometry = new THREE.BufferGeometry();
+      const trailMaterial = new THREE.LineBasicMaterial({ color: ufo.thrusterColor, transparent: true, opacity: 0.5 });
+      const trailPositions = new Float32Array(20 * 3);
+      trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+      const trail = new THREE.Line(trailGeometry, trailMaterial);
+      mesh.trail = trail;
+      scene.add(trail);
+      const shieldGeom = new THREE.SphereGeometry(0.5, 16, 16);
+      const shieldMat = new THREE.MeshBasicMaterial({ color: 0x00b7eb, transparent: true, opacity: 0.3, visible: false });
+      shieldMesh = new THREE.Mesh(shieldGeom, shieldMat);
+      mesh.add(shieldMesh);
+      return mesh;
+    }
+
+    function updateShield() {
+      if (playerShields > 0) {
+        shieldMesh.visible = true;
+        const purpleShift = Math.min(playerShields / 10, 1);
+        shieldMesh.material.color.setRGB(0, 0.72 - purpleShift * 0.72, 0.92 + purpleShift * 0.08);
+      } else {
+        shieldMesh.visible = false;
+      }
+    }
+
+    function createDrone(ufo) {
+      const mat = new THREE.MeshPhongMaterial({
+        color: new THREE.Color(...ufo.colors.slice(3)),
+        emissive: new THREE.Color(...ufo.colors.slice(3)).multiplyScalar(0.2)
+      });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), mat);
+      mesh.userData = { health: 1, angle: Math.random() * Math.PI * 2, shootTimer: 0 };
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function createParticle(pos) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ff00ff'; ctx.fillRect(8, 8, 16, 16);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+      sprite.position.copy(pos);
+      sprite.scale.set(0.2, 0.2, 0.2);
+      sprite.userData = { life: 0.5, speed: new THREE.Vector3((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1, 0) };
+      scene.add(sprite);
+      particles.push(sprite);
+    }
+
+    function createBullet(position, { damage, angle = 0, speed = 0.3 }) {
+      const emoji = bulletLevel === 0 ? '🔹' : bulletLevel === 1 ? '🔷' : '💠';
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '24px serif'; ctx.fillStyle = '#00ffff'; ctx.fillText(emoji, 4, 24);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+      sprite.position.copy(position);
+      sprite.scale.set(0.75, 0.75, 0.75);
+      sprite.userData = { damage, angle, speed };
+      scene.add(sprite);
+      bullets.push(sprite);
+      return sprite;
+    }
+
+    function shootEnemyBullet(enemy) {
+      const dx = player.position.x - enemy.position.x;
+      const dy = player.position.y - enemy.position.y;
+      const angle = Math.atan2(dx, dy);
+      const emoji = Math.random() < 0.8 ? '🔸' : '🔶';
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '24px serif'; ctx.fillStyle = '#ff00ff'; ctx.fillText(emoji, 4, 24);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+      sprite.position.copy(enemy.position);
+      sprite.scale.set(0.75, 0.75, 0.75);
+      sprite.userData = { damage: emoji === '🔶' ? 2 : 1, speed: -0.2, angle };
+      scene.add(sprite);
+      enemyBullets.push(sprite);
+    }
+
+    function spawnEnemy() {
+      const types = [
+        { geom: new THREE.IcosahedronGeometry(0.3), health: 1, speed: 0.015 + Math.random() * 0.03, shootInterval: 3 },
+        { geom: new THREE.ConeGeometry(0.2, 0.4, 32), health: 1, speed: 0.02 + Math.random() * 0.04, shootInterval: 2.5 },
+        { geom: new THREE.BoxGeometry(0.4, 0.4, 0.4), health: 3, speed: 0.01 + Math.random() * 0.02, shootInterval: 4 }
+      ];
+      const { geom, health, speed, shootInterval } = types[Math.floor(Math.random() * types.length)];
+      const mat = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff, emissive: 0x333333, shininess: 50 });
+      const enemy = new THREE.Mesh(geom, mat);
+      enemy.position.set((Math.random() - 0.5) * 16, 16, 0);
+      enemy.userData = { health, speed, rotationSpeed: 0.03, shootTimer: Math.random() * shootInterval, shootInterval };
+      scene.add(enemy);
+      enemies.push(enemy);
+    }
+
+    function spawnBoss() {
+      bossActive = true;
+      notify('Warning: Star Devourer Approaches!');
+      const geom = new THREE.IcosahedronGeometry(3);
+      const mat = new THREE.MeshPhongMaterial({ color: 0xff0000, emissive: 0x330000, shininess: 50 });
+      boss = new THREE.Mesh(geom, mat);
+      boss.position.set(0, 12, 0);
+      boss.userData = { health: 150 + Math.floor(stars / 500) * 20, speed: 0.015, rotationSpeed: 0.02, shootTimer: 0, lingerTimer: 30 };
+      scene.add(boss);
+    }
+
+    function spawnStar(pos) {
+      if (Math.random() < 0.1) {
+        spawnPowerUp(pos);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '24px serif'; ctx.fillStyle = '#ffff00'; ctx.fillText('⭐️', 4, 24);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+      sprite.position.copy(pos);
+      sprite.scale.set(0.75, 0.75, 0.75);
+      sprite.userData = { speed: -0.02 };
+      scene.add(sprite);
+      starsOnField.push(sprite);
+    }
+
+    function spawnPowerUp(pos) {
+      const types = [
+        { type: 'speed', emoji: '⚡', color: '#00ffff' },
+        { type: 'rapid', emoji: '🔫', color: '#ff00ff' },
+        { type: 'shield', emoji: '🛡️', color: '#ffff00' }
+      ];
+      const { type, emoji, color } = types[Math.floor(Math.random() * types.length)];
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.font = '24px serif'; ctx.fillStyle = color; ctx.fillText(emoji, 4, 24);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+      sprite.position.copy(pos);
+      sprite.scale.set(0.75, 0.75, 0.75);
+      sprite.userData = { type, speed: -0.02 };
+      scene.add(sprite);
+      powerUps.push(sprite);
+    }
+
+    function renderStartMenu() {
+      stars = parseInt(localStorage.getItem('stars')) || 0;
+      const grid = document.getElementById('ufoGrid');
+      const upgrades = document.getElementById('upgradeOptions');
+      grid.innerHTML = ''; upgrades.innerHTML = '';
+      ufos.forEach(ufo => {
+        const cell = document.createElement('div');
+        cell.className = 'ufoPreview' + (ufo.unlocked ? '' : ' locked');
+        cell.innerHTML = `<div>${ufo.name}</div><div>${ufo.unlocked ? '✅' : `🔒 ${ufo.cost} ⭐️`}</div>`;
+        cell.addEventListener('click', () => {
+          if (ufo.unlocked) {
+            currentUFO = ufo;
+            scene.remove(player);
+            player = createUFO(currentUFO);
+            player.position.set(0, -8, 0);
+            scene.add(player);
+            drones.forEach(d => scene.remove(d));
+            drones = [];
+            for (let i = 0; i < currentUFO.stats.drones; i++) {
+              drones.push(createDrone(currentUFO));
+            }
+          } else if (stars >= ufo.cost) {
+            stars -= ufo.cost;
+            ufo.unlocked = true;
+            unlockedUFOs[ufo.id] = true;
+            localStorage.setItem('stars', stars);
+            localStorage.setItem('unlockedUFOs', JSON.stringify(unlockedUFOs));
+            notify(`${ufo.name} Unlocked!`);
+            renderStartMenu();
+          }
+        });
+        grid.appendChild(cell);
+      });
+      upgrades.innerHTML = `
+        <div>Photon: ${['🔹','🔷','💠'][bulletLevel]}</div>
+        <div>Shields: 🛡️${playerShields}</div>
+        <div>Stars: ⭐️${stars}</div>
+        <button id="upgradeBulletButton">Upgrade Photon (${bulletLevel === 0 ? 500 : bulletLevel === 1 ? 5000 : 'MAX'} ⭐️)</button>
+        <button id="upgradeShieldButton">Buy Shield (500 ⭐️)</button>
+      `;
+      document.getElementById('upgradeBulletButton').addEventListener('click', upgradeBullet);
+      document.getElementById('upgradeShieldButton').addEventListener('click', upgradeShield);
+    }
+
+    function renderPauseMenu() {
+      const upgrades = document.getElementById('pauseUpgrades');
+      upgrades.innerHTML = `
+        <h3>Galactic Upgrades</h3>
+        <div>Photon: ${['🔹','🔷','💠'][bulletLevel]}</div>
+        <div>Shields: 🛡️${playerShields}</div>
+        <div>Stars: ⭐️${stars}</div>
+        <button id="pauseUpgradeBulletButton">Upgrade Photon (${bulletLevel === 0 ? 500 : bulletLevel === 1 ? 5000 : 'MAX'} ⭐️)</button>
+        <button id="pauseUpgradeShieldButton">Buy Shield (500 ⭐️)</button>
+      `;
+      document.getElementById('pauseUpgradeBulletButton').addEventListener('click', upgradeBullet);
+      document.getElementById('pauseUpgradeShieldButton').addEventListener('click', upgradeShield);
+    }
+
+    function upgradeBullet() {
+      const cost = bulletLevel === 0 ? 500 : bulletLevel === 1 ? 5000 : Infinity;
+      if (stars >= cost && bulletLevel < 2) {
+        stars -= cost; bulletLevel++;
+        localStorage.setItem('stars', stars);
+        notify('Photon Blasters Upgraded!');
+        renderStartMenu(); renderPauseMenu();
+      }
+    }
+
+    function upgradeShield() {
+      if (stars >= 500) {
+        stars -= 500; playerShields++;
+        localStorage.setItem('stars', stars);
+        notify('Shield Acquired!');
+        updateShield();
+        renderStartMenu(); renderPauseMenu();
+      }
+    }
+
+    function notify(msg) {
+      const n = document.getElementById('notification');
+      n.textContent = msg; n.style.display = 'block';
+      setTimeout(() => n.style.display = 'none', 1500);
+    }
+
+    function setupControls() {
+      window.addEventListener('keydown', e => keys[e.key] = true);
+      window.addEventListener('keyup', e => keys[e.key] = false);
+      const leftArea = document.getElementById('left');
+      const rightArea = document.getElementById('right');
+      leftArea.addEventListener('touchstart', e => { e.preventDefault(); moveLeft = true; });
+      leftArea.addEventListener('touchend', () => moveLeft = false);
+      rightArea.addEventListener('touchstart', e => { e.preventDefault(); moveRight = true; });
+      rightArea.addEventListener('touchend', () => moveRight = false);
+    }
+
+    function saveHighScore() {
+      let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+      highScores.push({ score, stars, ufo: currentUFO.name, date: new Date().toISOString().split('T')[0] });
+      highScores.sort((a, b) => b.score - a.score);
+      highScores = highScores.slice(0, 10);
+      localStorage.setItem('highScores', JSON.stringify(highScores));
+      return highScores;
+    }
+
+    function renderHighScores() {
+      const highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+      const list = document.getElementById('highScoresList');
+      const gameOverList = document.getElementById('highScores');
+      list.innerHTML = highScores.map((s, i) => `<p>${i + 1}. ${s.score} pts - ${s.ufo} - ${s.date}</p>`).join('');
+      gameOverList.innerHTML = highScores.slice(0, 5).map((s, i) => `<p>${i + 1}. ${s.score} pts - ${s.ufo}</p>`).join('');
+    }
+
+    function showGameOver() {
+      gameOver = true; paused = true;
+      document.getElementById('finalScore').innerText = `Score: ${score} pts`;
+      document.getElementById('starsEarned').innerText = `Stars Earned: ${stars} ⭐️`;
+      localStorage.setItem('stars', stars);
+      saveHighScore();
+      renderHighScores();
+      document.getElementById('gameOverMenu').style.display = 'flex';
+    }
+
+    function resetGame() {
+      bullets.forEach(b => scene.remove(b)); bullets = [];
+      enemyBullets.forEach(b => scene.remove(b)); enemyBullets = [];
+      enemies.forEach(e => scene.remove(e)); enemies = [];
+      starsOnField.forEach(s => scene.remove(s)); starsOnField = [];
+      powerUps.forEach(p => scene.remove(p)); powerUps = [];
+      particles.forEach(p => scene.remove(p)); particles = [];
+      if (boss) { scene.remove(boss); boss = null; bossActive = false; }
+      player.position.set(0, -8, 0);
+      score = 0; lastSpawn = 0;
+      gameOver = false; paused = true;
+      localStorage.setItem('stars', stars);
+      updateShield();
+      renderStartMenu();
+      document.getElementById('startMenu').style.display = 'flex';
+    }
+
+    function setupMenu() {
+      document.getElementById('startGameButton').addEventListener('click', () => {
+        document.getElementById('startMenu').style.display = 'none';
+        score = 0;
+        paused = false;
+      });
+      document.getElementById('highScoresButton').addEventListener('click', () => {
+        document.getElementById('startMenu').style.display = 'none';
+        renderHighScores();
+        document.getElementById('highScoresMenu').style.display = 'flex';
+      });
+      document.getElementById('resumeButton').addEventListener('click', () => {
+        document.getElementById('pauseMenu').style.display = 'none';
+        paused = false;
+      });
+      document.getElementById('hangarButton').addEventListener('click', () => {
+        document.getElementById('pauseMenu').style.display = 'none';
+        resetGame();
+      });
+      document.getElementById('pauseButton').addEventListener('click', () => {
+        if (!gameOver) {
+          paused = true;
+          renderPauseMenu();
+          document.getElementById('pauseMenu').style.display = 'flex';
+        }
+      });
+      document.getElementById('restartButton').addEventListener('click', () => {
+        document.getElementById('gameOverMenu').style.display = 'none';
+        resetGame();
+      });
+      document.getElementById('backButton').addEventListener('click', () => {
+        document.getElementById('highScoresMenu').style.display = 'none';
+        document.getElementById('startMenu').style.display = 'flex';
+      });
+      document.getElementById('clearScoresButton').addEventListener('click', () => {
+        if (confirm('Clear all high scores?')) {
+          localStorage.removeItem('highScores');
+          renderHighScores();
+        }
+      });
+    }
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+      if (paused || gameOver) return;
+
+      const t = time * 0.001;
+
+      const moveSpeed = currentUFO.stats.moveSpeed * 0.75;
+      if (keys['ArrowLeft'] || moveLeft) player.position.x = Math.max(-8, player.position.x - moveSpeed);
+      if (keys['ArrowRight'] || moveRight) player.position.x = Math.min(8, player.position.x + moveSpeed);
+      player.rotation.y += player.userData.rotationSpeed;
+
+      const trailPositions = player.trail.geometry.attributes.position.array;
+      for (let i = 19; i > 0; i--) {
+        trailPositions[i * 3] = trailPositions[(i - 1) * 3];
+        trailPositions[i * 3 + 1] = trailPositions[(i - 1) * 3 + 1] - 0.05;
+        trailPositions[i * 3 + 2] = trailPositions[(i - 1) * 3 + 2];
+      }
+      trailPositions[0] = player.position.x;
+      trailPositions[1] = player.position.y - 0.2;
+      trailPositions[2] = player.position.z;
+      player.trail.geometry.attributes.position.needsUpdate = true;
+
+      drones.forEach((drone, i) => {
+        if (drone.userData.health <= 0) return;
+        drone.userData.angle += 0.1;
+        drone.position.set(
+          player.position.x + Math.cos(drone.userData.angle) * 0.4,
+          player.position.y + Math.sin(drone.userData.angle) * 0.4,
+          0
+        );
+        drone.userData.shootTimer += 0.016;
+        if (drone.userData.shootTimer > currentUFO.stats.shotCooldown * 2) {
+          createBullet(drone.position, { damage: currentUFO.stats.superchargePower });
+          drone.userData.shootTimer = 0;
+        }
+      });
+
+      const shotCooldown = currentUFO.stats.shotCooldown;
+      if (t - lastShot > shotCooldown && shootPatterns[currentUFO.shoot]) {
+        shootPatterns[currentUFO.shoot](currentUFO, player.position);
+        lastShot = t;
+      }
+
+      const spawnInterval = Math.max(0.5, 1.5 - score / 10000);
+      if (!bossActive && stars >= 500 && Math.floor(stars / 500) > Math.floor((stars - 1) / 500)) {
+        spawnBoss();
+      } else if (!bossActive && t - lastSpawn > spawnInterval) {
+        spawnEnemy();
+        lastSpawn = t;
+      }
+
+      [starFieldNear, starFieldMid, starFieldFar].forEach((field, i) => {
+        const speed = [0.05, 0.02, 0.01][i];
+        const positions = field.geometry.attributes.position.array;
+        for (let j = 0; j < positions.length / 3; j++) {
+          positions[j * 3 + 1] -= speed;
+          if (positions[j * 3 + 1] < -25) {
+            positions[j * 3 + 1] += 50;
+            positions[j * 3] = (Math.random() - 0.5) * 50;
+          }
+        }
+        field.geometry.attributes.position.needsUpdate = true;
+      });
+
+      if (bossActive && boss) {
+        boss.position.x = Math.sin(t) * 6;
+        boss.rotation.y += boss.userData.rotationSpeed;
+        boss.userData.shootTimer += 0.016;
+        boss.userData.lingerTimer -= 0.016;
+        if (boss.userData.shootTimer > 1.5) {
+          [-0.3, -0.15, 0, 0.15, 0.3].forEach(angle => {
+            const bullet = createBullet(boss.position, { damage: 2 });
+            bullet.userData.speed = -0.2;
+            bullet.userData.angle = angle;
+            bullet.material.color.set(0xff0000);
+          });
+          boss.userData.shootTimer = 0;
+        }
+        if (boss.userData.lingerTimer <= 0) {
+          boss.position.y -= boss.userData.speed;
+          if (boss.position.y < -16) {
+            scene.remove(boss); boss = null; bossActive = false;
+          }
+        }
+      }
+
+      enemies.forEach(e => {
+        e.userData.shootTimer += 0.016;
+        if (e.userData.shootTimer > e.userData.shootInterval) {
+          shootEnemyBullet(e);
+          e.userData.shootTimer = 0;
+        }
+      });
+
+      bullets.forEach(b => {
+        b.position.y += b.userData.speed * Math.cos(b.userData.angle);
+        b.position.x += b.userData.speed * Math.sin(b.userData.angle);
+        b.scale.set(0.75 + 0.1 * Math.sin(t * 5), 0.75 + 0.1 * Math.sin(t * 5), 0.75);
+        if (b.userData.homing) {
+          const target = enemies.concat(boss ? [boss] : []).reduce((closest, e) => {
+            const dist = e.position.distanceTo(b.position);
+            return dist < closest.dist ? { dist, enemy: e } : closest;
+          }, { dist: Infinity, enemy: null });
+          if (target.enemy) {
+            const dx = target.enemy.position.x - b.position.x;
+            b.userData.angle = Math.atan2(dx, 1) * 0.1 + b.userData.angle * 0.9;
+          }
+        }
+        if (b.userData.wave) {
+          b.userData.angle += Math.sin(t * 5) * 0.05;
+        }
+        if (b.userData.explosive && b.position.y > 10) {
+          for (let i = 0; i < 5; i++) {
+            createBullet(b.position, { damage: b.userData.damage / 2, angle: (i / 5) * Math.PI * 2 });
+          }
+          scene.remove(b);
+          bullets = bullets.filter(bullet => bullet !== b);
+        }
+      });
+      enemyBullets.forEach(b => {
+        b.position.y += b.userData.speed * Math.cos(b.userData.angle);
+        b.position.x += b.userData.speed * Math.sin(b.userData.angle);
+      });
+      bullets = bullets.filter(b => {
+        if (b.position.y > 20) { scene.remove(b); return false; }
+        return true;
+      });
+
+      particles = particles.filter(p => {
+        p.position.add(p.userData.speed);
+        p.userData.life -= 0.016;
+        p.material.opacity = p.userData.life / 0.5;
+        if (p.userData.life <= 0) { scene.remove(p); return false; }
+        return true;
+      });
+
+      enemyBullets = enemyBullets.filter(b => {
+        if (b.position.distanceTo(player.position) < 0.3 && t - lastHit > 1) {
+          if (playerShields > 0) {
+            playerShields--;
+            updateShield();
+          } else {
+            showGameOver();
+          }
+          lastHit = t;
+          scene.remove(b); return false;
+        }
+        drones.forEach(d => {
+          if (d.userData.health > 0 && b.position.distanceTo(d.position) < 0.2) {
+            d.userData.health--;
+            if (d.userData.health <= 0) scene.remove(d);
+            scene.remove(b);
+            b = null;
+          }
+        });
+        if (!b) return false;
+        if (b.position.y < -16 || b.position.y > 16 || Math.abs(b.position.x) > 16) { scene.remove(b); return false; }
+        return true;
+      });
+
+      enemies = enemies.filter(e => {
+        e.position.y -= e.userData.speed;
+        e.rotation.x += e.userData.rotationSpeed;
+        if (e.position.y < -16) { scene.remove(e); return false; }
+        for (let j = 0; j < bullets.length; j++) {
+          if (e.position.distanceTo(bullets[j].position) < 0.4) {
+            e.userData.health -= bullets[j].userData.damage;
+            scene.remove(bullets[j]); bullets.splice(j, 1);
+            if (e.userData.health <= 0) {
+              spawnStar(e.position);
+              for (let i = 0; i < 5; i++) createParticle(e.position);
+              scene.remove(e); playSound('explosion');
+              score += 10;
+              return false;
+            }
+            break;
+          }
+        }
+        if (e.position.distanceTo(player.position) < 0.4 && t - lastHit > 1) {
+          if (playerShields > 0) {
+            playerShields--;
+            updateShield();
+          } else {
+            showGameOver();
+          }
+          lastHit = t;
+          scene.remove(e); playSound('explosion');
+          return false;
+        }
+        return true;
+      });
+
+      if (boss && boss.userData.health > 0) {
+        boss.userData.health -= bullets.reduce((dmg, b) => {
+          if (b.position.distanceTo(boss.position) < 1.5) {
+            scene.remove(b);
+            return dmg + b.userData.damage;
+          }
+          return dmg;
+        }, 0);
+        bullets = bullets.filter(b => scene.children.includes(b));
+        if (boss.userData.health <= 0) {
+          for (let i = 0; i < 10; i++) spawnStar(boss.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0)));
+          for (let i = 0; i < 20; i++) createParticle(boss.position);
+          spawnPowerUp(boss.position);
+          scene.remove(boss); boss = null; bossActive = false; playSound('explosion');
+          score += 100;
+        }
+      }
+
+      starsOnField = starsOnField.filter(star => {
+        star.position.y += star.userData.speed;
+        star.rotation.z += 0.1;
+        if (star.position.y < -16) { scene.remove(star); return false; }
+        if (star.position.distanceTo(player.position) < 0.3) {
+          stars++; localStorage.setItem('stars', stars);
+          scene.remove(star); playSound('star');
+          return false;
+        }
+        return true;
+      });
+
+      powerUps = powerUps.filter(p => {
+        p.position.y += p.userData.speed;
+        p.rotation.z += 0.1;
+        if (p.position.y < -16) { scene.remove(p); return false; }
+        if (p.position.distanceTo(player.position) < 0.3) {
+          if (p.userData.type === 'speed') currentUFO.stats.moveSpeed *= 2;
+          if (p.userData.type === 'rapid') currentUFO.stats.shotCooldown /= 2;
+          if (p.userData.type === 'shield') {
+            playerShields++;
+            updateShield();
+          }
+          scene.remove(p); playSound('powerup');
+          notify(`${p.userData.type.charAt(0).toUpperCase() + p.userData.type.slice(1)} Activated!`);
+          return false;
+        }
+        return true;
+      });
+
+      if (t - lastFrame > 0.2) {
+        heartAnim = (heartAnim + 1) % heartCycle.length;
+        lastFrame = t;
+      }
+      let hudText = `Score: ${score}  ⭐️ ${stars}  ${heartCycle[heartAnim]} 🛡️${playerShields}`;
+      if (boss && boss.userData.health > 0) {
+        hudText += `\nBoss HP: ${Math.ceil(boss.userData.health)}`;
+      }
+      document.getElementById('hud').innerText = hudText;
+
+      renderer.render(scene, camera);
+    }
+
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, 24);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      directionalLight.position.set(0, 5, 5);
+      scene.add(ambientLight, directionalLight);
+
+      const createStarField = (count, size, speed) => {
+        const geom = new THREE.BufferGeometry();
+        const mat = new THREE.PointsMaterial({ color: 0xffffff, size });
+        const pos = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+          pos[i * 3] = (Math.random() - 0.5) * 50;
+          pos[i * 3 + 1] = (Math.random() - 0.5) * 50;
+          pos[i * 3 + 2] = (Math.random() - 0.5) * 50;
+        }
+        geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        const field = new THREE.Points(geom, mat);
+        scene.add(field);
+        return field;
+      };
+      window.starFieldNear = createStarField(200, 0.2, 0.05);
+      window.starFieldMid = createStarField(500, 0.1, 0.02);
+      window.starFieldFar = createStarField(1000, 0.05, 0.01);
+
+      player = createUFO(currentUFO);
+      player.position.set(0, -8, 0);
+      scene.add(player);
+
+      initAudio();
+      setupControls();
+      renderStartMenu();
+      renderHighScores();
+      requestAnimationFrame(animate);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupMenu();
+      init();
+    });
+  </script>
+</body>
+</html>';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupMenu();
+      init();
+    });
+  </script>
+</body>
+</html> currentUFO.name, date: new Date().toISOString().split('T')[0] });
+      highScores.sort((a, b) => b.score - a.score);
+      highScores = highScores.slice(0, 10);
+      localStorage.setItem('highScores', JSON.stringify(highScores));
+      return highScores;
+    }
+
+    function renderHighScores() {
+      try {
+        console.log('Rendering high scores...');
+        const highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+        const list = document.getElementById('highScoresList');
+        const gameOverList = document.getElementById('highScores');
+        list.innerHTML = highScores.map((s, i) => `<p>${i + 1}. ${s.score} pts - ${s.ufo} - ${s.date}</p>`).join('');
+        gameOverList.innerHTML = highScores.slice(0, 5).map((s, i) => `<p>${i + 1}. ${s.score} pts - ${s.ufo}</p>`).join('');
+        console.log('High scores rendered successfully');
+      } catch (e) {
+        console.error('Failed to render high scores:', e);
+      }
+    }
+
+    function showGameOver() {
+      gameOver = true; paused = true;
+      document.getElementById('finalScore').innerText = `Score: ${score} pts`;
+      document.getElementById('starsEarned').innerText = `Stars Earned: ${stars} ⭐️`;
+      localStorage.setItem('stars', stars);
+      saveHighScore();
+      renderHighScores();
+      document.getElementById('gameOverMenu').style.display = 'flex';
+      console.log('Game over screen shown');
+    }
+
+    function resetGame() {
+      bullets.forEach(b => scene.remove(b)); bullets = [];
+      enemyBullets.forEach(b => scene.remove(b)); enemyBullets = [];
+      enemies.forEach(e => scene.remove(e)); enemies = [];
+      starsOnField.forEach(s => scene.remove(s)); starsOnField = [];
+      powerUps.forEach(p => scene.remove(p)); powerUps = [];
+      particles.forEach(p => scene.remove(p)); particles = [];
+      if (boss) { scene.remove(boss); boss = null; bossActive = false; }
+      player.position.set(0, -4, 0);
+      playerShields = currentUFO.stats.health;
+      score = 0; lastSpawn = 0;
+      gameOver = false; paused = true;
+      localStorage.setItem('stars', stars);
+      renderStartMenu();
+      document.getElementById('startMenu').style.display = 'flex';
+    }
+
+    function setupMenu() {
+      try {
+        console.log('Setting up menu bindings...');
+        document.getElementById('startGameButton').addEventListener('click', () => {
+          console.log('Launch into Battle clicked');
+          document.getElementById('startMenu').style.display = 'none';
+          score = 0; // Reset score
+          paused = false;
+        });
+        document.getElementById('highScoresButton').addEventListener('click', () => {
+          console.log('High Scores clicked');
+          document.getElementById('startMenu').style.display = 'none';
+          renderHighScores();
+          document.getElementById('highScoresMenu').style.display = 'flex';
+        });
+        document.getElementById('resumeButton').addEventListener('click', () => {
+          console.log('Resume Mission clicked');
+          document.getElementById('pauseMenu').style.display = 'none';
+          paused = false;
+        });
+        document.getElementById('hangarButton').addEventListener('click', () => {
+          console.log('Return to Hangar clicked');
+          document.getElementById('pauseMenu').style.display = 'none';
+          resetGame();
+        });
+        document.getElementById('pauseButton').addEventListener('click', () => {
+          console.log('Pause clicked');
+          if (!gameOver) {
+            paused = true;
+            renderPauseMenu();
+            document.getElementById('pauseMenu').style.display = 'flex';
+          }
+        });
+        document.getElementById('restartButton').addEventListener('click', () => {
+          console.log('Return to Base clicked');
+          document.getElementById('gameOverMenu').style.display = 'none';
+          resetGame();
+        });
+        document.getElementById('backButton').addEventListener('click', () => {
+          console.log('Back clicked');
+          document.getElementById('highScoresMenu').style.display = 'none';
+          document.getElementById('startMenu').style.display = 'flex';
+        });
+        document.getElementById('clearScoresButton').addEventListener('click', () => {
+          console.log('Clear Scores clicked');
+          if (confirm('Clear all high scores?')) {
+            localStorage.removeItem('highScores');
+            renderHighScores();
+          }
+        });
+        console.log('Menu bindings set successfully');
+      } catch (e) {
+        console.error('Failed to set up menu bindings:', e);
+      }
+    }
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+      if (paused || gameOver) return;
+
+      const t = time * 0.001;
+
+      // Player movement
+      const moveSpeed = speedBoost > t ? currentUFO.stats.moveSpeed * 2 : currentUFO.stats.moveSpeed;
+      if (keys['ArrowLeft'] || moveLeft) player.position.x = Math.max(-4, player.position.x - moveSpeed);
+      if (keys['ArrowRight'] || moveRight) player.position.x = Math.min(4, player.position.x + moveSpeed);
+      player.rotation.y += player.userData.rotationSpeed;
+
+      // Update trail
+      const trailPositions = player.trail.geometry.attributes.position.array;
+      for (let i = 19; i > 0; i--) {
+        trailPositions[i * 3] = trailPositions[(i - 1) * 3];
+        trailPositions[i * 3 + 1] = trailPositions[(i - 1) * 3 + 1] - 0.05;
+        trailPositions[i * 3 + 2] = trailPositions[(i - 1) * 3 + 2];
+      }
+      trailPositions[0] = player.position.x;
+      trailPositions[1] = player.position.y - 0.2;
+      trailPositions[2] = player.position.z;
+      player.trail.geometry.attributes.position.needsUpdate = true;
+
+      // Drones
+      drones.forEach((drone, i) => {
+        if (drone.userData.health <= 0) return;
+        drone.userData.angle += 0.1;
+        drone.position.set(
+          player.position.x + Math.cos(drone.userData.angle) * 0.4,
+          player.position.y + Math.sin(drone.userData.angle) * 0.4,
+          0
+        );
+        drone.userData.shootTimer += 0.016;
+        if (drone.userData.shootTimer > currentUFO.stats.shotCooldown * 2) {
+          createBullet(drone.position, { damage: currentUFO.stats.superchargePower });
+          drone.userData.shootTimer = 0;
+        }
+      });
+
+      // Fire photons
+      const shotCooldown = rapidFire > t ? currentUFO.stats.shotCooldown / 2 : currentUFO.stats.shotCooldown;
+      if (t - lastShot > shotCooldown && shootPatterns[currentUFO.shoot]) {
+        shootPatterns[currentUFO.shoot](currentUFO, player.position);
+        lastShot = t;
+      }
+
+      // Spawn enemies or boss
+      const spawnInterval = Math.max(0.5, 1.5 - score / 10000); // Dynamic spawn rate
+      if (!bossActive && stars >= 500 && Math.floor(stars / 500) > Math.floor((stars - 1) / 500)) {
+        spawnBoss();
+      } else if (!bossActive && t - lastSpawn > spawnInterval) {
+        spawnEnemy();
+        lastSpawn = t;
+      }
+
+      // Update starfields
+      [starFieldNear, starFieldMid, starFieldFar].forEach((field, i) => {
+        const speed = [0.05, 0.02, 0.01][i];
+        const positions = field.geometry.attributes.position.array;
+        for (let j = 0; j < positions.length / 3; j++) {
+          positions[j * 3 + 1] -= speed;
+          if (positions[j * 3 + 1] < -25) {
+            positions[j * 3 + 1] += 50;
+            positions[j * 3] = (Math.random() - 0.5) * 50;
+          }
+        }
+        field.geometry.attributes.position.needsUpdate = true;
+      });
+
+      // Boss logic
+      if (bossActive && boss) {
+        boss.position.x = Math.sin(t) * 3;
+        boss.rotation.y += boss.userData.rotationSpeed;
+        boss.userData.shootTimer += 0.016;
+        if (boss.userData.shootTimer > 2) {
+          [-0.3, -0.15, 0, 0.15, 0.3].forEach(angle => {
+            const bullet = createBullet(boss.position, { damage: 2 });
+            bullet.userData.speed = -0.2;
+            bullet.userData.angle = angle;
+            bullet.material.color.set(0xff0000);
+          });
+          boss.userData.shootTimer = 0;
+        }
+      }
+
+      // Update enemies
+      enemies.forEach(e => {
+        e.userData.shootTimer += 0.016;
+        if (e.userData.shootTimer > e.userData.shootInterval) {
+          shootEnemyBullet(e);
+          e.userData.shootTimer = 0;
+        }
+      });
+
+      // Update projectiles
+      bullets.forEach(b => {
+        b.position.y += b.userData.speed * Math.cos(b.userData.angle);
+        b.position.x += b.userData.speed * Math.sin(b.userData.angle);
+        b.scale.set(0.75 + 0.1 * Math.sin(t * 5), 0.75 + 0.1 * Math.sin(t * 5), 0.75);
+        if (b.userData.homing) {
+          const target = enemies.concat(boss ? [boss] : []).reduce((closest, e) => {
+            const dist = e.position.distanceTo(b.position);
+            return dist < closest.dist ? { dist, enemy: e } : closest;
+          }, { dist: Infinity, enemy: null });
+          if (target.enemy) {
+            const dx = target.enemy.position.x - b.position.x;
+            b.userData.angle = Math.atan2(dx, 1) * 0.1 + b.userData.angle * 0.9;
+          }
+        }
+      });
+      enemyBullets.forEach(b => {
+        b.position.y += b.userData.speed * Math.cos(b.userData.angle);
+        b.position.x += b.userData.speed * Math.sin(b.userData.angle);
+      });
+      bullets = bullets.filter(b => {
+        if (b.position.y > 10) { scene.remove(b); return false; }
+        return true;
+      });
+
+      // Update particles
+      particles = particles.filter(p => {
+        p.position.add(p.userData.speed);
+        p.userData.life -= 0.016;
+        p.material.opacity = p.userData.life / 0.5;
+        if (p.userData.life <= 0) { scene.remove(p); return false; }
+        return true;
+      });
+
+      // Damage
+      enemyBullets = enemyBullets.filter(b => {
+        if (b.position.distanceTo(player.position) < 0.3 && t - lastHit > 1) {
+          playerShields--; lastHit = t;
+          if (playerShields <= 0) showGameOver();
+          scene.remove(b); return false;
+        }
+        drones.forEach(d => {
+          if (d.userData.health > 0 && b.position.distanceTo(d.position) < 0.2) {
+            d.userData.health--;
+            if (d.userData.health <= 0) scene.remove(d);
+            scene.remove(b);
+            b = null;
+          }
+        });
+        if (!b) return false;
+        if (b.position.y < -8 || b.position.y > 8 || Math.abs(b.position.x) > 8) { scene.remove(b); return false; }
+        return true;
+      });
+
+      enemies = enemies.filter(e => {
+        e.position.y -= e.userData.speed;
+        e.rotation.x += e.userData.rotationSpeed;
+        if (e.position.y < -8) { scene.remove(e); return false; }
+        for (let j = 0; j < bullets.length; j++) {
+          if (e.position.distanceTo(bullets[j].position) < 0.4) {
+            e.userData.health -= bullets[j].userData.damage;
+            scene.remove(bullets[j]); bullets.splice(j, 1);
+            if (e.userData.health <= 0) {
+              spawnStar(e.position);
+              for (let i = 0; i < 5; i++) createParticle(e.position); // Explosion
+              scene.remove(e); playSound('explosion');
+              score += 10; // Score for enemy kill
+              return false;
+            }
+            break;
+          }
+        }
+        if (e.position.distanceTo(player.position) < 0.4 && t - lastHit > 1) {
+          playerShields--; lastHit = t;
+          if (playerShields <= 0) showGameOver();
+          scene.remove(e); playSound('explosion');
+          return false;
+        }
+        return true;
+      });
+
+      if (boss && boss.userData.health > 0) {
+        boss.userData.health -= bullets.reduce((dmg, b) => {
+          if (b.position.distanceTo(boss.position) < 0.75) {
+            scene.remove(b);
+            return dmg + b.userData.damage;
+          }
+          return dmg;
+        }, 0);
+        bullets = bullets.filter(b => scene.children.includes(b));
+        if (boss.userData.health <= 0) {
+          for (let i = 0; i < 10; i++) spawnStar(boss.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0)));
+          for (let i = 0; i < 20; i++) createParticle(boss.position);
+          spawnPowerUp(boss.position);
+          scene.remove(boss); boss = null; bossActive = false; playSound('explosion');
+          score += 100; // Score for boss kill
+        }
+      }
+
+      starsOnField = starsOnField.filter(star => {
+        star.position.y += star.userData.speed;
+        star.rotation.z += 0.1;
+        if (star.position.y < -8) { scene.remove(star); return false; }
+        if (star.position.distanceTo(player.position) < 0.3) {
+          stars++; localStorage.setItem('stars', stars);
+          scene.remove(star); playSound('star');
+          return false;
+        }
+        return true;
+      });
+
+      powerUps = powerUps.filter(p => {
+        p.position.y += p.userData.speed;
+        p.rotation.z += 0.1;
+        if (p.position.y < -8) { scene.remove(p); return false; }
+        if (p.position.distanceTo(player.position) < 0.3) {
+          if (p.userData.type === 'speed') speedBoost = t + 10;
+          if (p.userData.type === 'rapid') rapidFire = t + 8;
+          if (p.userData.type === 'shield' && playerShields < currentUFO.stats.health) playerShields++;
+          scene.remove(p); playSound('powerup');
+          notify(`${p.userData.type.charAt(0).toUpperCase() + p.userData.type.slice(1)} Activated!`);
+          return false;
+        }
+        return true;
+      });
+
+      // HUD
+      if (t - lastFrame > 0.2) {
+        heartAnim = (heartAnim + 1) % heartCycle.length;
+        lastFrame = t;
+      }
+      let hudText = `Score: ${score}  ⭐️ ${stars}  ${heartCycle[heartAnim].repeat(playerShields)}`;
+      if (speedBoost > t) hudText += ` ⚡ ${Math.ceil(speedBoost - t)}s`;
+      if (rapidFire > t) hudText += ` 🔫 ${Math.ceil(rapidFire - t)}s`;
+      if (boss && boss.userData.health > 0) {
+        hudText += `\nBoss HP: ${Math.ceil(boss.userData.health)}`;
+      }
+      document.getElementById('hud').innerText = hudText;
+
+      renderer.render(scene, camera);
+    }
+
+    function init() {
+      try {
+        console.log('Initializing Cosmic UFO Battle...');
+        // Scene setup
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 12);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        console.log('Renderer initialized:', renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        directionalLight.position.set(0, 5, 5);
+        scene.add(ambientLight, directionalLight);
+
+        // Parallax starfields
+        const createStarField = (count, size, speed) => {
+          const geom = new THREE.BufferGeometry();
+          const mat = new THREE.PointsMaterial({ color: 0xffffff, size });
+          const pos = new Float32Array(count * 3);
+          for (let i = 0; i < count; i++) {
+            pos[i * 3] = (Math.random() - 0.5) * 50;
+            pos[i * 3 + 1] = (Math.random() - 0.5) * 50;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 50;
+          }
+          geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          const field = new THREE.Points(geom, mat);
+          field.userData = { speed };
+          scene.add(field);
+          return field;
+        };
+        window.starFieldNear = createStarField(200, 0.2, 0.05);
+        window.starFieldMid = createStarField(500, 0.1, 0.02);
+        window.starFieldFar = createStarField(1000, 0.05, 0.01);
+
+        // Player
+        player = createUFO(currentUFO);
+        player.position.set(0, -4, 0);
+        scene.add(player);
+        console.log('Player added at', player.position);
+
+        // Initialize audio
+        initAudio();
+
+        setupControls();
+        renderStartMenu();
+        renderHighScores();
+        requestAnimationFrame(animate);
+        console.log('Initialization complete');
+      } catch (e) {
+        console.error('Initialization failed:', e);
+        document.body.innerHTML = '<h1 style="color:white;font-family:Arial;text-align:center;">Error: Game failed to initialize. Please try a modern browser.</h1>';
+      }
+    }
+
+    // Run after DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      setupMenu();
+      init();
+    });
+  </script>
+</body>
+</html>getElementById('restartButton').addEventListener('click', () => {
+          console.log('Return to Base clicked');
+          document.getElementById('gameOverMenu').style.display = 'none';
+          resetGame();
+        });
+        document.getElementById('backButton').addEventListener('click', () => {
+          console.log('Back clicked');
+          document.getElementById('highScoresMenu').style.display = 'none';
+          document.getElementById('startMenu').style.display = 'flex';
+        });
+        document.getElementById('clearScoresButton').addEventListener('click', () => {
+          console.log('Clear Scores clicked');
+          if (confirm('Clear all high scores?')) {
+            localStorage.removeItem('highScores');
+            renderHighScores();
+          }
+        });
+        console.log('Menu bindings set successfully');
+      } catch (e) {
+        console.error('Failed to set up menu bindings:', e);
+      }
+    }
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+      if (paused || gameOver) return;
+
+      const t = time * 0.001;
+
+      // Player movement
+      const moveSpeed = speedBoost > t ? currentUFO.stats.moveSpeed * 2 : currentUFO.stats.moveSpeed;
+      if (keys['ArrowLeft'] || moveLeft) player.position.x = Math.max(-4, player.position.x - moveSpeed);
+      if (keys['ArrowRight'] || moveRight) player.position.x = Math.min(4, player.position.x + moveSpeed);
+      player.rotation.y += player.userData.rotationSpeed;
+
+      // Update trail
+      const trailPositions = player.trail.geometry.attributes.position.array;
+      for (let i = 19; i > 0; i--) {
+        trailPositions[i * 3] = trailPositions[(i - 1) * 3];
+        trailPositions[i * 3 + 1] = trailPositions[(i - 1) * 3 + 1] - 0.05;
+        trailPositions[i * 3 + 2] = trailPositions[(i - 1) * 3 + 2];
+      }
+      trailPositions[0] = player.position.x;
+      trailPositions[1] = player.position.y - 0.2;
+      trailPositions[2] = player.position.z;
+      player.trail.geometry.attributes.position.needsUpdate = true;
+
+      // Drones
+      drones.forEach((drone, i) => {
+        if (drone.userData.health <= 0) return;
+        drone.userData.angle += 0.1;
+        drone.position.set(
+          player.position.x + Math.cos(drone.userData.angle) * 0.4,
+          player.position.y + Math.sin(drone.userData.angle) * 0.4,
+          0
+        );
+        drone.userData.shootTimer += 0.016;
+        if (drone.userData.shootTimer > currentUFO.stats.shotCooldown * 2) {
+          createBullet(drone.position, { damage: currentUFO.stats.superchargePower });
+          drone.userData.shootTimer = 0;
+        }
+      });
+
+      // Fire photons
+      const shotCooldown = rapidFire > t ? currentUFO.stats.shotCooldown / 2 : currentUFO.stats.shotCooldown;
+      if (t - lastShot > shotCooldown && shootPatterns[currentUFO.shoot]) {
+        shootPatterns[currentUFO.shoot](currentUFO, player.position);
+        lastShot = t;
+      }
+
+      // Spawn enemies or boss
+      const spawnInterval = Math.max(0.5, 1.5 - score / 10000);
+      if (!bossActive && stars >= 500 && Math.floor(stars / 500) > Math.floor((stars - 1) / 500)) {
+        spawnBoss();
+      } else if (!bossActive && t - lastSpawn > spawnInterval) {
+        spawnEnemy();
+        lastSpawn = t;
+      }
+
+      // Update starfields
+      [starFieldNear, starFieldMid, starFieldFar].forEach((field, i) => {
+        const speed = [0.05, 0.02, 0.01][i];
+        const positions = field.geometry.attributes.position.array;
+        for (let j = 0; j < positions.length / 3; j++) {
+          positions[j * 3 + 1] -= speed;
+          if (positions[j * 3 + 1] < -25) {
+            positions[j * 3 + 1] += 50;
+            positions[j * 3] = (Math.random() - 0.5) * 50;
+          }
+        }
+        field.geometry.attributes.position.needsUpdate = true;
+      });
+
+      // Boss logic
+      if (bossActive && boss) {
+        boss.position.x = Math.sin(t) * 3;
+        boss.rotation.y += boss.userData.rotationSpeed;
+        boss.userData.shootTimer += 0.016;
+        if (boss.userData.shootTimer > 2) {
+          [-0.3, -0.15, 0, 0.15, 0.3].forEach(angle => {
+            const bullet = createBullet(boss.position, { damage: 2 });
+            bullet.userData.speed = -0.2;
+            bullet.userData.angle = angle;
+            bullet.material.color.set(0xff0000);
+          });
+          boss.userData.shootTimer = 0;
+        }
+      }
+
+      // Update enemies
+      enemies.forEach(e => {
+        e.userData.shootTimer += 0.016;
+        if (e.userData.shootTimer > e.userData.shootInterval) {
+          shootEnemyBullet(e);
+          e.userData.shootTimer = 0;
+        }
+      });
+
+      // Update projectiles
+      bullets.forEach(b => {
+        b.position.y += b.userData.speed * Math.cos(b.userData.angle);
+        b.position.x += b.userData.speed * Math.sin(b.userData.angle);
+        b.scale.set(0.75 + 0.1 * Math.sin(t * 5), 0.75 + 0.1 * Math.sin(t * 5), 0.75);
+        if (b.userData.homing) {
+          const target = enemies.concat(boss ? [boss] : []).reduce((closest, e) => {
+            const dist = e.position.distanceTo(b.position);
+            return dist < closest.dist ? { dist, enemy: e } : closest;
+          }, { dist: Infinity, enemy: null });
+          if (target.enemy) {
+            const dx = target.enemy.position.x - b.position.x;
+            b.userData.angle = Math.atan2(dx, 1) * 0.1 + b.userData.angle * 0.9;
+          }
+        }
+      });
+      enemyBullets.forEach(b => {
+        b.position.y += b.userData.speed * Math.cos(b.userData.angle);
+        b.position.x += b.userData.speed * Math.sin(b.userData.angle);
+      });
+      bullets = bullets.filter(b => {
+        if (b.position.y > 10) { scene.remove(b); return false; }
+        return true;
+      });
+
+      // Update particles
+      particles = particles.filter(p => {
+        p.position.add(p.userData.speed);
+        p.userData.life -= 0.016;
+        p.material.opacity = p.userData.life / 0.5;
+        if (p.userData.life <= 0) { scene.remove(p); return false; }
+        return true;
+      });
+
+      // Damage
+      enemyBullets = enemyBullets.filter(b => {
+        if (b.position.distanceTo(player.position) < 0.3 && t - lastHit > 1) {
+          playerShields--; lastHit = t;
+          if (playerShields <= 0) showGameOver();
+          scene.remove(b); return false;
+        }
+        drones.forEach(d => {
+          if (d.userData.health > 0 && b.position.distanceTo(d.position) < 0.2) {
+            d.userData.health--;
+            if (d.userData.health <= 0) scene.remove(d);
+            scene.remove(b);
+            b = null;
+          }
+        });
+        if (!b) return false;
+        if (b.position.y < -8 || b.position.y > 8 || Math.abs(b.position.x) > 8) { scene.remove(b); return false; }
+        return true;
+      });
+
+      enemies = enemies.filter(e => {
+        e.position.y -= e.userData.speed;
+        e.rotation.x += e.userData.rotationSpeed;
+        if (e.position.y < -8) { scene.remove(e); return false; }
+        for (let j = 0; j < bullets.length; j++) {
+          if (e.position.distanceTo(bullets[j].position) < 0.4) {
+            e.userData.health -= bullets[j].userData.damage;
+            scene.remove(bullets[j]); bullets.splice(j, 1);
+            if (e.userData.health <= 0) {
+              spawnStar(e.position);
+              for (let i = 0; i < 5; i++) createParticle(e.position);
+              scene.remove(e); playSound('explosion');
+              score += 10;
+              return false;
+            }
+            break;
+          }
+        }
+        if (e.position.distanceTo(player.position) < 0.4 && t - lastHit > 1) {
+          playerShields--; lastHit = t;
+          if (playerShields <= 0) showGameOver();
+          scene.remove(e); playSound('explosion');
+          return false;
+        }
+        return true;
+      });
+
+      if (boss && boss.userData.health > 0) {
+        boss.userData.health -= bullets.reduce((dmg, b) => {
+          if (b.position.distanceTo(boss.position) < 0.75) {
+            scene.remove(b);
+            return dmg + b.userData.damage;
+          }
+          return dmg;
+        }, 0);
+        bullets = bullets.filter(b => scene.children.includes(b));
+        if (boss.userData.health <= 0) {
+          for (let i = 0; i < 10; i++) spawnStar(boss.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0)));
+          for (let i = 0; i < 20; i++) createParticle(boss.position);
+          spawnPowerUp(boss.position);
+          scene.remove(boss); boss = null; bossActive = false; playSound('explosion');
+          score += 100;
+        }
+      }
+
+      starsOnField = starsOnField.filter(star => {
+        star.position.y += star.userData.speed;
+        star.rotation.z += 0.1;
+        if (star.position.y < -8) { scene.remove(star); return false; }
+        if (star.position.distanceTo(player.position) < 0.3) {
+          stars++; localStorage.setItem('stars', stars);
+          scene.remove(star); playSound('star');
+          return false;
+        }
+        return true;
+      });
+
+      powerUps = powerUps.filter(p => {
+        p.position.y += p.userData.speed;
+        p.rotation.z += 0.1;
+        if (p.position.y < -8) { scene.remove(p); return false; }
+        if (p.position.distanceTo(player.position) < 0.3) {
+          if (p.userData.type === 'speed') speedBoost = t + 10;
+          if (p.userData.type === 'rapid') rapidFire = t + 8;
+          if (p.userData.type === 'shield' && playerShields < currentUFO.stats.health) playerShields++;
+          scene.remove(p); playSound('powerup');
+          notify(`${p.userData.type.charAt(0).toUpperCase() + p.userData.type.slice(1)} Activated!`);
+          return false;
+        }
+        return true;
+      });
+
+      // HUD
+      if (t - lastFrame > 0.2) {
+        heartAnim = (heartAnim + 1) % heartCycle.length;
+        lastFrame = t;
+      }
+      let hudText = `Score: ${score}  ⭐️ ${stars}  ${heartCycle[heartAnim].repeat(playerShields)}`;
+      if (speedBoost > t) hudText += ` ⚡ ${Math.ceil(speedBoost - t)}s`;
+      if (rapidFire > t) hudText += ` 🔫 ${Math.ceil(rapidFire - t)}s`;
+      if (boss && boss.userData.health > 0) {
+        hudText += `\nBoss HP: ${Math.ceil(boss.userData.health)}`;
+      }
+      document.getElementById('hud').innerText = hudText;
+
+      renderer.render(scene, camera);
+    }
+
+    function init() {
+      try {
+        console.log('Initializing Cosmic       totalStars += 5;
+                         }
+                          // Update the main enemies array reference after filtering/removing
+                         enemies = enemies.filter(e => e && e.visible); // Keep only still visible and valid enemies
+
+                          // Clear enemy bullets safely
+                          for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                              const b = enemyBullets[i];
+                               if (b && b.parent) {
+                                  scene.remove(b);
+                                   // Dispose bullet resources - NO, these are shared.
+                                   // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                                   // if (b.material && !b.material.isDisposed) b.material.dispose();
+                               }
+                          }
+                          enemyBullets.length = 0;
+
+                         updateUI();
+                         if (enemies.filter(e => e && e.visible).length === 0) { // Check *visible* and valid enemies
+                             console.log("All enemies destroyed by mega bomb, creating new wave.");
+                             createEnemies();
+                         } else {
+                             console.log("Mega bomb used, remaining enemies:", enemies.filter(e => e && e.visible).length);
+                         }
+                     } else if (!player) { console.log("Mega bomb failed: player is null."); }
+                     else if (isPaused) { console.log("Mega bomb failed: game is paused."); }
+                     else if (megaBombCount <= 0) { console.log("Mega bomb failed: no bombs left."); }
+
+                 }, { passive: false });
+                 megaBombButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                     console.log("Mega Bomb button touched. Count:", megaBombCount); // Added log
+                     if (megaBombCount > 0 && player && !isPaused) {
+                         megaBombCount--;
+                         playSound('explosion');
+                         // Filter out non-visible/already removed enemies before iterating
+                         const enemiesToBomb = enemies.filter(e => e && e.visible && e.parent); // Added null/undefined check
+                         for (let i = enemiesToBomb.length - 1; i >= 0; i--) {
+                             const enemy = enemiesToBomb[i];
+                              if (!enemy) continue; // Double check
+                             // Dispose of enemy resources - NO, these are shared.
+                              // if (enemy.geometry && !enemy.geometry.isDisposed) enemy.geometry.dispose();
+                             // if (enemy.material && !enemy.material.isDisposed) enemy.material.dispose();
+                              enemy.children.forEach(child => {
+                                   if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                                   if (child.material && !child.material.isDisposed) child.material.dispose();
+                               });
+                             // Remove from scene first
+                             if (enemy.parent) scene.remove(enemy);
+                             enemy.visible = false; // Redundant but safe
+                             score += 20;
+                             totalStars += 5;
+                         }
+                          // Update the main enemies array reference after filtering/removing
+                         enemies = enemies.filter(e => e && e.visible); // Keep only still visible and valid enemies
+
+                          // Clear enemy bullets safely
+                          for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                              const b = enemyBullets[i];
+                               if (b && b.parent) {
+                                  scene.remove(b);
+                                   // Dispose bullet resources - NO, these are shared.
+                                   // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                                   // if (b.material && !b.material.isDisposed) b.material.dispose();
+                               }
+                          }
+                          enemyBullets.length = 0;
+
+                         updateUI();
+                         if (enemies.filter(e => e && e.visible).length === 0) { // Check *visible* and valid enemies
+                             console.log("All enemies destroyed by mega bomb (touch), creating new wave.");
+                             createEnemies();
+                         } else {
+                             console.log("Mega bomb used (touch), remaining enemies:", enemies.filter(e => e && e.visible).length);
+                         }
+                    } else if (!player) { console.log("Mega bomb failed (touch): player is null."); }
+                     else if (isPaused) { console.log("Mega bomb failed (touch): game is paused."); }
+                     else if (megaBombCount <= 0) { console.log("Mega bomb failed (touch): no bombs left."); }
+                 }, { passive: false });
+                 console.log("Mega Bomb button listeners added.");
+            } else { console.warn("Mega Bomb button element not found."); }
+
+             // Add listeners to static UI menu buttons
+            const selectButton = document.querySelector('#selection button[onclick="showHangar()"]');
+            if (selectButton) {
+                 selectButton.addEventListener('pointerup', () => showHangar()); // Call showHangar function
+                 selectButton.addEventListener('touchend', () => showHangar()); // Call showHangar function
+                 console.log("Selection to Hangar button listeners added.");
+            } else { console.warn("Selection to Hangar button not found."); }
+
+             const hangarBackButton = document.querySelector('#hangar button[onclick="showSelection()"]');
+            if (hangarBackButton) {
+                 hangarBackButton.addEventListener('pointerup', () => showSelection()); // Call showSelection function
+                 hangarBackButton.addEventListener('touchend', () => showSelection()); // Call showSelection function
+                 console.log("Hangar back button listeners added.");
+            } else { console.warn("Hangar back button not found."); }
+
+             const pauseResumeButton = document.querySelector('#pauseMenu button[onclick="resumeGame()"]');
+            if (pauseResumeButton) {
+                 pauseResumeButton.addEventListener('pointerup', () => resumeGame()); // Call resumeGame function
+                 pauseResumeButton.addEventListener('touchend', () => resumeGame()); // Call resumeGame function
+                 console.log("Pause resume button listeners added.");
+            } else { console.warn("Pause resume button not found."); }
+
+             // Notification OK button listener - Removed once: true
+             if (notificationOkButton) {
+                 notificationOkButton.addEventListener('pointerup', () => hideNotification());
+                 notificationOkButton.addEventListener('touchend', () => hideNotification());
+                  console.log("Notification OK button listeners added.");
+             } else { console.warn("Notification OK button not found."); }
+        }
+
+        // Touch/Keyboard Controls
+        const pointer = new THREE.Vector2();
+        let isDragging = false;
+        let initialPointerPos = new THREE.Vector2();
+        let initialPlayerPos = new THREE.Vector3();
+
+        renderer.domElement.addEventListener('pointerdown', (e) => {
+             // Prevent dragging if pointerdown is on a UI element
+            if (e.target.closest('#ui') || e.target.closest('#controls') || e.target.closest('#selection') || e.target.closest('#hangar') || e.target.closest('#pauseMenu') || e.target.closest('#notification') || !player || isPaused) { // Added isPaused check
+                return;
+            }
+            e.preventDefault(); // Prevent default only if starting drag
+            isDragging = true;
+            initialPointerPos.set(e.clientX, e.clientY);
+            initialPlayerPos.copy(player.position);
+            resumeAudioContext();
+             console.log("Pointer Down: Starting drag."); // Added log
+        }, { passive: false });
+
+        renderer.domElement.addEventListener('pointermove', (e) => {
+            if (isDragging && player && !isPaused) { // Added isPaused check
+                e.preventDefault();
+                const deltaX = e.clientX - initialPointerPos.x;
+                const deltaY = e.clientY - initialPointerPos.y;
+                const moveSensitivity = 0.05;
+                const gameMoveX = deltaX * moveSensitivity;
+                const gameMoveY = -deltaY * moveSensitivity;
+                player.position.x = initialPlayerPos.x + gameMoveX;
+                player.position.y = initialPlayerPos.y + gameMoveY;
+                const boundsX = 18;
+                const boundsYTop = -10;
+                const boundsYBottom = -18;
+                player.position.x = Math.max(-boundsX, Math.min(boundsX, player.position.x));
+                player.position.y = Math.max(boundsYBottom, Math.min(boundsYTop, player.position.y));
+                 // console.log("Pointer Move: Player position:", player.position.x, player.position.y); // Log player movement
+            }
+        }, { passive: false });
+
+        renderer.domElement.addEventListener('pointerup', () => {
+             if (isDragging) {
+                 isDragging = false;
+                 console.log("Pointer Up: Ending drag."); // Added log
+             }
+        });
+
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            // Only prevent default if the touch is NOT on a UI element
+            if (!e.target.closest('#ui') && !e.target.closest('#controls') && !e.target.closest('#selection') && !e.target.closest('#hangar') && !e.target.closest('#pauseMenu') && !e.target.closest('#notification')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+         // Added touchend listener to stop drag on touch end
+         renderer.domElement.addEventListener('touchend', (e) => {
+              if (isDragging) {
+                 isDragging = false;
+                 console.log("Touch End: Ending drag."); // Added log
+             }
+         });
+
+
+        renderer.domElement.addEventListener('dblclick', (e) => {
+             e.preventDefault(); // Prevent default double-click zoom
+         });
+
+
+        // Keyboard controls (basic)
+        const keys = {};
+        document.addEventListener('keydown', (e) => { keys[e.code] = true; });
+        document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        // Selection Menu
+        function updateSelectionMenu() {
+            console.log("Updating selection menu");
+            const ufoSelection = document.getElementById('ufoSelection');
+            if (!ufoSelection) { console.error("#ufoSelection element not found!"); return; }
+            ufoSelection.innerHTML = '';
+
+            ufoConfigs.forEach(config => {
+                if (config.unlocked) {
+                    const div = document.createElement('div');
+                    const preview = previewDivElements[config.id]; // Use the stored HTML div with canvas
+                    if (preview) {
+                        // Clone the HTML element but NOT its children (the canvas)
+                        const clonedPreviewDiv = preview.cloneNode(false);
+                        // Create a new canvas for this specific preview display
+                         const previewCanvas = document.createElement('canvas');
+                         previewCanvas.width = 50; // Match CSS size
+                         previewCanvas.height = 50; // Match CSS size
+                         clonedPreviewDiv.appendChild(previewCanvas);
+                         clonedPreviewDiv.dataset.ufoId = config.id; // Store UFO ID for rendering
+
+                        div.appendChild(clonedPreviewDiv);
+                    } else {
+                        console.warn(`Preview element not found for ${config.id} in selection menu.`);
+                         const placeholder = document.createElement('div');
+                         placeholder.className = 'preview-placeholder';
+                         placeholder.innerHTML = `<span>${config.name || 'UFO'}</span>`;
+                         div.appendChild(placeholder);
+                    }
+
+                    const button = document.createElement('button');
+                    button.textContent = `Select ${config.name}`;
+                    button.onclick = () => {
+                        // playSound('uiClick'); // Sound is now in button pointer/touch listeners
+                        selectedUfoId = config.id;
+                        startGame(selectedUfoId);
+                    };
+                    div.appendChild(button);
+                    ufoSelection.appendChild(div);
+                }
+            });
+             console.log("Selection menu updated with UFOs.");
+        }
+
+        window.showSelection = function() {
+            // playSound('uiClick'); // Sound is now in button pointer/touch listeners
+            console.log("Attempting to show selection menu.");
+            // Explicitly hide all other menus
+            const hangarMenu = document.getElementById('hangar');
+            if(hangarMenu) hangarMenu.style.display = 'none';
+            const pauseMenu = document.getElementById('pauseMenu');
+            if(pauseMenu) pauseMenu.style.display = 'none';
+            const notificationMenu = document.getElementById('notification');
+            if(notificationMenu) notificationMenu.style.display = 'none';
+
+             // Show the selection menu
+            const selectionMenu = document.getElementById('selection');
+            if (selectionMenu) {
+                 selectionMenu.style.display = 'flex';
+                 // Trigger a resize event to ensure preview canvases are sized correctly
+                 window.dispatchEvent(new Event('resize'));
+            } else { console.error("#selection element not found!"); }
+
+            updateSelectionMenu();
+            console.log("Selection menu shown");
+        };
+
+        window.showHangar = function() {
+            // playSound('uiClick'); // Sound is now in button pointer/touch listeners
+            console.log("Hangar button clicked, attempting to show hangar.");
+            // Explicitly hide all other menus
+            const selectionMenu = document.getElementById('selection');
+            if(selectionMenu) selectionMenu.style.display = 'none';
+            const pauseMenu = document.getElementById('pauseMenu');
+            if(pauseMenu) pauseMenu.style.display = 'none';
+            const notificationMenu = document.getElementById('notification');
+            if(notificationMenu) notificationMenu.style.display = 'none';
+
+             // Show the hangar menu
+            const hangarMenu = document.getElementById('hangar');
+             if (hangarMenu) {
+                 hangarMenu.style.display = 'flex';
+                 // Trigger a resize event to ensure preview canvases are sized correctly
+                 window.dispatchEvent(new Event('resize'));
+             } else { console.error("#hangar element not found!"); }
+
+            updateHangarUI();
+            console.log("Hangar menu shown");
+        };
+
+        window.hideNotification = function() {
+            playSound('uiClick');
+             const notificationMenu = document.getElementById('notification');
+             if (notificationMenu) {
+                 notificationMenu.style.display = 'none';
+             } else { console.error("#notification element not found!"); }
+        };
+
+        window.resumeGame = function() {
+            playSound('uiClick');
+            isPaused = false;
+             const pauseMenu = document.getElementById('pauseMenu');
+             if (pauseMenu) {
+                 pauseMenu.style.display = 'none';
+             } else { console.error("#pauseMenu element not found!"); }
+
+            resumeAudioContext();
+        };
+
+        // Hangar UI (Grid Layout and Show All)
+        function updateHangarUI() {
+            console.log("Updating hangar UI");
+            const hangarStars = document.getElementById('hangarStars');
+            if(hangarStars) hangarStars.textContent = totalStars;
+            const cannonLevel = document.getElementById('cannonLevel');
+            if(cannonLevel) cannonLevel.textContent = upgradeLevels.mainCannon;
+
+
+            const ufoList = document.getElementById('ufoList');
+            if (!ufoList) { console.error("#ufoList element not found!"); return; }
+            ufoList.innerHTML = '';
+
+            ufoConfigs.forEach((config, index) => {
+                 const div = document.createElement('div');
+
+                 const preview = previewDivElements[config.id]; // Use the stored HTML div with canvas
+                 if (preview) {
+                      // Clone the HTML element but NOT its children (the canvas)
+                      const clonedPreviewDiv = preview.cloneNode(false);
+                      // Create a new canvas for this specific preview display
+                       const previewCanvas = document.createElement('canvas');
+                       previewCanvas.width = 60; // Match CSS size for hangar previews
+                       previewCanvas.height = 60; // Match CSS size for hangar previews
+                       clonedPreviewDiv.appendChild(previewCanvas);
+                       clonedPreviewDiv.dataset.ufoId = config.id; // Store UFO ID for rendering
+
+                      div.appendChild(clonedPreviewDiv);
+                 } else {
+                     console.warn(`Preview element not found for ${config.id} in hangar UI.`);
+                      const placeholder = document.createElement('div');
+                     placeholder.className = 'preview-placeholder';
+                     placeholder.innerHTML = `<span>${config.name || 'UFO'}</span>`;
+                     // Increased placeholder size to match new preview size
+                     placeholder.style.width = '60px';
+                     placeholder.style.height = '60px';
+                     div.appendChild(placeholder);
+                 }
+
+                 const infoDiv = document.createElement('div');
+                 infoDiv.className = 'ufo-info';
+                 infoDiv.innerHTML = `<strong>${config.name}</strong><br>`;
+
+                 const button = document.createElement('button');
+
+                if (config.unlocked) {
+                    button.textContent = `Select`;
+                    button.onclick = () => {
+                        // playSound('uiClick'); // Sound is now in button pointer/touch listeners
+                        selectedUfoId = config.id;
+                        showSelection();
+                    };
+                     infoDiv.innerHTML += `Unlocked`;
+                } else {
+                    const unlockCost = config.cost;
+                    button.textContent = `Unlock (${unlockCost} Stars)`;
+                    button.onclick = () => {
+                        // playSound('uiClick'); // Sound is now in button pointer/touch listeners
+                        if (totalStars >= unlockCost) {
+                            totalStars -= unlockCost;
+                            config.unlocked = true;
+                            updateHangarUI();
+                            updateSelectionMenu();
+                            updateUI();
+                            const notificationText = document.getElementById('notificationText');
+                            if(notificationText) notificationText.textContent = `${config.name} Unlocked!`;
+                            const notificationMenu = document.getElementById('notification');
+                             if(notificationMenu) notificationMenu.style.display = 'flex';
+                        } else {
+                             const notificationText = document.getElementById('notificationText');
+                             if(notificationText) notificationText.textContent = 'Not enough stars!';
+                             const notificationMenu = document.getElementById('notification');
+                              if(notificationMenu) notificationMenu.style.display = 'flex';
+                        }
+                    };
+                     infoDiv.innerHTML += `Cost: ${unlockCost} Stars`;
+                }
+
+                 div.appendChild(infoDiv);
+                 div.appendChild(button);
+                 ufoList.appendChild(div);
+            });
+             const allUnlocked = ufoConfigs.every(config => config.unlocked);
+             if (allUnlocked && ufoList.children.length === 0) {
+                 const p = document.createElement('p');
+                 p.textContent = "All UFOs unlocked!";
+                 ufoList.appendChild(p);
+             }
+             console.log("Hangar UI updated with UFOs.");
+        }
+
+        // Upgrade System
+        const upgradeLevels = { mainCannon: 0 };
+        const upgradeCosts = { mainCannon: 20 };
+        const maxUpgradeLevels = { mainCannon: 5 };
+
+        window.buyUpgrade = function(type) {
+            playSound('uiClick');
+            const cost = upgradeCosts[type];
+            const currentLevel = upgradeLevels[type];
+            const maxLevel = maxUpgradeLevels[type];
+
+            if (currentLevel < maxLevel) {
+                if (totalStars >= cost) {
+                    totalStars -= cost;
+                    upgradeLevels[type]++;
+                    updateHangarUI();
+                    updateUI();
+                    const notificationText = document.getElementById('notificationText');
+                    if(notificationText) notificationText.textContent = `Upgraded ${type.replace('mainCannon', 'Main Cannon')} to Level ${upgradeLevels[type]}!`;
+                    const notificationMenu = document.getElementById('notification');
+                     if(notificationMenu) notificationMenu.style.display = 'flex';
+                } else {
+                     const notificationText = document.getElementById('notificationText');
+                     if(notificationText) notificationText.textContent = 'Not enough stars!';
+                     const notificationMenu = document.getElementById('notification');
+                      if(notificationMenu) notificationMenu.style.display = 'flex';
+                }
+            } else {
+                 const notificationText = document.getElementById('notificationText');
+                 if(notificationText) notificationText.textContent = `${type.replace('mainCannon', 'Main Cannon')} is already at max level!`;
+                 const notificationMenu = document.getElementById('notification');
+                 if(notificationMenu) notificationMenu.style.display = 'flex';
+            }
+        };
+
+        // Start Game
+        window.startGame = function(type) {
+            console.log(`Starting game with UFO: ${type}`);
+            resumeAudioContext();
+
+            // Hide all menus explicitly
+            const selectionMenu = document.getElementById('selection');
+            if(selectionMenu) selectionMenu.style.display = 'none';
+            const hangarMenu = document.getElementById('hangar');
+            if(hangarMenu) hangarMenu.style.display = 'none';
+            const pauseMenu = document.getElementById('pauseMenu');
+            if(pauseMenu) pauseMenu.style.display = 'none';
+            const notificationMenu = document.getElementById('notification');
+            if(notificationMenu) notificationMenu.style.display = 'none';
+
+            // Clean up previous game objects from the scene safely
+            const objectsToRemove = [];
+            scene.children.forEach(child => {
+                 // Mark objects with userData.isGameAsset to be removed/disposed
+                 if (child && child.userData && child.userData.isGameAsset) { // Added null/undefined check
+                     objectsToRemove.push(child);
+                 }
+            });
+
+            objectsToRemove.forEach(obj => {
+                 if (obj && obj.parent) { // Check if object and parent exist before removing
+                     // Dispose geometry and material only if they are not shared - NO, these ARE shared.
+                     // The geometry and material variables (enemyGeometry, enemyMaterial, etc.) are reused.
+                     // We should only dispose the mesh object and remove it from the scene.
+                     // if (obj.geometry && !obj.geometry.isDisposed) obj.geometry.dispose();
+                     // if (obj.material && !obj.material.isDisposed) obj.material.dispose(); // This was wrong
+                      obj.children.forEach(child => {
+                           if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                           if (child.material && !child.material.isDisposed) child.material.dispose();
+                       });
+                     scene.remove(obj);
+                     console.log(`Removed object with userData:`, obj.userData);
+                 } else if (obj) {
+                     console.warn("Attempted to remove object without parent:", obj.userData);
+                     // Still attempt to dispose resources if object exists - NO, only dispose the object if it's not shared.
+                     // if (obj.geometry && !obj.geometry.isDisposed) obj.geometry.dispose();
+                     // if (obj.material && !obj.material.isDisposed) obj.material.dispose(); // This was wrong
+                      obj.children.forEach(child => {
+                           if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                           if (child.material && !child.material.isDisposed) child.material.dispose();
+                       });
+                 }
+            });
+
+            // Clear arrays holding references
+            enemies.length = 0;
+            playerBullets.length = 0;
+            enemyBullets.length = 0;
+            starLayers.length = 0;
+
+
+            player = null;
+             console.log("Previous game objects cleaned up.");
+
+
+            // Recreate starfield for the new game
+            createStarfield();
+
+
+            createEnemies(); // Create new wave of enemies
+
+            const config = ufoConfigs.find(c => c.id === type);
+            if (!config) {
+                console.error("UFO config not found:", type);
+                showSelection();
+                return;
+            }
+
+            try {
+                const playerMaterial = ufoMaterials[config.id];
+                if (!playerMaterial) {
+                     console.error(`Material not found for UFO: ${config.id}. Using fallback.`);
+                     player = new THREE.Mesh(config.geometry, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+                } else {
+                     player = new THREE.Mesh(config.geometry, playerMaterial);
+                }
+
+                player.position.set(0, -15, 0);
+                 player.userData.isPlayer = true;
+                 player.userData.isGameAsset = true; // Mark as game asset for cleanup
+                 player.visible = true;
+
+
+                if (thrusters) { // Thrusters is a single object reused
+                     // Ensure thrusters are not already a child of something else before adding
+                    if (thrusters.parent) {
+                         thrusters.parent.remove(thrusters);
+                    }
+                     player.add(thrusters);
+                     if(thrusterMaterial) thrusterMaterial.color.set(config.thrusterColor);
+                     thrusters.visible = true;
+                     // thrusters.userData.isGameAsset is already set during its creation
+                } else {
+                     console.warn("Thrusters object is null or undefined.");
+                }
+
+                scene.add(player);
+                console.log("Player added at:", player.position, "with config:", config.name);
+            } catch (e) {
+                console.error("Error creating player:", e);
+                // Fallback player creation
+                player = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+                player.position.set(0, -15, 0);
+                 player.userData.isPlayer = true;
+                 player.userData.isGameAsset = true; // Mark as game asset
+                 player.visible = true;
+                scene.add(player);
+                console.log("Fallback player added due to error.");
+            }
+
+            playerStats = { ...config.stats };
+            currentHealth = playerStats.health + upgradeLevels.mainCannon;
+            currentShotCooldown = playerStats.shotCooldown * Math.pow(0.95, upgradeLevels.mainCannon);
+            currentShotCooldown = Math.max(currentShotCooldown, 0.05);
+
+            score = 0;
+            megaBombCount = 1;
+
+            isPaused = false;
+            enemyDirection = 1;
+            enemySpeed = 2;
+            formationTime = 0;
+            lastPlayerShotTime = 0;
+
+            updateUI();
+            console.log("Game started, scene children:", scene.children.length);
+        };
+
+        // Update Functions
+        let lastPlayerShotTime = 0;
+
+        function updateGame(dt) {
+            if (!player || isPaused) {
+                 return;
+            }
+
+            starLayers.forEach(layer => {
+                if (layer && layer.userData && typeof layer.userData.speed !== 'undefined') {
+                    layer.position.y -= layer.userData.speed * dt * 60;
+                    if (layer.position.y < -50) layer.position.y += 100;
+                }
+            });
+
+            if (player && player.material && player.material.uniforms && player.material.uniforms.time) {
+                player.material.uniforms.time.value = time;
+            }
+
+
+            if (thrusters && thrusters.geometry && thrusters.geometry.attributes && thrusters.geometry.attributes.position) {
+                const thrusterPos = thrusters.geometry.attributes.position.array;
+                for (let i = 0; i < thrusterCount; i++) {
+                    thrusterPos[i * 3] += thrusterVelocities[i].x * dt * 60;
+                    thrusterPos[i * 3 + 1] += thrusterVelocities[i].y * dt * 60;
+                    thrusterPos[i * 3 + 2] += thrusterVelocities[i].z * dt * 60;
+                    if (thrusterPos[i * 3 + 1] < -1) {
+                        thrusterPos[i * 3] = (Math.random() - 0.5) * 0.2;
+                        thrusterPos[i * 3 + 1] = -0.5;
+                        thrusterPos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+                        thrusterVelocities[i].set((Math.random() - 0.5) * 0.05, -Math.random() * 0.1, (Math.random() - 0.5) * 0.05);
+                    }
+                }
+                 thrusters.geometry.attributes.position.needsUpdate = true;
+            }
+
+
+             const moveSpeed = playerStats.moveSpeed;
+             if (keys['ArrowLeft'] || keys['KeyA']) player.position.x -= moveSpeed * dt * 60;
+             if (keys['ArrowRight'] || keys['KeyD']) player.position.x += moveSpeed * dt * 60;
+             if (keys['ArrowUp'] || keys['KeyW']) player.position.y += moveSpeed * dt * 60;
+             if (keys['ArrowDown'] || keys['KeyS']) player.position.y -= moveSpeed * dt * 60;
+
+
+             const boundsX = 18;
+             const boundsYTop = -10;
+             const boundsYBottom = -18;
+             player.position.x = Math.max(-boundsX, Math.min(boundsX, player.position.x));
+             player.position.y = Math.max(boundsYBottom, Math.min(boundsYTop, player.position.y));
+
+            // Autofire: Shoot if game is active (player exists and not paused) and cooldown is ready
+            if (player && !isPaused && time - lastPlayerShotTime >= currentShotCooldown) {
+                shootBullets();
+            }
+
+            formationTime += dt;
+            let maxX = -Infinity;
+            let minX = Infinity;
+            let minY = Infinity;
+
+            // Filter out null/undefined enemies and those not in the scene or not visible
+            const activeEnemies = enemies.filter(enemy => enemy && enemy.visible && enemy.parent);
+
+            activeEnemies.forEach((enemy) => {
+                 if (!enemy) return; // Double check
+
+                // Find the original index to maintain formation logic
+                // Note: This might become less reliable if enemies are removed from the middle of the array.
+                // A better approach for formation might be to store original grid position in userData.
+                // const originalIndex = ufoConfigs.findIndex(config => config.id === enemy.userData.originalUfoId); // Assuming you add originalUfoId to enemy userData
+                // If original index is not found, use current index in activeEnemies (less ideal for formation)
+                // const formationIndex = originalIndex !== -1 ? originalIndex : activeEnemies.indexOf(enemy);
+
+                // const row = Math.floor(formationIndex / 11);
+                // const col = formationIndex % 11;
+                // const offset = Math.sin(formationTime + row * 0.5) * 0.8;
+                // // Apply formation logic relative to the initial spawn position or a formation center
+                // // For now, keep the original logic based on the enemy's current position relative to its column
+                // enemy.position.x = (col - 11 / 2) * 1.8 + offset; // This line seems incorrect for movement, it resets x based on formation
+
+                // Let's adjust enemy movement based on current position and direction
+                enemy.position.x += enemyDirection * enemySpeed * dt;
+
+
+                enemy.rotation.y += 0.05 * dt * 60;
+
+                maxX = Math.max(maxX, enemy.position.x);
+                minX = Math.min(minX, enemy.position.x);
+                minY = Math.min(minY, enemy.position.y);
+
+                 // Reduced shootChance check
+                 if (time - enemy.userData.lastShotTime >= 0.5 && Math.random() < enemy.userData.shootChance * dt * 60) {
+                    if (player && player.parent) { // Check if player exists and is in scene
+                        // Aim enemy bullets downwards (not homing)
+                        const enemyBulletVelocity = new THREE.Vector3(0, -5, 0); // Simple downward velocity
+                        spawnEnemyBullet(enemy.position, enemyBulletVelocity);
+                        enemy.userData.lastShotTime = time;
+                    }
+                 }
+            });
+
+            if (maxX > 15 || minX < -15) {
+                enemyDirection *= -1;
+                activeEnemies.forEach(enemy => {
+                     if (enemy) enemy.position.y -= 0.5; // Added null check
+                });
+                enemySpeed *= 1.1;
+            }
+
+            // Update and check collisions for player bullets
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const bullet = playerBullets[i];
+                if (!bullet || !bullet.parent) { // Check if bullet is valid and still in scene
+                     playerBullets.splice(i, 1);
+                     continue;
+                }
+                bullet.position.addScaledVector(bullet.userData.velocity, dt);
+                if (bullet.position.y > 20) {
+                    scene.remove(bullet);
+                     // Dispose geometry and material only if they are not shared - NO
+                     // if (bullet.geometry && !bullet.geometry.isDisposed) bullet.geometry.dispose();
+                     // if (bullet.material && !bullet.material.isDisposed) bullet.material.dispose();
+                    playerBullets.splice(i, 1);
+                    continue;
+                }
+                // Check collision with active enemies
+                for (let j = activeEnemies.length - 1; j >= 0; j--) {
+                    const enemy = activeEnemies[j];
+                    if (!enemy || !enemy.parent || !enemy.visible) continue; // Check if enemy is valid, in scene, and visible
+                    const collisionRadius = 0.8; // Adjusted collision radius slightly
+                     if (bullet.position.distanceTo(enemy.position) < collisionRadius) {
+                        takeDamage(enemy, 1);
+                        // Remove bullet after collision
+                        if (bullet && bullet.parent) { // Check if bullet is still valid before removing
+                             // Dispose geometry and material only if they are not shared - NO
+                             // if (bullet.geometry && !bullet.geometry.isDisposed) bullet.geometry.dispose();
+                             // if (bullet.material && !bullet.material.isDisposed) bullet.material.dispose();
+                            scene.remove(bullet);
+                        }
+                        playerBullets.splice(i, 1); // Remove from array
+                        break; // Exit inner loop after collision
+                    }
+                }
+            }
+
+            // Update and check collisions for enemy bullets
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const bullet = enemyBullets[i];
+                if (!bullet || !bullet.parent) { // Check if bullet is valid and still in scene
+                    enemyBullets.splice(i, 1);
+                    continue;
+                }
+                bullet.position.addScaledVector(bullet.userData.velocity, dt);
+                if (bullet.position.y < -20) {
+                    scene.remove(bullet);
+                     // Dispose geometry and material only if they are not shared - NO
+                     // if (bullet.geometry && !bullet.geometry.isDisposed) bullet.geometry.dispose();
+                     // if (bullet.material && !bullet.material.isDisposed) bullet.material.dispose();
+                    enemyBullets.splice(i, 1);
+                    continue;
+                }
+                // Check collision with player
+                if (player && player.parent && bullet && bullet.parent && bullet.position.distanceTo(player.position) < 0.8) { // Adjusted collision radius
+                    currentHealth--;
+                    // Remove bullet after collision
+                    if (bullet && bullet.parent) { // Check if bullet is still valid before removing
+                         // Dispose geometry and material only if they are not shared - NO
+                         // if (bullet.geometry && !bullet.geometry.isDisposed) bullet.geometry.dispose();
+                         // if (bullet.material && !bullet.material.isDisposed) bullet.material.dispose();
+                         scene.remove(bullet);
+                     }
+                    enemyBullets.splice(i, 1); // Remove from array
+                    playSound('explosion');
+                    updateUI();
+                    if (currentHealth <= 0) {
+                        console.log("Player health <= 0, Game Over!");
+                         // Clean up player and remaining game assets safely
+                         if (player && player.parent) {
+                              // Dispose geometry and material only if they are not shared - NO
+                              // if (player.geometry && !player.geometry.isDisposed) player.geometry.dispose();
+                             if (player.material && typeof player.material.dispose === 'function' && !player.material.isDisposed) player.material.dispose(); // Dispose player's potentially unique material
+                             scene.remove(player); // Remove player mesh
+                              // Thrusters are a child, removed when player is removed. Dispose thruster resources.
+                              if (thrusters) {
+                                   if (thrusters.geometry && !thrusters.geometry.isDisposed) thrusters.geometry.dispose();
+                                   if (thrusters.material && !thrusters.material.isDisposed) thrusters.material.dispose();
+                              }
+                         }
+                        player = null; // Nullify player reference
+
+                         // Dispose and remove remaining player bullets safely
+                         for (let j = playerBullets.length - 1; j >= 0; j--) {
+                             const b = playerBullets[j];
+                             if (b && b.parent) {
+                                 scene.remove(b);
+                                  // Dispose geometry and material only if they are not shared - NO
+                                  // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                                  // if (b.material && !b.material.isDisposed) b.material.dispose();
+                              }
+                         }
+                         playerBullets.length = 0;
+
+                         // Dispose and remove remaining enemy bullets safely
+                          for (let j = enemyBullets.length - 1; j >= 0; j--) {
+                              const b = enemyBullets[j];
+                             if (b && b.parent) {
+                                 scene.remove(b);
+                                  // Dispose geometry and material only if they are not shared - NO
+                                  // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                                  // if (b.material && !b.material.isDisposed) b.material.dispose();
+                              }
+                         }
+                         enemyBullets.length = 0;
+
+                         // Dispose and remove remaining enemies safely
+                          enemies.forEach(enemy => {
+                               if (enemy && enemy.parent) {
+                                   // Dispose geometry and material only if they are not shared - NO
+                                   // if (enemy.geometry && !enemy.geometry.isDisposed) enemy.geometry.dispose();
+                                   // if (enemy.material && !enemy.material.isDisposed) enemy.material.dispose();
+                                    enemy.children.forEach(child => {
+                                        if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                                        if (child.material && !child.material.isDisposed) child.material.dispose();
+                                     });
+                                   scene.remove(enemy);
+                               } else if (enemy) {
+                                    // Attempt disposal even if not in scene, just in case - NO
+                                     // if (enemy.geometry && !enemy.geometry.isDisposed) enemy.geometry.dispose();
+                                     // if (enemy.material && !enemy.material.isDisposed) enemy.material.dispose();
+                                      enemy.children.forEach(child => {
+                                          if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                                          if (child.material && !child.material.isDisposed) child.material.dispose();
+                                       });
+                               }
+                          });
+                         enemies.length = 0; // Clear the array
+
+
+                        const notificationText = document.getElementById('notificationText');
+                        if(notificationText) notificationText.textContent = 'Game Over!';
+                        const notificationMenu = document.getElementById('notification');
+                         if(notificationMenu) {
+                             notificationMenu.style.display = 'flex';
+                             // Use a single event listener for both pointerup and touchend for simplicity
+                             const handleGameOverClick = () => {
+                                 hideNotification();
+                                 showSelection();
+                                 // Remove listeners after they are triggered once
+                                 notificationMenu.removeEventListener('pointerup', handleGameOverClick);
+                                 notificationMenu.removeEventListener('touchend', handleGameOverClick);
+                             };
+                             notificationMenu.addEventListener('pointerup', handleGameOverClick, { once: true });
+                             notificationMenu.addEventListener('touchend', handleGameOverClick, { once: true });
+                         }
+                    }
+                }
+            }
+
+            // Check if all enemies are destroyed (considering only visible ones)
+            if (enemies.filter(e => e && e.visible).length === 0 && enemies.length > 0) { // Check valid and visible enemies
+                 console.log("All enemies destroyed, creating new wave.");
+                 // Clear remaining enemy bullets before creating new wave safely
+                 for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                      const b = enemyBullets[i];
+                      if (b && b.parent) {
+                          scene.remove(b);
+                          // Dispose geometry and material only if they are not shared - NO
+                          // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                          // if (b.material && !b.material.isDisposed) b.material.dispose();
+                      }
+                 }
+                 enemyBullets.length = 0;
+                createEnemies();
+            }
+
+            // Check if enemies reached the base
+            if (minY < -8 && player) { // Check if player still exists
+                console.log("Enemies reached base, Game Over!");
+                 // Clean up player and remaining game assets safely
+                 if (player && player.parent) {
+                     // Dispose geometry and material only if they are not shared - NO
+                     // if (player.geometry && !player.geometry.isDisposed) player.geometry.dispose();
+                     if (player.material && typeof player.material.dispose === 'function' && !player.material.isDisposed) player.material.dispose(); // Dispose player's potentially unique material
+                     scene.remove(player); // Remove player mesh
+                      // Thrusters are a child, removed when player is removed. Dispose thruster resources.
+                      if (thrusters) {
+                           if (thrusters.geometry && !thrusters.geometry.isDisposed) thrusters.geometry.dispose();
+                           if (thrusters.material && !thrusters.material.isDisposed) thrusters.material.dispose();
+                      }
+                 }
+                player = null; // Nullify player reference
+
+                 // Dispose and remove remaining player bullets safely
+                 for (let j = playerBullets.length - 1; j >= 0; j--) {
+                     const b = playerBullets[j];
+                     if (b && b.parent) {
+                         scene.remove(b);
+                          // Dispose geometry and material only if they are not shared - NO
+                          // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                          // if (b.material && !b.material.isDisposed) b.material.dispose();
+                      }
+                 }
+                 playerBullets.length = 0;
+
+                 // Dispose and remove remaining enemy bullets safely
+                  for (let j = enemyBullets.length - 1; j >= 0; j--) {
+                      const b = enemyBullets[j];
+                     if (b && b.parent) {
+                         scene.remove(b);
+                          // Dispose geometry and material only if they are not shared - NO
+                          // if (b.geometry && !b.geometry.isDisposed) b.geometry.dispose();
+                          // if (b.material && !b.material.isDisposed) b.material.dispose();
+                      }
+                 }
+                 enemyBullets.length = 0;
+
+                 // Dispose and remove remaining enemies safely
+                  enemies.forEach(enemy => {
+                       if (enemy && enemy.parent) {
+                           // Dispose geometry and material only if they are not shared - NO
+                           // if (enemy.geometry && !enemy.geometry.isDisposed) enemy.geometry.dispose();
+                           // if (enemy.material && !enemy.material.isDisposed) enemy.material.dispose();
+                            enemy.children.forEach(child => {
+                                if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                                if (child.material && !child.material.isDisposed) child.material.dispose();
+                             });
+                           scene.remove(enemy);
+                       } else if (enemy) {
+                            // Attempt disposal even if not in scene, just in case - NO
+                             // if (enemy.geometry && !enemy.geometry.isDisposed) enemy.geometry.dispose();
+                             // if (enemy.material && !enemy.material.isDisposed) enemy.material.dispose();
+                              enemy.children.forEach(child => {
+                                  if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                                  if (child.material && !child.material.isDisposed) child.material.dispose();
+                               });
+                       }
+                  });
+                 enemies.length = 0; // Clear the array
+
+
+                const notificationText = document.getElementById('notificationText');
+                if(notificationText) notificationText.textContent = 'Game Over! Enemies reached your base!';
+                const notificationMenu = document.getElementById('notification');
+                 if(notificationMenu) {
+                     notificationMenu.style.display = 'flex';
+                      // Use a single event listener for both pointerup and touchend for simplicity
+                      const handleGameOverClick = () => {
+                         hideNotification();
+                         showSelection();
+                         // Remove listeners after they are triggered once
+                         notificationMenu.removeEventListener('pointerup', handleGameOverClick);
+                         notificationMenu.removeEventListener('touchend', handleGameOverClick);
+                     };
+                     notificationMenu.addEventListener('pointerup', handleGameOverClick, { once: true });
+                     notificationMenu.addEventListener('touchend', handleGameOverClick, { once: true });
+                 }
+            }
+        }
+
+        function shootBullets() {
+            // console.log("Attempting to shoot bullets..."); // Added log
+            lastPlayerShotTime = time;
+            playSound('shoot');
+            if (!player || !player.parent) { // Check if player is valid and in scene
+                 console.warn("ShootBullets called but player is not valid or not in scene.");
+                 return;
+            }
+
+            const bulletSpeed = 15; // Increased bullet speed further
+            const bulletSize = 0.2; // Bullet size is set in bulletGeometry
+
+            switch (playerStats.shoot) {
+                case 'single':
+                    const bullet = new THREE.Mesh(bulletGeometry, playerBulletMaterial); // Reuse geometry and material
+                    bullet.position.copy(player.position);
+                    bullet.position.y += 0.5;
+                    bullet.userData = { velocity: new THREE.Vector3(0, bulletSpeed, 0), isBullet: true, isGameAsset: true }; // Mark as bullet and game asset
+                    bullet.visible = true;
+                    scene.add(bullet);
+                    playerBullets.push(bullet);
+                    // console.log("Player shot a single bullet."); // Added log
+                    break;
+                case 'spread':
+                    // Implement spread shot
+                    const spreadAngle = 0.3; // Angle in radians (slightly wider)
+                    const velocities = [
+                        new THREE.Vector3(0, bulletSpeed, 0), // Center
+                        new THREE.Vector3(-Math.sin(spreadAngle) * bulletSpeed, Math.cos(spreadAngle) * bulletSpeed, 0), // Left
+                        new THREE.Vector3(Math.sin(spreadAngle) * bulletSpeed, Math.cos(spreadAngle) * bulletSpeed, 0) // Right
+                    ];
+                     velocities.forEach(vel => {
+                         const bullet = new THREE.Mesh(bulletGeometry, playerBulletMaterial); // Reuse geometry and material
+                         bullet.position.copy(player.position);
+                         bullet.position.y += 0.5;
+                         bullet.userData = { velocity: vel, isBullet: true, isGameAsset: true };
+                         bullet.visible = true;
+                         scene.add(bullet);
+                         playerBullets.push(bullet);
+                     });
+                    // console.log("Player shot a spread of bullets."); // Added log
+                    break;
+                case 'homing':
+                    console.warn("Homing shot not implemented yet.");
+                    // Implement homing shot logic here
+                    break;
+                case 'burst':
+                    console.warn("Burst shot not implemented yet.");
+                    // Implement burst shot logic here
+                    break;
+                case 'laser':
+                    console.warn("Laser shot not implemented yet.");
+                    // Implement laser shot logic here
+                    break;
+                case 'wave':
+                    console.warn("Wave shot not implemented yet.");
+                    // Implement wave shot logic here
+                    break;
+                case 'explosive':
+                    console.warn("Explosive shot not implemented yet.");
+                    // Implement explosive shot logic here
+                    break;
+                case 'arc':
+                    console.warn("Arc shot not implemented yet.");
+                    // Implement arc shot logic here
+                    break;
+                case 'spiral':
+                    console.warn("Spiral shot not implemented yet.");
+                    // Implement spiral shot logic here
+                    break;
+                default:
+                     console.warn("Unknown shoot type:", playerStats.shoot);
+                    break;
+            }
+        }
+
+        function spawnEnemyBullet(position, velocity) {
+            const bullet = new THREE.Mesh(bulletGeometry, enemyBulletMaterial); // Reuse geometry and material
+            bullet.position.copy(position);
+            bullet.position.y -= 0.5;
+            bullet.userData = { velocity: velocity.clone(), isBullet: true, isGameAsset: true }; // Mark as bullet and game asset
+            bullet.visible = true;
+            scene.add(bullet);
+            enemyBullets.push(bullet);
+        }
+
+        function takeDamage(enemy, damage) {
+            if (!enemy || !enemy.visible || !enemy.parent || !enemy.userData) return; // Added userData check
+            enemy.userData.health -= damage;
+            if (enemy.userData.health <= 0) {
+                 console.log("Enemy destroyed!"); // Added log
+                 // Dispose of enemy resources - NO, these are shared. Only remove from scene.
+                 // if (enemy.geometry && !enemy.geometry.isDisposed) enemy.geometry.dispose();
+                 // if (enemy.material && !enemy.material.isDisposed) enemy.material.dispose();
+                  enemy.children.forEach(child => {
+                       if (child.geometry && !child.geometry.isDisposed) child.geometry.dispose();
+                       if (child.material && !child.material.isDisposed) child.material.dispose();
+                   });
+                 if (enemy.parent) {
+                     scene.remove(enemy);
+                 }
+                enemy.visible = false; // Mark as not visible
+                score += 20;
+                totalStars += 5;
+                playSound('explosion');
+                // Remove the destroyed enemy from the enemies array to prevent further processing
+                const index = enemies.indexOf(enemy);
+                if (index !== -1) {
+                    enemies.splice(index, 1);
+                }
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            if (ui) {
+                ui.textContent = `Score: ${score} | Health: ${currentHealth} | Stars: ${totalStars} | Bombs: ${megaBombCount}`;
+            }
+            if (megaBombButton) {
+                megaBombButton.classList.toggle('disabled', megaBombCount === 0);
+            }
+             const hangarStarsSpan = document.getElementById('hangarStars');
+             if(hangarStarsSpan) hangarStarsSpan.textContent = totalStars;
+        }
+
+        // Animation Loop
+        let time = 0;
+        const clock = new THREE.Clock();
+
+        function animate() {
+            if (!renderer) {
+                 console.error("Renderer is undefined, cannot request next frame.");
+                 return;
+            }
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            time += dt;
+
+            // Animate previews regardless of game state
+            animatePreviews();
+
+            if (isPaused) {
+                 if (renderer) {
+                     renderer.render(scene, camera);
+                 } else {
+                     console.error("Renderer is undefined in animate loop (paused).");
+                 }
+                return;
+            }
+
+            const selectionMenuVisible = document.getElementById('selection')?.style.display === 'flex';
+            const hangarMenuVisible = document.getElementById('hangar')?.style.display === 'flex';
+            const notificationVisible = document.getElementById('notification')?.style.display === 'flex';
+            const pauseMenuVisible = document.getElementById('pauseMenu')?.style.display === 'flex';
+
+            // Only update game logic if a game is active (player exists and no menus are open)
+            if (player && !selectionMenuVisible && !hangarMenuVisible && !notificationVisible && !pauseMenuVisible) {
+                 try {
+                    updateGame(dt);
+                 } catch (e) {
+                     console.error("Error in updateGame:", e);
+                     isPaused = true;
+                      const notificationText = document.getElementById('notificationText');
+                     if(notificationText) notificationText.textContent = 'Game Error: ' + e.message;
+                     const notificationMenu = document.getElementById('notification');
+                      if(notificationMenu) {
+                         notificationMenu.style.display = 'flex';
+                         // Use a single event listener for both pointerup and touchend for simplicity
+                         const handleGameOverClick = () => {
+                             hideNotification();
+                             showSelection();
+                             notificationMenu.removeEventListener('pointerup', handleGameOverClick);
+                             notificationMenu.removeEventListener('touchend', handleGameOverClick);
+                          };
+                         notificationMenu.addEventListener('pointerup', handleGameOverClick, { once: true });
+                         notificationMenu.addEventListener('touchend', handleGameOverClick, { once: true });
+                      }
+                 }
+            } else if (!player && !selectionMenuVisible && !hangarMenuVisible && !notificationVisible && !pauseMenuVisible) {
+                 // If no player and no menus, show the selection menu (happens after game over)
+                 // Add a small delay to prevent immediate re-showing after game over cleanup
+                 if (!document.getElementById('notification').style.display === 'flex') { // Only show if notification isn't already up
+                     setTimeout(showSelection, 100); // Delay showing selection
+                 }
+            }
+
+
+            if (renderer) {
+                 renderer.render(scene, camera); // Always render the main scene
+            } else {
+                 console.error("Renderer is undefined in animate loop (rendering frame).");
+            }
+        }
+
+        // Animation loop specifically for previews (using the single preview renderer)
+        function animatePreviews() {
+             if (!previewRenderer) return; // Don't animate if preview renderer failed
+
+            requestAnimationFrame(animatePreviews);
+
+            // Rotate preview objects if they exist
+            for (const id in previewObjects) {
+                 const object = previewObjects[id];
+                 if (object) {
+                     object.rotation.y += 0.01; // Simple rotation
+                 }
+            }
+
+            // Render each preview scene onto its specific canvas element
+            // This requires iterating through the actual canvas elements in the DOM
+            document.querySelectorAll('.preview canvas').forEach(canvas => {
+                 const previewDiv = canvas.parentElement;
+                 const ufoId = previewDiv.dataset.ufoId; // Get the UFO ID from the data attribute
+
+                 const scene = previewScenes[ufoId];
+                 const camera = previewCameras[ufoId];
+
+                 if (scene && camera) {
+                     // Set the preview renderer's target to the current canvas
+                     // Temporarily set the renderer's domElement to the preview canvas
+                     const originalCanvas = previewRenderer.domElement;
+                     previewRenderer.domElement = canvas;
+
+                     // Set the viewport to match the canvas size
+                     previewRenderer.setViewport(0, 0, canvas.width, canvas.height);
+
+                     previewRenderer.render(scene, camera);
+
+                     // Restore the original domElement and viewport
+                     previewRenderer.domElement = originalCanvas;
+                     // Restore the main renderer's viewport (assuming it covers the whole window)
+                     if (renderer) {
+                         renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+                     }
+                 }
+            });
+
+             // After rendering all previews, set the main renderer's target back to null (the default canvas)
+             // This is not needed when temporarily changing domElement, but good practice if using render targets.
+             // If using setRenderTarget, you'd set it back to null here: renderer.setRenderTarget(null);
+        }
+
+
+        // Initialize
+        function init() {
+            console.log("Initializing game...");
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                 if (renderer) {
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                     // Update main renderer viewport on resize
+                     renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+                 } else {
+                     console.error("Renderer is undefined during resize!");
+                 }
+                 // Also resize preview canvases and update preview camera size
+                 if (previewRenderer) {
+                      document.querySelectorAll('.preview canvas').forEach(canvas => {
+                          const previewDiv = canvas.parentElement;
+                          if (previewDiv && previewDiv.offsetWidth > 0 && previewDiv.offsetHeight > 0) {
+                              canvas.width = previewDiv.offsetWidth;
+                              canvas.height = previewDiv.offsetHeight;
+                               // Update preview camera aspect ratio as well
+                               const ufoId = previewDiv.dataset.ufoId;
+                               const previewCamera = previewCameras[ufoId];
+                               if(previewCamera) {
+                                    previewCamera.aspect = canvas.width / canvas.height;
+                                    previewCamera.updateProjectionMatrix();
+                               }
+                          }
+                      });
+                     // The single preview renderer's size should ideally match the largest preview canvas,
+                     // or be set once to a reasonable maximum size. Setting it to a fixed size matching the CSS
+                     // and letting the individual canvases handle the display is simpler but might not be
+                     // the most performant for many previews. For now, we'll rely on the canvas element size.
+                 }
+            });
+
+            setup3DPreviews(); // Setup 3D previews (creates scenes, cameras, objects, and HTML divs)
+            setupButtons(); // Setup static UI button listeners
+
+            console.log("Initialization complete. Calling showSelection and starting animate loop outside init.");
+            showSelection(); // Show selection menu on start
+        }
+
+        // Call init to set up the game
+        init();
+
+        // Start the main animation loop *after* init has completed
+        console.log("Animate loop requested after init.");
+        animate();
+
+         // Start the preview animation loop separately
+         console.log("Preview animate loop requested."); // Added log
+         animatePreviews();
+
+
+    </script>
+</body>
+</html>
+
+tart the preview animation loop separately
+         console.log("Preview animate loop requested."); // Added log
+         animatePreviews();
+
+
+    </script>
+</body>
+</html>
+
