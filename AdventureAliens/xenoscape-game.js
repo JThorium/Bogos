@@ -250,13 +250,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     class Particle {
-        constructor(x, y, color, size, lifespan) {
+        constructor(x, y, color, size, lifespan, speedX, speedY) {
             this.x = x;
             this.y = y;
-            this.speedX = (Math.random() - 0.5) * 3;
-            this.speedY = (Math.random() - 0.5) * 3;
+            this.speedX = speedX || (Math.random() - 0.5) * 3;
+            this.speedY = speedY || (Math.random() - 0.5) * 3;
             this.color = color;
-            this.size = Math.random() * size + 2;
+            this.size = size;
             this.lifespan = lifespan;
             this.maxLifespan = lifespan;
         }
