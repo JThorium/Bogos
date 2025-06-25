@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cameraX = 0;
     let gameActive = false, player, keys = {}, projectiles = [], enemyProjectiles = [], enemies = [], particles = [], dnaDrops = [], platforms = [], parallaxLayers = [];
     let enemySpawnTimer = 0;
-    const enemySpawnInterval = 120; // Spawn an enemy every 2 seconds at 60fps
+    const enemySpawnInterval = 240; // Spawn an enemy every 4 seconds at 60fps for more deliberate encounters
     let runState = { score: 0, dnaCollected: 0 };
 
     function saveState() {
@@ -366,10 +366,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.y = canvas.height / 2 - this.height / 2;
             this.vx = 0;
             this.vy = 0;
-            this.maxSpeed = 7;
-            this.friction = 0.85;
-            this.gravity = 0.6;
-            this.jumpStrength = -14;
+            this.maxSpeed = 5; // Slightly slower for more control
+            this.friction = 0.9; // More friction for quicker stops
+            this.gravity = 0.8; // Stronger gravity for a snappier jump arc
+            this.jumpStrength = -18; // Higher jump for platforming
             this.isOnGround = false;
             this.facingDirection = 1; // 1 for right, -1 for left
 
@@ -391,11 +391,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const warpLevel = playerState.upgrades.emergencyWarp || 0;
             this.warpMaxCooldown = (10 - warpLevel * 1.5) * 60; // Cooldown in frames
             this.isWarping = false;
-        }
 
-        // Weapon management (moved inside constructor)
-        this.availableWeapons = ['laser']; 
-        this.currentWeapon = 'laser'; 
+            // Weapon management
+            this.availableWeapons = ['laser']; 
+            this.currentWeapon = 'laser'; 
+        }
 
         update(keys) {
             // --- Horizontal Movement ---
@@ -641,28 +641,24 @@ document.addEventListener('DOMContentLoaded', () => {
             } else { // 85% chance for ground enemy
                 // Filter for platforms that are currently on screen and wide enough
                 const suitablePlatforms = platforms.filter(p => 
-                    p.width >= 40 &&
-                    p.x < cameraX + canvas.width &&
-                    p.x + p.width > cameraX
+                    p.width >= 80 && // Ensure platform is wide enough for an enemy
+                    p.x < cameraX + canvas.width && // Platform starts before right edge of screen
+                    p.x + p.width > cameraX + 100 // Platform ends after a bit into the screen
                 );
                 if (suitablePlatforms.length > 0) {
                     const targetPlatform = suitablePlatforms[Math.floor(Math.random() * suitablePlatforms.length)];
                     
                     let newEnemy;
-                    if (Math.random() < 0.3) { // 30% of ground enemies are Spitters (can be adjusted)
+                    if (Math.random() < 0.3) { // 30% chance for Spitter
                         newEnemy = new SpitterEnemy(targetPlatform);
                     } else {
                         newEnemy = new GroundEnemy(targetPlatform);
                     }
 
-                    // Calculate a valid spawn position on the platform that is on-screen
-                    const minSpawnX = Math.max(targetPlatform.x, cameraX);
-                    const maxSpawnX = Math.min(targetPlatform.x + targetPlatform.width - newEnemy.width, cameraX + canvas.width - newEnemy.width);
-                    
-                    if (maxSpawnX > minSpawnX) {
-                        newEnemy.x = minSpawnX + Math.random() * (maxSpawnX - minSpawnX);
-                        enemies.push(newEnemy);
-                    }
+                    // Spawn enemy on the platform, ensuring it's within the platform's bounds
+                    newEnemy.x = targetPlatform.x + Math.random() * (targetPlatform.width - newEnemy.width);
+                    newEnemy.y = targetPlatform.y - newEnemy.height; // Place on top of the platform
+                    enemies.push(newEnemy);
                 }
             }
             enemySpawnTimer = 0;
@@ -688,30 +684,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Dynamic level generation (simple version)
-    const PLATFORM_CHUNK_WIDTH = 800; // How wide each "chunk" of platforms is
+    const PLATFORM_CHUNK_WIDTH = 1000; // How wide each "chunk" of platforms is
     let lastPlatformX = 0; // Tracks the absolute X of the last generated platform
+    let platformPatterns = [
+        // Pattern 1: Simple floating platforms
+        [
+            { xOffset: 100, yOffset: 100, width: 100, height: 20 },
+            { xOffset: 250, yOffset: 180, width: 120, height: 20 },
+            { xOffset: 400, yOffset: 100, width: 100, height: 20 },
+        ],
+        // Pattern 2: Gap with a high platform
+        [
+            { xOffset: 0, yOffset: 0, width: 300, height: 40 }, // Ground segment
+            { xOffset: 400, yOffset: 200, width: 80, height: 20 }, // High platform over a gap
+            { xOffset: 550, yOffset: 0, width: 300, height: 40 }, // Another ground segment
+        ],
+        // Pattern 3: Descending platforms
+        [
+            { xOffset: 0, yOffset: 0, width: 200, height: 40 },
+            { xOffset: 250, yOffset: -50, width: 100, height: 20 },
+            { xOffset: 400, yOffset: -100, width: 100, height: 20 },
+            { xOffset: 550, yOffset: -150, width: 100, height: 20 },
+        ]
+    ];
+    let currentPatternIndex = 0;
 
     function generateNewPlatforms() {
-        // Only generate if cameraX has moved significantly past the last generated chunk
-        // Generate when the right edge of the camera view is within one chunk width of the last generated platform
-        if (cameraX + canvas.width > lastPlatformX - PLATFORM_CHUNK_WIDTH / 2) { 
+        // Generate a new chunk when the camera approaches the end of the last generated platform
+        if (cameraX + canvas.width > lastPlatformX - 200) { 
             const currentChunkStart = lastPlatformX;
 
-            // Add a new ground segment to ensure continuous ground
-            const groundSegmentWidth = Math.random() * 300 + 200; // 200 to 500 width
-            platforms.push({ x: currentChunkStart, y: canvas.height - 20, width: groundSegmentWidth, height: 20 });
-            lastPlatformX = currentChunkStart + groundSegmentWidth;
+            // Add a ground segment to ensure continuous ground before a new pattern
+            platforms.push({ x: currentChunkStart, y: canvas.height - 40, width: 200, height: 40 });
+            lastPlatformX = currentChunkStart + 200;
 
-            // Generate a few random floating platforms within this new chunk
-            const numNewPlatforms = Math.floor(Math.random() * 3) + 1; // 1 to 3 new platforms
-            for (let i = 0; i < numNewPlatforms; i++) {
-                const newPlatformWidth = Math.random() * 250 + 100; // 100 to 350 width
-                // Ensure platform is within the current chunk and doesn't overlap too much
-                const newPlatformX = currentChunkStart + Math.random() * (PLATFORM_CHUNK_WIDTH - newPlatformWidth) + 50; 
-                
-                const newPlatformY = canvas.height - (Math.random() * 200 + 80); // Random height above ground
-                platforms.push({ x: newPlatformX, y: newPlatformY, width: newPlatformWidth, height: 20 });
-            }
+            // Add platforms from the current pattern
+            const pattern = platformPatterns[currentPatternIndex];
+            pattern.forEach(p => {
+                platforms.push({
+                    x: lastPlatformX + p.xOffset,
+                    y: canvas.height - 40 - p.yOffset, // Adjust y to be relative to ground
+                    width: p.width,
+                    height: p.height
+                });
+            });
+            lastPlatformX += PLATFORM_CHUNK_WIDTH; // Advance lastPlatformX by chunk width
+
+            // Move to the next pattern, loop if at the end
+            currentPatternIndex = (currentPatternIndex + 1) % platformPatterns.length;
         }
     }
 
@@ -785,19 +805,27 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraX = 0; // Reset camera position
         enemySpawnTimer = 0;
         platforms = [
-            // Ground
-            { x: 0, y: canvas.height - 20, width: canvas.width * 1.5, height: 20 }, // Initial long ground
-            // Floating platforms
-            { x: 200, y: canvas.height - 150, width: 150, height: 20 },
-            { x: 450, y: canvas.height - 250, width: 200, height: 20 },
+            // Initial ground platform
+            { x: 0, y: canvas.height - 40, width: 500, height: 40 },
+            // First set of floating platforms
+            { x: 600, y: canvas.height - 120, width: 100, height: 20 },
+            { x: 750, y: canvas.height - 200, width: 120, height: 20 },
+            { x: 900, y: canvas.height - 120, width: 100, height: 20 },
+            // Second ground section
+            { x: 1100, y: canvas.height - 40, width: 600, height: 40 },
+            // More floating platforms
+            { x: 1800, y: canvas.height - 150, width: 150, height: 20 },
+            { x: 2000, y: canvas.height - 250, width: 100, height: 20 },
+            { x: 2200, y: canvas.height - 150, width: 150, height: 20 },
+            { x: 2400, y: canvas.height - 40, width: 500, height: 40 },
         ];
         // Check if Plasma Blaster is unlocked and add to available weapons
         if (playerState.upgrades.unlockPlasmaBlaster > 0) {
             player.availableWeapons.push('plasma');
         }
         player.currentWeapon = 'laser'; // Start with laser
-        // Set lastPlatformX to the end of the initial ground platform
-        lastPlatformX = platforms[0].x + platforms[0].width; 
+        // Set lastPlatformX to the end of the last initial platform to ensure continuous generation
+        lastPlatformX = platforms[platforms.length - 1].x + platforms[platforms.length - 1].width; 
         parallaxLayers = [
             new ParallaxLayer('#1e1b34', 0.2, 1), // Farthest, slowest
             new ParallaxLayer('#3b0764', 0.5, 1.5),
