@@ -125,6 +125,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const enemySpawnInterval = 240; // Spawn an enemy every 4 seconds at 60fps for more deliberate encounters
     let runState = { score: 0, dnaCollected: 0 };
 
+    // Defines enemies placed statically in the level
+    const levelEnemies = [
+        // Ground enemies on initial platforms
+        { id: 'enemy1', type: 'GroundEnemy', x: 300, y: canvas.height - 40, platformIndex: 0 },
+        { id: 'enemy2', type: 'SpitterEnemy', x: 700, y: canvas.height - 120, platformIndex: 1 },
+        { id: 'enemy3', type: 'GroundEnemy', x: 1200, y: canvas.height - 40, platformIndex: 4 },
+        { id: 'enemy4', type: 'FlyingEnemy', x: 1500, y: canvas.height - 300 },
+        { id: 'enemy5', type: 'SpitterEnemy', x: 2000, y: canvas.height - 150, platformIndex: 5 },
+        { id: 'enemy6', type: 'GroundEnemy', x: 2500, y: canvas.height - 40, platformIndex: 8 },
+    ];
+    let killedEnemies = new Set(); // Stores IDs of enemies that have been killed
+
     function saveState() {
         localStorage.setItem('xenoscapePlayerState', JSON.stringify(playerState));
     }
@@ -285,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Draw relative to cameraX
             context.fillStyle = this.color; 
             context.beginPath();
-            context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            context.arc(this.x - cameraX, this.y, this.size, 0, Math.PI * 2); // Corrected to use cameraX
             context.fill();
             context.strokeStyle = '#a7f3d0'; // Emerald-200
             context.lineWidth = 2;
@@ -308,9 +320,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            // Draw relative to cameraX
+            const drawX = this.x - cameraX;
             context.fillStyle = this.color; 
-            context.fillRect(this.x - cameraX, this.y, this.width, this.height); // Draw relative to camera
+            // Main body (similar to GroundEnemy, but perhaps slightly different proportions)
+            context.beginPath();
+            context.roundRect(drawX, this.y + 5, this.width, this.height - 5, 5);
+            context.fill();
+
+            // Large head/mouth for spitting
+            context.beginPath();
+            context.arc(drawX + this.width / 2, this.y + 5, this.width / 2, Math.PI, 0, false);
+            context.fill();
+
+            // Eyes
+            context.fillStyle = 'white';
+            context.fillRect(drawX + 10, this.y + 5, 5, 5);
+            context.fillRect(drawX + this.width - 15, this.y + 5, 5, 5);
+            context.fillStyle = 'black';
+            context.fillRect(drawX + 11, this.y + 6, 3, 3);
+            context.fillRect(drawX + this.width - 14, this.y + 6, 3, 3);
         }
     }
 
@@ -511,16 +539,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            // Draw relative to cameraX
             const drawX = this.x - cameraX;
+
             if (this.isWarping) { 
                 context.fillStyle = '#f0abfc'; // Fuchsia-300
                 context.globalAlpha = 0.5;
                 context.fillRect(drawX, this.y, this.width, this.height);
                 context.globalAlpha = 1.0;
             }
+
             context.fillStyle = this.color; 
-            context.fillRect(drawX, this.y, this.width, this.height);
+            // Main body
+            context.fillRect(drawX, this.y + 5, this.width, this.height - 10);
+            // Head
+            context.beginPath();
+            context.arc(drawX + this.width / 2, this.y + 5, this.width / 2 - 5, Math.PI, 0, false);
+            context.fill();
+            // Legs (simple)
+            context.fillRect(drawX + 5, this.y + this.height - 5, 10, 5);
+            context.fillRect(drawX + this.width - 15, this.y + this.height - 5, 10, 5);
+
+            // Eyes (simple)
+            context.fillStyle = 'white';
+            context.fillRect(drawX + 10, this.y + 10, 5, 5);
+            context.fillRect(drawX + this.width - 15, this.y + 10, 5, 5);
+            context.fillStyle = 'black';
+            context.fillRect(drawX + 11, this.y + 11, 3, 3);
+            context.fillRect(drawX + this.width - 14, this.y + 11, 3, 3);
         }
     }
 
@@ -542,9 +587,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            // Draw relative to cameraX
+            const drawX = this.x - cameraX;
             context.fillStyle = this.color; 
-            context.fillRect(this.x - cameraX, this.y, this.width, this.height);
+            // Main body (oval-like)
+            context.beginPath();
+            context.ellipse(drawX + this.width / 2, this.y + this.height / 2, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+            context.fill();
+            // Wings (simple triangles)
+            context.beginPath();
+            context.moveTo(drawX, this.y + this.height / 2);
+            context.lineTo(drawX - 10, this.y + this.height / 4);
+            context.lineTo(drawX - 10, this.y + this.height * 3 / 4);
+            context.fill();
+
+            context.beginPath();
+            context.moveTo(drawX + this.width, this.y + this.height / 2);
+            context.lineTo(drawX + this.width + 10, this.y + this.height / 4);
+            context.lineTo(drawX + this.width + 10, this.y + this.height * 3 / 4);
+            context.fill();
         }
     }
 
@@ -577,9 +637,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            // Draw relative to cameraX
+            const drawX = this.x - cameraX;
             context.fillStyle = this.color; 
-            context.fillRect(this.x - cameraX, this.y, this.width, this.height);
+            // Main body (rounded rectangle)
+            context.beginPath();
+            context.roundRect(drawX, this.y, this.width, this.height, 5);
+            context.fill();
+
+            // Eyes (simple)
+            context.fillStyle = 'white';
+            context.fillRect(drawX + 8, this.y + 10, 8, 8);
+            context.fillRect(drawX + this.width - 16, this.y + 10, 8, 8);
+            context.fillStyle = 'black';
+            context.fillRect(drawX + 10, this.y + 12, 4, 4);
+            context.fillRect(drawX + this.width - 14, this.y + 12, 4, 4);
         }
     }
 
@@ -624,53 +695,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function createParticles(x, y, color, count) {
+    function createParticles(x, y, color, count, size = 5, lifespan = 30, spread = 3) {
         for (let i = 0; i < count; i++) {
-            particles.push(new Particle(x, y, color, 5, 30));
+            const particleSize = Math.random() * size + 2;
+            const particleLifespan = Math.random() * lifespan + 15;
+            const speedX = (Math.random() - 0.5) * spread;
+            const speedY = (Math.random() - 0.5) * spread;
+            particles.push(new Particle(x, y, color, particleSize, particleLifespan, speedX, speedY));
+        }
+    }
+
+    class Particle {
+        constructor(x, y, color, size, lifespan, speedX, speedY) {
+            this.x = x;
+            this.y = y;
+            this.speedX = speedX || (Math.random() - 0.5) * 3;
+            this.speedY = speedY || (Math.random() - 0.5) * 3;
+            this.color = color;
+            this.size = size;
+            this.lifespan = lifespan;
+            this.maxLifespan = lifespan;
+        }
+
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            this.lifespan--;
+        }
+
+        draw(context) {
+            // Draw relative to cameraX
+            context.save(); 
+            context.globalAlpha = this.lifespan / this.maxLifespan;
+            context.fillStyle = this.color;
+            context.beginPath();
+            context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+        }
+    }
+
+    function createParticles(x, y, color, count, size = 5, lifespan = 30, spread = 3) {
+        for (let i = 0; i < count; i++) {
+            const particleSize = Math.random() * size + 2;
+            const particleLifespan = Math.random() * lifespan + 15;
+            const speedX = (Math.random() - 0.5) * spread;
+            const speedY = (Math.random() - 0.5) * spread;
+            particles.push(new Particle(x, y, color, particleSize, particleLifespan, speedX, speedY));
         }
     }
 
     function handleEnemies(context) {
-        // Spawning
-        enemySpawnTimer++;
-        if (enemySpawnTimer > enemySpawnInterval) {
-            // Introduce a chance to spawn different enemy types
-            const spawnRoll = Math.random();
-            if (spawnRoll < 0.15) { // 15% chance for flying enemy
-                enemies.push(new FlyingEnemy());
-            } else { // 85% chance for ground enemy
-                // Filter for platforms that are currently on screen and wide enough
-                const suitablePlatforms = platforms.filter(p => 
-                    p.width >= 80 && // Ensure platform is wide enough for an enemy
-                    p.x < cameraX + canvas.width && // Platform starts before right edge of screen
-                    p.x + p.width > cameraX + 100 // Platform ends after a bit into the screen
-                );
-                if (suitablePlatforms.length > 0) {
-                    const targetPlatform = suitablePlatforms[Math.floor(Math.random() * suitablePlatforms.length)];
-                    
-                    let newEnemy;
-                    if (Math.random() < 0.3) { // 30% chance for Spitter
-                        newEnemy = new SpitterEnemy(targetPlatform);
-                    } else {
-                        newEnemy = new GroundEnemy(targetPlatform);
-                    }
-
-                    // Spawn enemy on the platform, ensuring it's within the platform's bounds
-                    newEnemy.x = targetPlatform.x + Math.random() * (targetPlatform.width - newEnemy.width);
-                    newEnemy.y = targetPlatform.y - newEnemy.height; // Place on top of the platform
-                    enemies.push(newEnemy);
-                }
-            }
-            enemySpawnTimer = 0;
-        }
-
         // Update and draw enemies
         for (let i = enemies.length - 1; i >= 0; i--) {
             const enemy = enemies[i];
-            enemy.update();
-            enemy.draw(context); // Draw relative to cameraX
-            // Remove if completely off-screen to the left of the camera
-            if (enemy.x + enemy.width < cameraX) { 
+            // Only update and draw enemies that are on-screen or approaching
+            if (enemy.x < cameraX + canvas.width && enemy.x + enemy.width > cameraX) {
+                enemy.update();
+                enemy.draw(context); // Draw relative to cameraX
+            } else if (enemy.x + enemy.width < cameraX) { 
+                // Remove if completely off-screen to the left of the camera
                 enemies.splice(i, 1);
             }
         }
@@ -757,6 +841,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         createParticles(e.x + e.width / 2, e.y + e.height / 2, e.color, 15);
                         dnaDrops.push(new DnaDrop(e.x + e.width / 2, e.y + e.height / 2));
                         runState.score += e.scoreValue;
+                        if (e.id) { // If enemy has an ID, mark it as killed
+                            killedEnemies.add(e.id);
+                        }
                         enemies.splice(j, 1);
                     }
 
@@ -778,9 +865,25 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = dnaDrops.length - 1; i >= 0; i--) {
             const d = dnaDrops[i];
             const dnaMagnetLevel = playerState.upgrades.dnaMagnet || 0;
-            const collectionRadius = (player.width / 2 + d.size) + (dnaMagnetLevel * 15); const dist = Math.hypot(player.x + player.width / 2 - d.x, player.y + player.height / 2 - d.y); if (dist < collectionRadius) {
+            const collectionRadius = (player.width / 2 + d.size) + (dnaMagnetLevel * 15); 
+            const dist = Math.hypot(player.x + player.width / 2 - d.x, player.y + player.height / 2 - d.y); 
+            
+            // Check collision with player
+            if (dist < collectionRadius) {
                 runState.dnaCollected += d.value;
                 dnaDrops.splice(i, 1);
+                continue; // Move to next DNA drop
+            }
+
+            // Check collision with platforms (for DNA drops falling)
+            for (const platform of platforms) {
+                if (d.x < platform.x + platform.width && d.x + d.size > platform.x &&
+                    d.y < platform.y + platform.height && d.y + d.size > platform.y &&
+                    d.speedY > 0 && (d.y + d.size - d.speedY) <= platform.y + 1) {
+                    d.y = platform.y - d.size;
+                    d.speedY = 0; // Stop falling
+                    break; // DNA drop hit a platform, no need to check other platforms
+                }
             }
         }
 
@@ -797,13 +900,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame() {
         gameActive = true;
         player = new Player();
-        enemies = [];
+        enemies = []; // Will be populated from levelEnemies
         projectiles = [];
         particles = [];
         enemyProjectiles = [];
         dnaDrops = [];
         cameraX = 0; // Reset camera position
         enemySpawnTimer = 0;
+        killedEnemies.clear(); // Clear killed enemies for a new run
+
         platforms = [
             // Initial ground platform
             { x: 0, y: canvas.height - 40, width: 500, height: 40 },
@@ -819,6 +924,25 @@ document.addEventListener('DOMContentLoaded', () => {
             { x: 2200, y: canvas.height - 150, width: 150, height: 20 },
             { x: 2400, y: canvas.height - 40, width: 500, height: 40 },
         ];
+
+        // Populate enemies based on levelEnemies
+        levelEnemies.forEach(enemyData => {
+            if (!killedEnemies.has(enemyData.id)) {
+                let newEnemy;
+                if (enemyData.type === 'GroundEnemy') {
+                    newEnemy = new GroundEnemy(platforms[enemyData.platformIndex]);
+                } else if (enemyData.type === 'SpitterEnemy') {
+                    newEnemy = new SpitterEnemy(platforms[enemyData.platformIndex]);
+                } else if (enemyData.type === 'FlyingEnemy') {
+                    newEnemy = new FlyingEnemy();
+                }
+                // Set initial position for statically placed enemies
+                newEnemy.x = enemyData.x;
+                newEnemy.y = enemyData.y;
+                newEnemy.id = enemyData.id; // Assign ID for tracking
+                enemies.push(newEnemy);
+            }
+        });
         // Check if Plasma Blaster is unlocked and add to available weapons
         if (playerState.upgrades.unlockPlasmaBlaster > 0) {
             player.availableWeapons.push('plasma');
