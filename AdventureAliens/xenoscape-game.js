@@ -118,14 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const weaponGrid = document.getElementById('weaponUpgradeGrid');
 
     // --- STATE MANAGEMENT ---
-    let gameActive = false;
-    let player;
-    let keys = {};
-    let projectiles = [];
-    let enemies = [];
-    let particles = [];
-    let dnaDrops = [];
-    let platforms = [];
+    // Global camera offset
+    let cameraX = 0;
+    let gameActive = false, player, keys = {}, projectiles = [], enemyProjectiles = [], enemies = [], particles = [], dnaDrops = [], platforms = [], parallaxLayers = [];
     let enemySpawnTimer = 0;
     const enemySpawnInterval = 120; // Spawn an enemy every 2 seconds at 60fps
     let runState = { score: 0, dnaCollected: 0 };
@@ -215,6 +210,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    class ParallaxLayer {
+        constructor(color, speedFactor, size) {
+            this.color = color;
+            this.speedFactor = speedFactor;
+            this.size = size;
+            this.stars = [];
+            // Pre-populate stars for a couple of screen widths
+            for (let i = 0; i < 200; i++) {
+                this.stars.push({
+                    x: Math.random() * canvas.width * 2,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * this.size
+                });
+            }
+        }
+
+        draw(context, cameraX) {
+            context.fillStyle = this.color;
+            for (const star of this.stars) {
+                const x = (star.x - cameraX * this.speedFactor) % (canvas.width * 2);
+                context.beginPath();
+                context.arc(x < 0 ? x + canvas.width * 2 : x, star.y, star.radius, 0, Math.PI * 2);
+                context.fill();
+            }
+        }
+    }
+
     class Particle {
         constructor(x, y, color, size, lifespan) {
             this.x = x;
@@ -234,7 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            context.save();
+            // Draw relative to cameraX
+            context.save(); 
             context.globalAlpha = this.lifespan / this.maxLifespan;
             context.fillStyle = this.color;
             context.beginPath();
@@ -259,7 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            context.fillStyle = this.color;
+            // Draw relative to cameraX
+            context.fillStyle = this.color; 
             context.beginPath();
             context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             context.fill();
@@ -269,13 +293,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    class Projectile {
-        constructor(x, y) {
+    class LaserProjectile { // Renamed from PlayerProjectile
+        constructor(x, y, direction) {
             this.x = x;
             this.y = y;
             this.width = 15;
             this.height = 5;
-            this.speed = 10;
+            this.speed = 12 * direction;
             this.color = '#34d399'; // Emerald-400
         }
 
@@ -284,8 +308,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
+            // Draw relative to cameraX
+            context.fillStyle = this.color; 
+            context.fillRect(this.x - cameraX, this.y, this.width, this.height); // Draw relative to camera
+        }
+    }
+
+    class PlasmaProjectile {
+        constructor(x, y, direction) {
+            this.x = x;
+            this.y = y;
+            this.width = 25; // Larger projectile
+            this.height = 10;
+            this.speed = 8 * direction; // Slower than laser
+            this.color = '#f0abfc'; // Fuchsia-300
+        }
+
+        update() {
+            this.x += this.speed;
+        }
+
+        draw(context) {
             context.fillStyle = this.color;
-            context.fillRect(this.x, this.y, this.width, this.height);
+            context.fillRect(this.x - cameraX, this.y, this.width, this.height); // Draw relative to camera
+        }
+    }
+
+    class EnemyProjectile {
+        constructor(x, y, targetX, targetY) {
+            this.x = x;
+            this.y = y;
+            this.width = 8;
+            this.height = 8;
+            this.color = '#f97316'; // Orange-500
+            const angle = Math.atan2(targetY - y, targetX - x);
+            const speed = 5;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+        }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+        }
+
+        draw(context) {
+            context.fillStyle = this.color;
+            context.fillRect(this.x - cameraX, this.y, this.width, this.height);
         }
     }
 
@@ -293,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         constructor() {
             this.width = 40;
             this.height = 30;
-            this.x = 100;
+            this.x = 100; // Player's initial x is an absolute world position
             this.y = canvas.height / 2 - this.height / 2;
             this.vx = 0;
             this.vy = 0;
@@ -302,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.gravity = 0.6;
             this.jumpStrength = -14;
             this.isOnGround = false;
+            this.facingDirection = 1; // 1 for right, -1 for left
 
             this.color = '#9333ea'; // A distinct purple for Xylar
             this.shootCooldown = 0;
@@ -323,10 +393,20 @@ document.addEventListener('DOMContentLoaded', () => {
             this.isWarping = false;
         }
 
+        // Weapon management (moved inside constructor)
+        this.availableWeapons = ['laser']; 
+        this.currentWeapon = 'laser'; 
+
         update(keys) {
             // --- Horizontal Movement ---
-            if (keys['a'] || keys['ArrowLeft']) this.vx -= 1.2;
-            if (keys['d'] || keys['ArrowRight']) this.vx += 1.2;
+            if (keys['a'] || keys['ArrowLeft']) {
+                this.vx -= 1.2;
+                this.facingDirection = -1;
+            }
+            if (keys['d'] || keys['ArrowRight']) {
+                this.vx += 1.2;
+                this.facingDirection = 1;
+            }
 
             // --- Jumping ---
             if ((keys['w'] || keys['ArrowUp']) && this.isOnGround) {
@@ -350,24 +430,53 @@ document.addEventListener('DOMContentLoaded', () => {
             this.x += this.vx;
             this.y += this.vy;
 
+            // Clamp player's absolute X to prevent going left of world start
+            if (this.x < 0) {
+                this.x = 0;
+            }
+
             this.isOnGround = false; // Assume not on ground until collision check
 
             // Shooting
             if (this.shootCooldown > 0) this.shootCooldown--;
             if (keys[' '] && this.shootCooldown <= 0) { // Spacebar to shoot
                 this.shoot();
+                keys[' '] = false; // Consume key press only if shot
+            }
+
+            // Weapon switching
+            if (keys['q']) {
+                this.switchWeapon();
+                keys['q'] = false; // Consume key press only if switched
             }
 
             if (this.y > canvas.height) gameOver(); // Fell off the world
         }
 
+        switchWeapon() {
+            const currentIndex = this.availableWeapons.indexOf(this.currentWeapon);
+            const nextIndex = (currentIndex + 1) % this.availableWeapons.length;
+            this.currentWeapon = this.availableWeapons[nextIndex];
+            // Reset cooldown to prevent immediate firing after switch
+            this.shootCooldown = this.fireRate; 
+            updateHud(); // Update HUD to show new weapon
+        }
+
         shoot() {
-            projectiles.push(new Projectile(this.x + this.width, this.y + this.height / 2 - 2.5));
+            const projectileY = this.y + this.height / 2 - 2.5;
+            const projectileX = this.facingDirection > 0 ? this.x + this.width : this.x;
+            
+            if (this.currentWeapon === 'laser') {
+                projectiles.push(new LaserProjectile(projectileX, projectileY, this.facingDirection));
+            } else if (this.currentWeapon === 'plasma') {
+                projectiles.push(new PlasmaProjectile(projectileX, projectileY, this.facingDirection));
+            }
             this.shootCooldown = this.fireRate;
         }
 
         warp() {
-            const warpDirection = this.vx === 0 ? 1 : Math.sign(this.vx);
+            // Warp in the direction the player is facing, not necessarily moving
+            const warpDirection = this.facingDirection;
             this.vx = 25 * warpDirection; // Powerful burst of speed
             this.vy = -2; // Slight upward lift
             this.warpCooldown = this.warpMaxCooldown;
@@ -402,21 +511,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            if (this.isWarping) {
+            // Draw relative to cameraX
+            const drawX = this.x - cameraX;
+            if (this.isWarping) { 
                 context.fillStyle = '#f0abfc'; // Fuchsia-300
                 context.globalAlpha = 0.5;
-                context.fillRect(this.x, this.y, this.width, this.height);
+                context.fillRect(drawX, this.y, this.width, this.height);
                 context.globalAlpha = 1.0;
             }
-            context.fillStyle = this.color; context.fillRect(this.x, this.y, this.width, this.height);
+            context.fillStyle = this.color; 
+            context.fillRect(drawX, this.y, this.width, this.height);
         }
     }
 
-    class FlyingEnemy { // Renamed from Enemy for clarity
+    class FlyingEnemy {
         constructor() {
             this.width = 30;
             this.height = 30;
-            this.x = canvas.width;
+            this.x = cameraX + canvas.width; // Spawn at right edge of visible screen
             this.y = Math.random() * (canvas.height - this.height);
             this.speed = Math.random() * 2 + 1; // Random speed
             this.color = '#ef4444'; // Red-500
@@ -430,17 +542,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            context.fillStyle = this.color;
-            context.fillRect(this.x, this.y, this.width, this.height);
+            // Draw relative to cameraX
+            context.fillStyle = this.color; 
+            context.fillRect(this.x - cameraX, this.y, this.width, this.height);
         }
     }
 
-    class GroundEnemy {
+    class GroundEnemy { // Base class for walking enemies
         constructor(platform) {
+            // Spawns on a given platform, patrolling its width
             this.width = 40;
             this.height = 40;
             // Spawn randomly on the given platform
-            this.x = platform.x + Math.random() * (platform.width - this.width);
+            this.x = platform.x; // Placeholder, will be set in handleEnemies
             this.y = platform.y - this.height; // Position on top of the platform
             this.speed = 1.5;
             this.direction = Math.random() < 0.5 ? 1 : -1; // 1 for right, -1 for left
@@ -463,8 +577,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw(context) {
-            context.fillStyle = this.color;
-            context.fillRect(this.x, this.y, this.width, this.height);
+            // Draw relative to cameraX
+            context.fillStyle = this.color; 
+            context.fillRect(this.x - cameraX, this.y, this.width, this.height);
+        }
+    }
+
+    class SpitterEnemy extends GroundEnemy { // Ranged ground enemy
+        constructor(platform) {
+            super(platform);
+            this.color = '#f59e0b'; // Amber-500
+            this.health = 3;
+            this.dnaValue = 25;
+            this.scoreValue = 200;
+            this.shootCooldown = 0;
+            this.fireRate = 180; // Shoots every 3 seconds
+            this.detectionRange = 500;
+        }
+
+        update() {
+            super.update(); // Call parent update for movement
+
+            if (this.shootCooldown > 0) {
+                this.shootCooldown--;
+            } else {
+                // Check if player is in range and on screen
+                const playerScreenX = player.x - cameraX;
+                const selfScreenX = this.x - cameraX;
+                const distanceToPlayer = Math.abs(player.x - this.x);
+
+                if (distanceToPlayer < this.detectionRange && playerScreenX > 0 && playerScreenX < canvas.width && selfScreenX > 0 && selfScreenX < canvas.width) {
+                    this.shoot();
+                }
+            }
+        }
+
+        shoot() {
+            // Shoots a projectile towards the player's current position
+            enemyProjectiles.push(new EnemyProjectile(
+                this.x + this.width / 2,
+                this.y + this.height / 2,
+                player.x + player.width / 2,
+                player.y + player.height / 2
+            ));
+            this.shootCooldown = this.fireRate + Math.random() * 60; // Add some randomness to firing
         }
     }
 
@@ -479,49 +635,102 @@ document.addEventListener('DOMContentLoaded', () => {
         enemySpawnTimer++;
         if (enemySpawnTimer > enemySpawnInterval) {
             // Introduce a chance to spawn different enemy types
-            if (Math.random() < 0.7) { // 70% chance for flying enemy
+            const spawnRoll = Math.random();
+            if (spawnRoll < 0.15) { // 15% chance for flying enemy
                 enemies.push(new FlyingEnemy());
-            } else { // 30% chance for ground enemy
-                // Find the main ground platform to spawn on
-                const groundPlatform = platforms.find(p => p.y === canvas.height - 20);
-                if (groundPlatform) { enemies.push(new GroundEnemy(groundPlatform)); }
+            } else { // 85% chance for ground enemy
+                // Filter for platforms that are currently on screen and wide enough
+                const suitablePlatforms = platforms.filter(p => 
+                    p.width >= 40 &&
+                    p.x < cameraX + canvas.width &&
+                    p.x + p.width > cameraX
+                );
+                if (suitablePlatforms.length > 0) {
+                    const targetPlatform = suitablePlatforms[Math.floor(Math.random() * suitablePlatforms.length)];
+                    
+                    let newEnemy;
+                    if (Math.random() < 0.3) { // 30% of ground enemies are Spitters (can be adjusted)
+                        newEnemy = new SpitterEnemy(targetPlatform);
+                    } else {
+                        newEnemy = new GroundEnemy(targetPlatform);
+                    }
+
+                    // Calculate a valid spawn position on the platform that is on-screen
+                    const minSpawnX = Math.max(targetPlatform.x, cameraX);
+                    const maxSpawnX = Math.min(targetPlatform.x + targetPlatform.width - newEnemy.width, cameraX + canvas.width - newEnemy.width);
+                    
+                    if (maxSpawnX > minSpawnX) {
+                        newEnemy.x = minSpawnX + Math.random() * (maxSpawnX - minSpawnX);
+                        enemies.push(newEnemy);
+                    }
+                }
             }
             enemySpawnTimer = 0;
         }
 
-        // Update and draw
+        // Update and draw enemies
         for (let i = enemies.length - 1; i >= 0; i--) {
             const enemy = enemies[i];
             enemy.update();
-            enemy.draw(context);
-            if (enemy instanceof FlyingEnemy && enemy.x + enemy.width < 0) { // Only flying enemies go off-screen
+            enemy.draw(context); // Draw relative to cameraX
+            // Remove if completely off-screen to the left of the camera
+            if (enemy.x + enemy.width < cameraX) { 
                 enemies.splice(i, 1);
             }
         }
     }
 
     function handlePlatforms(context) {
-        for (const platform of platforms) {
-            context.fillStyle = '#4a044e'; // Dark purple for platforms
-            context.fillRect(platform.x, platform.y, platform.width, platform.height);
+        for (const platform of platforms) { // Draw relative to cameraX
+            context.fillStyle = '#4a044e'; 
+            context.fillRect(platform.x - cameraX, platform.y, platform.width, platform.height);
+        }
+    }
+
+    // Dynamic level generation (simple version)
+    const PLATFORM_CHUNK_WIDTH = 800; // How wide each "chunk" of platforms is
+    let lastPlatformX = 0; // Tracks the absolute X of the last generated platform
+
+    function generateNewPlatforms() {
+        // Only generate if cameraX has moved significantly past the last generated chunk
+        // Generate when the right edge of the camera view is within one chunk width of the last generated platform
+        if (cameraX + canvas.width > lastPlatformX - PLATFORM_CHUNK_WIDTH / 2) { 
+            const currentChunkStart = lastPlatformX;
+
+            // Add a new ground segment to ensure continuous ground
+            const groundSegmentWidth = Math.random() * 300 + 200; // 200 to 500 width
+            platforms.push({ x: currentChunkStart, y: canvas.height - 20, width: groundSegmentWidth, height: 20 });
+            lastPlatformX = currentChunkStart + groundSegmentWidth;
+
+            // Generate a few random floating platforms within this new chunk
+            const numNewPlatforms = Math.floor(Math.random() * 3) + 1; // 1 to 3 new platforms
+            for (let i = 0; i < numNewPlatforms; i++) {
+                const newPlatformWidth = Math.random() * 250 + 100; // 100 to 350 width
+                // Ensure platform is within the current chunk and doesn't overlap too much
+                const newPlatformX = currentChunkStart + Math.random() * (PLATFORM_CHUNK_WIDTH - newPlatformWidth) + 50; 
+                
+                const newPlatformY = canvas.height - (Math.random() * 200 + 80); // Random height above ground
+                platforms.push({ x: newPlatformX, y: newPlatformY, width: newPlatformWidth, height: 20 });
+            }
         }
     }
 
     function checkPlatformCollisions() {
         for (const platform of platforms) {
-            if (player.x < platform.x + platform.width && player.x + player.width > platform.x && player.y < platform.y + platform.height && player.y + player.height > platform.y && player.vy >= 0 && (player.y + player.height - player.vy) <= platform.y + 1) {
+            if (player.x < platform.x + platform.width && player.x + player.width > platform.x && player.y < platform.y + platform.height && player.y + player.height > platform.y && player.vy >= 0 && (player.y + player.height - player.vy) <= platform.y + 1) { // Check for collision from above
                 player.y = platform.y - player.height; player.vy = 0; player.isOnGround = true;
             }
         }
     }
 
     function checkCollisions() {
-        for (let i = projectiles.length - 1; i >= 0; i--) {
+        // Player projectiles vs Enemies
+        for (let i = projectiles.length - 1; i >= 0; i--) { 
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const p = projectiles[i];
                 const e = enemies[j];
                 if (p.x < e.x + e.width && p.x + p.width > e.x && p.y < e.y + e.height && p.y + p.height > e.y) {
-                    projectiles.splice(i, 1);
+                    projectiles.splice(i, 1); 
 
                     e.health--;
                     if (e.health <= 0) {
@@ -540,8 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             if (player.x < e.x + e.width && player.x + player.width > e.x && player.y < e.y + e.height && player.y + player.height > e.y) {
-                createParticles(e.x + e.width / 2, e.y + e.height / 2, e.color, 15); enemies.splice(i, 1);
-                enemies.splice(i, 1);
+                createParticles(e.x + e.width / 2, e.y + e.height / 2, e.color, 15);
                 player.hit(20); // Player takes 20 damage on collision
             }
         }
@@ -550,10 +758,18 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = dnaDrops.length - 1; i >= 0; i--) {
             const d = dnaDrops[i];
             const dnaMagnetLevel = playerState.upgrades.dnaMagnet || 0;
-            const collectionRadius = (player.width / 2 + d.size) + (dnaMagnetLevel * 15);
-            const dist = Math.hypot(player.x + player.width / 2 - d.x, player.y + player.height / 2 - d.y); if (dist < collectionRadius) {
+            const collectionRadius = (player.width / 2 + d.size) + (dnaMagnetLevel * 15); const dist = Math.hypot(player.x + player.width / 2 - d.x, player.y + player.height / 2 - d.y); if (dist < collectionRadius) {
                 runState.dnaCollected += d.value;
                 dnaDrops.splice(i, 1);
+            }
+        }
+
+        // Enemy projectiles vs Player
+        for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+            const p = enemyProjectiles[i];
+            if (p.x < player.x + player.width && p.x + p.width > player.x && p.y < player.y + player.height && p.y + p.height > player.y) {
+                enemyProjectiles.splice(i, 1);
+                player.hit(10); // Enemy projectiles do 10 damage
             }
         }
     }
@@ -564,16 +780,28 @@ document.addEventListener('DOMContentLoaded', () => {
         enemies = [];
         projectiles = [];
         particles = [];
+        enemyProjectiles = [];
         dnaDrops = [];
+        cameraX = 0; // Reset camera position
         enemySpawnTimer = 0;
         platforms = [
             // Ground
-            { x: 0, y: canvas.height - 20, width: canvas.width, height: 20 },
+            { x: 0, y: canvas.height - 20, width: canvas.width * 1.5, height: 20 }, // Initial long ground
             // Floating platforms
             { x: 200, y: canvas.height - 150, width: 150, height: 20 },
             { x: 450, y: canvas.height - 250, width: 200, height: 20 },
-            { x: 700, y: canvas.height - 100, width: 100, height: 20 },
-            { x: 900, y: canvas.height - 200, width: 180, height: 20 },
+        ];
+        // Check if Plasma Blaster is unlocked and add to available weapons
+        if (playerState.upgrades.unlockPlasmaBlaster > 0) {
+            player.availableWeapons.push('plasma');
+        }
+        player.currentWeapon = 'laser'; // Start with laser
+        // Set lastPlatformX to the end of the initial ground platform
+        lastPlatformX = platforms[0].x + platforms[0].width; 
+        parallaxLayers = [
+            new ParallaxLayer('#1e1b34', 0.2, 1), // Farthest, slowest
+            new ParallaxLayer('#3b0764', 0.5, 1.5),
+            new ParallaxLayer('#4a044e', 0.8, 2)  // Closest, fastest
         ];
         runState = { score: 0, dnaCollected: 0 };
         updateHud();
@@ -605,17 +833,19 @@ document.addEventListener('DOMContentLoaded', () => {
         shieldBar.style.width = player.maxShield > 0 ? `${(player.shield / player.maxShield) * 100}%` : '0%';
         runDnaCounter.textContent = runState.dnaCollected;
         scoreCounter.textContent = runState.score;
+        currentWeaponDisplay.textContent = player.currentWeapon.toUpperCase();
     }
 
     // --- INITIALIZATION ---
     function init() {
         loadState();
+        player = new Player(); // Initialize player here to get its initial x for camera setup
 
         // --- Main Menu & Screen Transitions ---
         startGameButton.addEventListener('click', () => {
             mainMenu.style.display = 'none';
             evolutionChamberContainer.style.display = 'none'; // Ensure it's hidden
-            gameContainer.style.display = 'block';
+            gameContainer.style.display = 'block'; 
             startGame();
         });
 
@@ -639,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
         evolutionChamberContainer.addEventListener('click', handlePurchase);
 
         // --- Input Listeners ---
-        window.addEventListener('keydown', (e) => keys[e.key] = true);
+        window.addEventListener('keydown', (e) => { keys[e.key] = true; });
         window.addEventListener('keyup', (e) => keys[e.key] = false);
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
@@ -648,7 +878,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
         if (!gameActive) return;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // --- Camera Update ---
+        // The camera tries to keep the player in the middle of the screen.
+        cameraX = player.x - canvas.width / 2;
+        // Clamp camera to prevent showing area left of the world's start
+        cameraX = Math.max(0, cameraX);
+
+        // --- Drawing ---
+        ctx.fillStyle = '#0c0a14'; // Clear with solid dark space background
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (const layer of parallaxLayers) { layer.draw(ctx, cameraX); }
 
         // Update and draw particles
         for (let i = particles.length - 1; i >= 0; i--) {
@@ -671,15 +911,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Update and draw projectiles
-        for (let i = projectiles.length - 1; i >= 0; i--) {
+        for (let i = projectiles.length - 1; i >= 0; i--) { 
             const p = projectiles[i];
             p.update();
             p.draw(ctx);
-            if (p.x > canvas.width) {
+            // Remove if off-screen relative to camera
+            if (p.x > cameraX + canvas.width || p.x < cameraX) { 
                 projectiles.splice(i, 1);
             }
         }
 
+        // Update and draw enemy projectiles
+        for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+            const p = enemyProjectiles[i];
+            p.update();
+            p.draw(ctx);
+            if (p.x > cameraX + canvas.width || p.x < cameraX || p.y > canvas.height || p.y < 0) {
+                enemyProjectiles.splice(i, 1);
+            }
+        }
+
+        generateNewPlatforms(); // Call this before drawing platforms
         handlePlatforms(ctx);
         handleEnemies(ctx);
         player.update(keys);

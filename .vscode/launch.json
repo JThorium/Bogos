@@ -7,8 +7,8 @@
         {
             "type": "msedge",
             "request": "launch",
-            "name": "Open xenoscape-genesis.html",
-            "file": "c:\\Users\\JyahN\\Bogos\\Bogos\\AdventureAliens\\xenoscape-genesis.html"
+            "name": "Open HuntingGame.html",
+            "file": "c:\\Users\\JyahN\\Bogos\\Bogos\\HuntingGame\\index.html"
         }
     ]
 }
