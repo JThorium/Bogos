@@ -130,6 +130,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // Defines enemies placed statically in the level (moved inside DOMContentLoaded)
     let levelEnemies;
 
+    let currentLevel = 1; // Track current level
+
+    // Level data definition
+    const levelData = {
+        1: {
+            platforms: [
+                { x: 0, y: canvas.height - 40, width: 500, height: 40 },
+                { x: 600, y: canvas.height - 100, width: 100, height: 20 },
+                { x: 750, y: canvas.height - 180, width: 120, height: 20 },
+                { x: 900, y: canvas.height - 100, width: 100, height: 20 },
+                { x: 1100, y: canvas.height - 40, width: 600, height: 40 },
+                { x: 1800, y: canvas.height - 120, width: 150, height: 20 },
+                { x: 2000, y: canvas.height - 220, width: 100, height: 20 },
+                { x: 2200, y: canvas.height - 120, width: 150, height: 20 },
+                { x: 2400, y: canvas.height - 40, width: 500, height: 40 },
+                { x: 2900, y: canvas.height - 40, width: 300, height: 40 }, // End of level 1
+            ],
+            enemies: [
+                { id: 'enemy1', type: 'GroundEnemy', x: 500, y: canvas.height - 40, platformIndex: 0 },
+                { id: 'enemy2', type: 'SpitterEnemy', x: 700, y: canvas.height - 120, platformIndex: 1 },
+                { id: 'enemy3', type: 'GroundEnemy', x: 1200, y: canvas.height - 40, platformIndex: 4 },
+                { id: 'enemy4', type: 'FlyingEnemy', x: 1500, y: canvas.height - 300 },
+                { id: 'enemy5', type: 'SpitterEnemy', x: 2000, y: canvas.height - 150, platformIndex: 5 },
+                { id: 'enemy6', type: 'GroundEnemy', x: 2500, y: canvas.height - 40, platformIndex: 8 },
+            ],
+            endX: 3200 // X-coordinate where the level ends
+        },
+        2: { // Placeholder for Level 2
+            platforms: [
+                { x: 0, y: canvas.height - 40, width: 500, height: 40 },
+                { x: 600, y: canvas.height - 150, width: 150, height: 20 },
+                { x: 800, y: canvas.height - 250, width: 100, height: 20 },
+                { x: 1000, y: canvas.height - 150, width: 150, height: 20 },
+                { x: 1300, y: canvas.height - 40, width: 700, height: 40 },
+                { x: 2100, y: canvas.height - 100, width: 100, height: 20 },
+                { x: 2300, y: canvas.height - 200, width: 120, height: 20 },
+                { x: 2500, y: canvas.height - 100, width: 100, height: 20 },
+                { x: 2700, y: canvas.height - 40, width: 500, height: 40 },
+                { x: 3200, y: canvas.height - 40, width: 300, height: 40 }, // End of level 2
+            ],
+            enemies: [
+                { id: 'enemy7', type: 'FlyingEnemy', x: 500, y: canvas.height - 250 },
+                { id: 'enemy8', type: 'GroundEnemy', x: 700, y: canvas.height - 150, platformIndex: 1 },
+                { id: 'enemy9', type: 'SpitterEnemy', x: 1500, y: canvas.height - 40, platformIndex: 4 },
+                { id: 'enemy10', type: 'FlyingEnemy', x: 2000, y: canvas.height - 350 },
+                { id: 'enemy11', type: 'GroundEnemy', x: 2400, y: canvas.height - 40, platformIndex: 8 },
+            ],
+            endX: 3500
+        }
+    };
+
     function saveState() {
         localStorage.setItem('xenoscapePlayerState', JSON.stringify(playerState));
     }
@@ -560,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.width = 30;
             this.height = 30;
             this.x = cameraX + canvas.width; // Spawn at right edge of visible screen
-            this.y = Math.random() * (canvas.height - this.height);
+            this.y = Math.random() * (canvas.height * 0.6 - this.height) + (canvas.height * 0.2); // Spawn in middle 60% of screen height
             this.speed = Math.random() * 2 + 1; // Random speed
             this.color = '#ef4444'; // Red-500
             this.health = 1;
@@ -867,52 +918,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame() {
         gameActive = true;
         player = new Player();
-        enemies = []; // Will be populated from levelEnemies
+        enemies = [];
         projectiles = [];
         particles = [];
         enemyProjectiles = [];
         dnaDrops = [];
-        cameraX = 0; // Reset camera position
+        cameraX = 0;
         enemySpawnTimer = 0;
-        killedEnemies.clear(); // Clear killed enemies for a new run
+        killedEnemies.clear();
 
-        platforms = [
-            // Initial ground platform
-            { x: 0, y: canvas.height - 40, width: 500, height: 40 },
-            // First set of floating platforms (more accessible)
-            { x: 600, y: canvas.height - 100, width: 100, height: 20 },
-            { x: 750, y: canvas.height - 180, width: 120, height: 20 },
-            { x: 900, y: canvas.height - 100, width: 100, height: 20 },
-            // Second ground section
-            { x: 1100, y: canvas.height - 40, width: 600, height: 40 },
-            // More floating platforms (varied heights)
-            { x: 1800, y: canvas.height - 120, width: 150, height: 20 },
-            { x: 2000, y: canvas.height - 220, width: 100, height: 20 },
-            { x: 2200, y: canvas.height - 120, width: 150, height: 20 },
-            { x: 2400, y: canvas.height - 40, width: 500, height: 40 },
-        ];
-
-        // Populate enemies based on levelEnemies
-        levelEnemies.forEach(enemyData => {
+        // Load platforms and enemies for the current level
+        const currentLevelData = levelData[currentLevel];
+        platforms = [...currentLevelData.platforms]; // Copy to avoid modifying original
+        
+        // Populate enemies based on current level's data
+        currentLevelData.enemies.forEach(enemyData => {
             if (!killedEnemies.has(enemyData.id)) {
                 let newEnemy;
+                // Find the platform object by index from the current level's platforms
+                const platformForEnemy = platforms[enemyData.platformIndex]; 
+
                 if (enemyData.type === 'GroundEnemy') {
-                    newEnemy = new GroundEnemy(platforms[enemyData.platformIndex]);
+                    newEnemy = new GroundEnemy(platformForEnemy);
                 } else if (enemyData.type === 'SpitterEnemy') {
-                    newEnemy = new SpitterEnemy(platforms[enemyData.platformIndex]);
+                    newEnemy = new SpitterEnemy(platformForEnemy);
                 } else if (enemyData.type === 'FlyingEnemy') {
                     newEnemy = new FlyingEnemy();
                 }
-                // Set initial position for statically placed enemies
                 newEnemy.x = enemyData.x;
                 newEnemy.y = enemyData.y;
-                newEnemy.id = enemyData.id; // Assign ID for tracking
+                newEnemy.id = enemyData.id;
                 enemies.push(newEnemy);
             }
         });
-        // Add more dynamic enemy spawning
-        enemySpawnTimer = 0; // Reset timer
-        // Add a few more enemies to the initial spawn
+        // Add dynamic enemy spawning for the current level
         enemies.push(new FlyingEnemy());
         enemies.push(new GroundEnemy(platforms[0])); // Spawn on first ground platform
         // Check if Plasma Blaster is unlocked and add to available weapons
@@ -965,8 +1004,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadState();
         // Defines enemies placed statically in the level
         levelEnemies = [
-            // Ground enemies on initial platforms
-            { id: 'enemy1', type: 'GroundEnemy', x: 300, y: canvas.height - 40, platformIndex: 0 },
+            // Ground enemies on initial platforms (moved enemy1 further)
+            { id: 'enemy1', type: 'GroundEnemy', x: 500, y: canvas.height - 40, platformIndex: 0 }, // Moved from 300 to 500
             { id: 'enemy2', type: 'SpitterEnemy', x: 700, y: canvas.height - 120, platformIndex: 1 },
             { id: 'enemy3', type: 'GroundEnemy', x: 1200, y: canvas.height - 40, platformIndex: 4 },
             { id: 'enemy4', type: 'FlyingEnemy', x: 1500, y: canvas.height - 300 },
@@ -1012,11 +1051,34 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
         if (!gameActive) return;
 
+        // --- Level Completion Check ---
+        if (player.x >= levelData[currentLevel].endX) {
+            if (currentLevel < Object.keys(levelData).length) {
+                currentLevel++;
+                startGame(); // Start next level
+                return; // Stop current loop
+            } else {
+                // Game completed!
+                gameActive = false;
+                alert('Congratulations! You completed all levels!');
+                // Optionally, reset game or show a final score screen
+                setTimeout(() => {
+                    mainMenu.style.display = 'block';
+                    gameContainer.style.display = 'none';
+                    currentLevel = 1; // Reset for next play
+                }, 2000);
+                return;
+            }
+        }
+
         // --- Camera Update ---
         // The camera tries to keep the player in the middle of the screen.
         cameraX = player.x - canvas.width / 2;
         // Clamp camera to prevent showing area left of the world's start
         cameraX = Math.max(0, cameraX);
+        // Clamp camera to prevent showing area right of the world's end
+        const maxCameraX = levelData[currentLevel].endX - canvas.width;
+        cameraX = Math.min(cameraX, maxCameraX);
 
         // --- Drawing ---
         ctx.fillStyle = '#0c0a14'; // Clear with solid dark space background
