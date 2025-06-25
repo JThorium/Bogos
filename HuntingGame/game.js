@@ -7,6 +7,7 @@ const GAME_WIDTH = canvas.width;
 const GAME_HEIGHT = canvas.height;
 
 let score = 0;
+let pelts = 0; // New variable for collected pelts
 let gameTime = 60; // seconds
 let lastTime = 0;
 let animals = [];
@@ -14,19 +15,51 @@ const ANIMAL_SPAWN_INTERVAL = 1000; // milliseconds (increased frequency)
 let lastAnimalSpawnTime = 0;
 let scorePopups = []; // Array to hold score pop-up objects
 
-let ammo = 10;
-const MAX_AMMO = 10;
-const RELOAD_TIME = 1500; // milliseconds
+// Gun Definitions
+const GUNS = {
+    SHOTGUN: {
+        name: "Shotgun",
+        damage: 1, // Multiplier for animal points
+        reloadTime: 2000,
+        ammoCapacity: 5,
+        pellets: 5, // For shotgun spread
+        spread: 0.1 // Radians
+    },
+    RIFLE: {
+        name: "Rifle",
+        damage: 1.5,
+        reloadTime: 1000,
+        ammoCapacity: 10,
+        pellets: 1,
+        spread: 0
+    }
+};
+let currentGun = GUNS.SHOTGUN; // Default gun
+
+let ammo = currentGun.ammoCapacity;
+const MAX_AMMO = currentGun.ammoCapacity; // This will be dynamically updated
+const RELOAD_TIME = currentGun.reloadTime; // milliseconds (This will be dynamically updated)
 let reloading = false;
 let reloadTimer = 0;
+
+// Define planes for depth perception
+const PLANES = [
+    { y_min: GAME_HEIGHT * 0.6, y_max: GAME_HEIGHT * 0.7, size_multiplier: 0.6, speed_multiplier: 0.8, name: "far" },
+    { y_min: GAME_HEIGHT * 0.5, y_max: GAME_HEIGHT * 0.6, size_multiplier: 0.8, speed_multiplier: 1.0, name: "mid-far" },
+    { y_min: GAME_HEIGHT * 0.4, y_max: GAME_HEIGHT * 0.5, size_multiplier: 1.0, speed_multiplier: 1.2, name: "mid" },
+    { y_min: GAME_HEIGHT * 0.3, y_max: GAME_HEIGHT * 0.4, size_multiplier: 1.2, speed_multiplier: 1.4, name: "mid-near" },
+    { y_min: GAME_HEIGHT * 0.2, y_max: GAME_HEIGHT * 0.3, size_multiplier: 1.4, speed_multiplier: 1.6, name: "near" }
+];
 
 // Game State
 const GAME_STATE = {
     MENU: 0,
     RUNNING: 1,
-    GAMEOVER: 2
+    GAMEOVER: 2,
+    LOADOUT: 3 // New state for loadout configuration
 };
 let currentState = GAME_STATE.MENU;
+let highScores = []; // Array to hold high scores
 
 // Mouse and Shot variables for crosshair and shooting animation
 let mouseX = 0;
@@ -38,35 +71,38 @@ let shotAlpha = 0;
 
 // Animal Class
 class Animal {
-    constructor(type, x, y, size, speed, points) {
+    constructor(type, x, y, size, speed, points, plane) {
         this.type = type;
         this.x = x;
         this.y = y;
         this.size = size;
         this.speed = speed;
         this.points = points;
+        this.plane = plane; // Store the plane this animal belongs to
         this.direction = Math.random() < 0.5 ? 1 : -1; // 1 for right, -1 for left
         this.fleeing = false;
+        this.hiding = false; // New property for hiding behavior
+        this.hideTimer = 0; // Timer for how long an animal hides
+        this.maxHideTime = 3000; // Max hide time in ms
     }
 
     draw() {
         ctx.fillStyle = this.getColor();
         ctx.save(); // Save the current canvas state
-        ctx.translate(this.x, this.y); // Move origin to animal's center
+        // Adjust y position slightly based on plane for visual depth
+        const displayY = this.y + (this.plane.y_max - this.plane.y_min) / 2;
+        ctx.translate(this.x, displayY); // Move origin to animal's center
 
         switch (this.type.toLowerCase()) {
             case "deer":
-                // Draw a simple rectangle for deer
                 ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
                 break;
             case "rabbit":
-                // Draw a circle for rabbit
                 ctx.beginPath();
                 ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
                 ctx.fill();
                 break;
             case "bear":
-                // Draw a simple triangle for bear
                 ctx.beginPath();
                 ctx.moveTo(0, -this.size / 2);
                 ctx.lineTo(-this.size / 2, this.size / 2);
@@ -74,8 +110,32 @@ class Animal {
                 ctx.closePath();
                 ctx.fill();
                 break;
+            case "bird":
+                // Simple triangle for bird
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size / 2);
+                ctx.lineTo(-this.size, this.size / 2);
+                ctx.lineTo(this.size, this.size / 2);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case "squirrel":
+                // Small circle for squirrel
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case "groundhog":
+                // Oval for groundhog
+                ctx.ellipse(0, 0, this.size / 2, this.size / 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case "beaver":
+                // Rectangle with a flat tail for beaver
+                ctx.fillRect(-this.size / 2, -this.size / 3, this.size, this.size * 2 / 3);
+                ctx.fillRect(this.size / 2, 0, this.size / 3, this.size / 4); // Tail
+                break;
             default:
-                // Default to circle
                 ctx.beginPath();
                 ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -90,31 +150,64 @@ class Animal {
     }
 
     update(deltaTime) {
+        if (this.hiding) {
+            this.hideTimer -= deltaTime;
+            if (this.hideTimer <= 0) {
+                this.hiding = false;
+                // Re-enter from the side it was hiding towards
+                this.x = this.direction === 1 ? -this.size / 2 : GAME_WIDTH + this.size / 2;
+                this.y = this.plane.y_min + Math.random() * (this.plane.y_max - this.plane.y_min);
+            }
+            return false; // Hiding animals don't move or get removed
+        }
+
         if (this.fleeing) {
-            // Fleeing animals move faster and away from the center of the canvas
             const centerX = GAME_WIDTH / 2;
             const centerY = GAME_HEIGHT / 2;
             const dx = this.x - centerX;
             const dy = this.y - centerY;
             const angle = Math.atan2(dy, dx);
 
-            this.x += Math.cos(angle) * this.speed * 2 * (deltaTime / 1000); // Move away from center
+            this.x += Math.cos(angle) * this.speed * 2 * (deltaTime / 1000);
             this.y += Math.sin(angle) * this.speed * 2 * (deltaTime / 1000);
 
-            // If fleeing animal goes off-screen, remove it
-            if (this.x < -this.size || this.x > GAME_WIDTH + this.size ||
-                this.y < -this.size || this.y > GAME_HEIGHT + this.size) {
-                return true; // Indicate that this animal should be removed
+            if (this.x < -this.size * 2 || this.x > GAME_WIDTH + this.size * 2 ||
+                this.y < -this.size * 2 || this.y > GAME_HEIGHT + this.size * 2) {
+                return true;
             }
         } else {
-            this.x += this.speed * this.direction * (deltaTime / 1000); // Move horizontally
+            this.x += this.speed * this.direction * (deltaTime / 1000);
 
-            // Bounce off walls
-            if (this.x - this.size / 2 < 0 || this.x + this.size / 2 > GAME_WIDTH) {
-                this.direction *= -1;
+            // Check for hiding spots (burrows, trees, rocks)
+            const burrows = [
+                { x: GAME_WIDTH * 0.25, y: GAME_HEIGHT * 0.85, radiusX: 60, radiusY: 30 },
+                { x: GAME_WIDTH * 0.6, y: GAME_HEIGHT * 0.9, radiusX: 70, radiusY: 35 }
+            ];
+
+            // Only groundhogs and beavers use burrows
+            if ((this.type === "groundhog" || this.type === "beaver") && !this.hiding) {
+                for (const burrow of burrows) {
+                    const distToBurrow = Math.sqrt(
+                        (this.x - burrow.x) * (this.x - burrow.x) +
+                        (this.y - burrow.y) * (this.y - burrow.y)
+                    );
+                    if (distToBurrow < this.size + burrow.radiusX / 2) { // If close to a burrow
+                        this.hiding = true;
+                        this.hideTimer = this.maxHideTime;
+                        return false; // Don't remove, just hide
+                    }
+                }
+            }
+
+            // Remove animal if it goes completely off-screen on the opposite side
+            if (this.direction === 1 && this.x - this.size / 2 > GAME_WIDTH) {
+                return true;
+            }
+            if (this.direction === -1 && this.x + this.size / 2 < 0) {
+                return true;
             }
         }
-        return false; // Indicate that this animal should not be removed
+        return false;
     }
 
     getColor() {
@@ -122,6 +215,10 @@ class Animal {
             case "deer": return "brown";
             case "rabbit": return "grey";
             case "bear": return "black";
+            case "bird": return "skyblue";
+            case "squirrel": return "orange";
+            case "groundhog": return "darkgrey";
+            case "beaver": return "darkorange";
             default: return "purple";
         }
     }
@@ -137,21 +234,83 @@ class Animal {
 
 // Game Functions
 function spawnAnimal() {
-    const animalTypes = ["deer", "rabbit", "bear"];
+    const animalTypes = ["deer", "rabbit", "bear", "bird", "squirrel", "groundhog", "beaver"];
     const randomType = animalTypes[Math.floor(Math.random() * animalTypes.length)];
-    const size = 40; // Increased size
-    const x = Math.random() * (GAME_WIDTH - size) + size / 2;
-    const y = Math.random() * (GAME_HEIGHT - size) + size / 2;
-    const speed = 30 + Math.random() * 70; // 30 to 100 pixels per second (slower)
-    let points;
 
+    let randomPlane;
+    // Birds can spawn in any plane, others only in ground planes
+    if (randomType === "bird") {
+        randomPlane = PLANES[Math.floor(Math.random() * PLANES.length)];
+    } else {
+        // Ground animals should stick to lower planes
+        randomPlane = PLANES[Math.floor(Math.random() * (PLANES.length - 2))]; // Exclude top two planes for ground animals
+    }
+
+    const baseSize = 40;
+    const size = baseSize * randomPlane.size_multiplier;
+    const baseSpeed = 30 + Math.random() * 70;
+    const speed = baseSpeed * randomPlane.speed_multiplier;
+
+    // Spawn off-screen
+    const direction = Math.random() < 0.5 ? 1 : -1; // 1 for right, -1 for left
+    const x = direction === 1 ? -size / 2 : GAME_WIDTH + size / 2; // Start left or right
+    const y = randomPlane.y_min + Math.random() * (randomPlane.y_max - randomPlane.y_min);
+
+    let points;
     switch (randomType) {
         case "deer": points = 100; break;
         case "rabbit": points = 50; break;
         case "bear": points = 200; break;
+        case "bird": points = 75; break;
+        case "squirrel": points = 60; break;
+        case "groundhog": points = 40; break;
+        case "beaver": points = 90; break;
     }
 
-    animals.push(new Animal(randomType, x, y, size, speed, points));
+    const newAnimal = new Animal(randomType, x, y, size, speed, points, randomPlane);
+    newAnimal.direction = direction; // Set initial direction
+    animals.push(newAnimal);
+}
+
+// High Score Functions
+async function loadHighScores() {
+    try {
+        const response = await fetch('highscores.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        highScores = await response.json();
+        highScores.sort((a, b) => b.score - a.score); // Sort descending
+        highScores = highScores.slice(0, 5); // Keep top 5
+    } catch (error) {
+        console.error("Could not load high scores:", error);
+        highScores = []; // Initialize as empty if loading fails
+    }
+}
+
+async function saveHighScore(newScore) {
+    highScores.push({ score: newScore, date: new Date().toLocaleString() });
+    highScores.sort((a, b) => b.score - a.score);
+    highScores = highScores.slice(0, 5); // Keep top 5
+
+    // In a real application, this would send data to a server.
+    // For a client-side only game, we can't directly write to a file.
+    // This part would require a backend. For now, it will just update the in-memory array.
+    console.log("High Scores updated (in-memory):", highScores);
+    // To persist, you'd need a server endpoint:
+    /*
+    try {
+        await fetch('/save-highscore', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(highScores),
+        });
+    } catch (error) {
+        console.error("Could not save high scores:", error);
+    }
+    */
 }
 
 function draw() {
@@ -163,6 +322,37 @@ function draw() {
     ctx.fillStyle = '#228B22'; // Forest green
     ctx.fillRect(0, GAME_HEIGHT * 0.7, GAME_WIDTH, GAME_HEIGHT * 0.3); // Ground covers bottom 30%
 
+    // Draw static environmental elements (trees, rocks)
+    // Simple trees
+    ctx.fillStyle = 'brown'; // Tree trunk
+    ctx.fillRect(GAME_WIDTH * 0.15, GAME_HEIGHT * 0.5, 20, GAME_HEIGHT * 0.2);
+    ctx.fillRect(GAME_WIDTH * 0.7, GAME_HEIGHT * 0.45, 25, GAME_HEIGHT * 0.25);
+    ctx.fillStyle = 'darkgreen'; // Tree leaves
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH * 0.15 + 10, GAME_HEIGHT * 0.5, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH * 0.7 + 12.5, GAME_HEIGHT * 0.45, 50, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Simple rocks
+    ctx.fillStyle = 'grey';
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH * 0.3, GAME_HEIGHT * 0.75, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH * 0.85, GAME_HEIGHT * 0.8, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Simple burrows
+    ctx.fillStyle = '#8B4513'; // Brown for burrow
+    ctx.beginPath();
+    ctx.ellipse(GAME_WIDTH * 0.25, GAME_HEIGHT * 0.85, 60, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(GAME_WIDTH * 0.6, GAME_HEIGHT * 0.9, 70, 35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     if (currentState === GAME_STATE.MENU) {
         ctx.fillStyle = 'black';
         ctx.font = '40px Arial';
@@ -170,8 +360,10 @@ function draw() {
         ctx.fillText('Hunting Game', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50);
         ctx.font = '20px Arial';
         ctx.fillText('Click to Start', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
+        ctx.fillText('Press L for Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50); // Option to go to loadout
     } else if (currentState === GAME_STATE.RUNNING) {
-        // Draw animals
+        // Draw animals, sorted by plane (near to far) for correct layering
+        animals.sort((a, b) => b.plane.size_multiplier - a.plane.size_multiplier);
         animals.forEach(animal => animal.draw());
 
         // Draw score and timer
@@ -179,15 +371,18 @@ function draw() {
         ctx.font = '20px Arial';
         ctx.textAlign = 'left';
         ctx.fillText(`Score: ${score}`, 10, 30);
+        ctx.fillText(`Pelts: ${pelts}`, 10, 60); // Display pelts
         ctx.textAlign = 'right';
         ctx.fillText(`Time: ${Math.max(0, Math.floor(gameTime))}`, GAME_WIDTH - 10, 30);
 
         // Draw ammo
         ctx.textAlign = 'center';
-        ctx.fillText(`Ammo: ${ammo}/${MAX_AMMO}`, GAME_WIDTH / 2, 30);
+        ctx.fillText(`Ammo: ${ammo}/${currentGun.ammoCapacity}`, GAME_WIDTH / 2, 30);
+        ctx.textAlign = 'center';
+        ctx.fillText(`Weapon: ${currentGun.name}`, GAME_WIDTH / 2, 60);
         if (reloading) {
             ctx.fillStyle = 'orange';
-            ctx.fillText(`Reloading... ${(reloadTimer / 1000).toFixed(1)}s`, GAME_WIDTH / 2, 60);
+            ctx.fillText(`Reloading... ${(reloadTimer / 1000).toFixed(1)}s`, GAME_WIDTH / 2, 90);
         }
 
         // Draw score pop-ups
@@ -224,6 +419,36 @@ function draw() {
         ctx.fillText(`Final Score: ${score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
         ctx.font = '20px Arial';
         ctx.fillText('Click to Restart', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
+        ctx.fillText('Press L for Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80); // Option to go to loadout
+
+        // Display High Scores on Game Over screen
+        ctx.font = '25px Arial';
+        ctx.fillText('High Scores:', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 130);
+        highScores.forEach((hs, index) => {
+            ctx.fillText(`${index + 1}. ${hs.score} (${hs.date})`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 160 + index * 30);
+        });
+
+    } else if (currentState === GAME_STATE.LOADOUT) {
+        ctx.fillStyle = 'black';
+        ctx.font = '40px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 100);
+
+        let yOffset = GAME_HEIGHT / 2 - 30;
+        for (const gunKey in GUNS) {
+            const gun = GUNS[gunKey];
+            ctx.font = '25px Arial';
+            ctx.fillText(`${gun.name} (Damage: ${gun.damage}, Ammo: ${gun.ammoCapacity}, Reload: ${gun.reloadTime / 1000}s)`, GAME_WIDTH / 2, yOffset);
+            if (currentGun === gun) {
+                ctx.fillText(' (EQUIPPED)', GAME_WIDTH / 2 + ctx.measureText(gun.name).width / 2 + 100, yOffset);
+            }
+            yOffset += 40;
+        }
+
+        ctx.font = '20px Arial';
+        ctx.fillText('Press 1 for Shotgun, 2 for Rifle', GAME_WIDTH / 2, yOffset + 30);
+        ctx.fillText('Press Enter to Start Game', GAME_WIDTH / 2, yOffset + 60);
+        ctx.fillText('Press M for Main Menu', GAME_WIDTH / 2, yOffset + 90);
     }
 }
 
@@ -262,6 +487,7 @@ function update(deltaTime) {
         if (gameTime <= 0) {
             currentState = GAME_STATE.GAMEOVER;
             gameTime = 0;
+            saveHighScore(score); // Save score when game ends
         }
 
         // Update animals
@@ -300,82 +526,131 @@ canvas.addEventListener('click', (event) => {
         gameTime = 60;
         animals = [];
         lastAnimalSpawnTime = performance.now();
-        ammo = MAX_AMMO; // Reset ammo on new game
+        currentGun = GUNS.SHOTGUN; // Reset gun to default on new game
+        ammo = currentGun.ammoCapacity; // Reset ammo based on current gun
         reloading = false;
         reloadTimer = 0;
+        pelts = 0; // Reset pelts on new game
     } else if (currentState === GAME_STATE.RUNNING) {
         if (ammo > 0 && !reloading) {
             ammo--; // Consume one ammo
 
-            // Trigger shot animation
-            shotFired = true;
-            shotX = mouseX;
-            shotY = mouseY;
-            shotAlpha = 1; // Start fully opaque
+            // Handle multiple pellets for shotgun
+            const numPellets = currentGun.pellets;
+            const spreadAngle = currentGun.spread;
 
-            let hit = false;
-            for (let i = animals.length - 1; i >= 0; i--) {
-                if (animals[i].isClicked(mouseX, mouseY)) {
-                    score += animals[i].points;
-                    // Add score pop-up
+            for (let p = 0; p < numPellets; p++) {
+                // Calculate a random offset for each pellet within the spread
+                const angleOffset = (Math.random() - 0.5) * spreadAngle * 2;
+                const adjustedMouseX = mouseX + Math.cos(angleOffset) * 50; // Adjust target slightly
+                const adjustedMouseY = mouseY + Math.sin(angleOffset) * 50;
+
+                // Trigger shot animation for each pellet (optional, might be too many)
+                // For now, just one visual shot feedback
+                if (p === 0) {
+                    shotFired = true;
+                    shotX = mouseX;
+                    shotY = mouseY;
+                    shotAlpha = 1;
+                }
+
+                let hit = false;
+                for (let i = animals.length - 1; i >= 0; i--) {
+                    if (animals[i].hiding) {
+                        continue;
+                    }
+
+                if (animals[i].isClicked(adjustedMouseX, adjustedMouseY)) {
+                    score += animals[i].points * currentGun.damage; // Apply gun damage multiplier
+                    pelts++; // Increment pelts on successful hit
                     scorePopups.push({
-                        points: animals[i].points,
+                        points: animals[i].points * currentGun.damage,
                         x: animals[i].x,
                         y: animals[i].y,
                         alpha: 1,
                         fontSize: 14
                     });
 
-                    // For visual feedback, briefly change color before removing
-                    const hitAnimal = animals[i];
-                    hitAnimal.originalColor = hitAnimal.getColor(); // Store original color
-                    hitAnimal.getColor = () => 'red'; // Change to red on hit
-                    setTimeout(() => {
-                        animals.splice(i, 1); // Remove after a short delay
-                    }, 100); // 100ms delay for visual feedback
-                    hit = true;
-                    break; // Only hit one animal per click
-                } else {
-                    // Check for near-miss to trigger fleeing behavior
-                    const distance = Math.sqrt(
-                        (mouseX - animals[i].x) * (mouseX - animals[i].x) +
-                        (mouseY - animals[i].y) * (mouseY - animals[i].y)
-                    );
-                    if (distance < animals[i].size * 2) { // If click is within 2x animal size
-                        animals[i].fleeing = true;
+                        const hitAnimal = animals[i];
+                        hitAnimal.originalColor = hitAnimal.getColor();
+                        hitAnimal.getColor = () => 'red';
+                        setTimeout(() => {
+                            animals.splice(i, 1);
+                        }, 100);
+                        hit = true;
+                        break; // Only hit one animal per pellet
+                    } else {
+                        const distance = Math.sqrt(
+                            (adjustedMouseX - animals[i].x) * (adjustedMouseX - animals[i].x) +
+                            (adjustedMouseY - animals[i].y) * (adjustedMouseY - animals[i].y)
+                        );
+                        if (distance < animals[i].size * 2) {
+                            animals[i].fleeing = true;
+                        }
                     }
                 }
-            }
-
-            if (!hit) {
-                score -= 10; // Penalty for missing
-                if (score < 0) score = 0; // Prevent negative score
-                scorePopups.push({
-                    points: -10, // Negative points for miss
-                    x: mouseX,
-                    y: mouseY,
-                    alpha: 1,
-                    fontSize: 14,
-                    color: 'red' // Indicate penalty
-                });
+                if (!hit && numPellets === 1) { // Only penalize for a miss if it's a single shot (rifle)
+                    score -= 10;
+                    if (score < 0) score = 0;
+                    scorePopups.push({
+                        points: -10,
+                        x: mouseX,
+                        y: mouseY,
+                        alpha: 1,
+                        fontSize: 14,
+                        color: 'red'
+                    });
+                }
             }
         } else if (ammo === 0 && !reloading) {
-            // Auto-reload if out of ammo
             reloading = true;
-            reloadTimer = RELOAD_TIME;
+            reloadTimer = currentGun.reloadTime;
         }
     } else if (currentState === GAME_STATE.GAMEOVER) {
-        currentState = GAME_STATE.MENU; // Go back to menu to restart
+        currentState = GAME_STATE.MENU;
+    } else if (currentState === GAME_STATE.LOADOUT) {
+        // In loadout, clicking does nothing for now, only keyboard input
     }
 });
 
 // Keyboard event for manual reload (e.g., 'R' key)
 document.addEventListener('keydown', (event) => {
-    if (currentState === GAME_STATE.RUNNING && event.key.toLowerCase() === 'r' && !reloading && ammo < MAX_AMMO) {
+    if (currentState === GAME_STATE.RUNNING && event.key.toLowerCase() === 'r' && !reloading && ammo < currentGun.ammoCapacity) {
         reloading = true;
-        reloadTimer = RELOAD_TIME;
+        reloadTimer = currentGun.reloadTime;
+    } else if (currentState === GAME_STATE.MENU && event.key.toLowerCase() === 'l') {
+        currentState = GAME_STATE.LOADOUT;
+    } else if (currentState === GAME_STATE.GAMEOVER && event.key.toLowerCase() === 'l') {
+        currentState = GAME_STATE.LOADOUT;
+    } else if (currentState === GAME_STATE.LOADOUT) {
+        if (event.key === '1') {
+            currentGun = GUNS.SHOTGUN;
+            ammo = currentGun.ammoCapacity;
+            reloading = false;
+            reloadTimer = 0;
+        } else if (event.key === '2') {
+            currentGun = GUNS.RIFLE;
+            ammo = currentGun.ammoCapacity;
+            reloading = false;
+            reloadTimer = 0;
+        } else if (event.key === 'Enter') {
+            currentState = GAME_STATE.RUNNING;
+            score = 0;
+            pelts = 0; // Reset pelts on new game
+            gameTime = 60;
+            animals = [];
+            lastAnimalSpawnTime = performance.now();
+            ammo = currentGun.ammoCapacity; // Reset ammo based on selected gun
+            reloading = false;
+            reloadTimer = 0;
+        } else if (event.key.toLowerCase() === 'm') {
+            currentState = GAME_STATE.MENU;
+        }
     }
 });
+
+// Initial load of high scores
+loadHighScores();
 
 // Start the game loop
 requestAnimationFrame(gameLoop);
