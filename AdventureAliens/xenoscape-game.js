@@ -315,23 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         draw(context) {
             const drawX = this.x - cameraX;
             context.fillStyle = this.color; 
-            // Main body (similar to GroundEnemy, but perhaps slightly different proportions)
-            context.beginPath();
-            context.roundRect(drawX, this.y + 5, this.width, this.height - 5, 5);
-            context.fill();
-
-            // Large head/mouth for spitting
-            context.beginPath();
-            context.arc(drawX + this.width / 2, this.y + 5, this.width / 2, Math.PI, 0, false);
-            context.fill();
-
-            // Eyes
-            context.fillStyle = 'white';
-            context.fillRect(drawX + 10, this.y + 5, 5, 5);
-            context.fillRect(drawX + this.width - 15, this.y + 5, 5, 5);
-            context.fillStyle = 'black';
-            context.fillRect(drawX + 11, this.y + 6, 3, 3);
-            context.fillRect(drawX + this.width - 14, this.y + 6, 3, 3);
+            context.fillRect(drawX, this.y, this.width, this.height);
         }
     }
 
@@ -392,6 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.gravity = 0.8; // Stronger gravity for a snappier jump arc
             this.jumpStrength = -18; // Higher jump for platforming
             this.isOnGround = false;
+            this.jumps = 0;
+            this.maxJumps = 2; // Allow for double jump
+            this.jumpInputReleased = true; // New flag to track if jump key was released
             this.facingDirection = 1; // 1 for right, -1 for left
 
             this.color = '#9333ea'; // A distinct purple for Xylar
@@ -430,9 +417,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- Jumping ---
-            if ((keys['w'] || keys['ArrowUp']) && this.isOnGround) {
-                this.vy = this.jumpStrength;
-                this.isOnGround = false;
+            if ((keys['w'] || keys['ArrowUp'])) {
+                if (this.jumpInputReleased && this.jumps < this.maxJumps) {
+                    this.vy = this.jumpStrength;
+                    this.jumps++;
+                    this.jumpInputReleased = false; // Prevent multiple jumps from one press
+                }
+            } else {
+                this.jumpInputReleased = true; // Allow jump again when key is released
             }
 
             // --- Emergency Warp (Dash) ---
@@ -457,6 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             this.isOnGround = false; // Assume not on ground until collision check
+            // Jump reset logic will be handled in gameLoop after collision detection
 
             // Shooting
             if (this.shootCooldown > 0) this.shootCooldown--;
@@ -725,24 +718,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const PLATFORM_CHUNK_WIDTH = 1000; // How wide each "chunk" of platforms is
     let lastPlatformX = 0; // Tracks the absolute X of the last generated platform
     let platformPatterns = [
-        // Pattern 1: Simple floating platforms
+        // Pattern 1: Simple floating platforms with varied heights
         [
             { xOffset: 100, yOffset: 100, width: 100, height: 20 },
             { xOffset: 250, yOffset: 180, width: 120, height: 20 },
             { xOffset: 400, yOffset: 100, width: 100, height: 20 },
+            { xOffset: 550, yOffset: 220, width: 80, height: 20 }, // Higher platform
         ],
-        // Pattern 2: Gap with a high platform
+        // Pattern 2: Gap with a high platform and a lower one after
         [
             { xOffset: 0, yOffset: 0, width: 300, height: 40 }, // Ground segment
             { xOffset: 400, yOffset: 200, width: 80, height: 20 }, // High platform over a gap
-            { xOffset: 550, yOffset: 0, width: 300, height: 40 }, // Another ground segment
+            { xOffset: 550, yOffset: 100, width: 150, height: 20 }, // Lower platform after gap
+            { xOffset: 750, yOffset: 0, width: 200, height: 40 }, // Another ground segment
         ],
-        // Pattern 3: Descending platforms
+        // Pattern 3: Descending platforms leading to a lower area
         [
             { xOffset: 0, yOffset: 0, width: 200, height: 40 },
             { xOffset: 250, yOffset: -50, width: 100, height: 20 },
             { xOffset: 400, yOffset: -100, width: 100, height: 20 },
             { xOffset: 550, yOffset: -150, width: 100, height: 20 },
+            { xOffset: 700, yOffset: -200, width: 150, height: 20 }, // Even lower platform
+        ],
+        // Pattern 4: Stepping stones upwards
+        [
+            { xOffset: 50, yOffset: 0, width: 80, height: 20 },
+            { xOffset: 150, yOffset: 50, width: 80, height: 20 },
+            { xOffset: 250, yOffset: 100, width: 80, height: 20 },
+            { xOffset: 350, yOffset: 150, width: 80, height: 20 },
+            { xOffset: 450, yOffset: 200, width: 80, height: 20 },
         ]
     ];
     let currentPatternIndex = 0;
@@ -774,10 +778,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkPlatformCollisions() {
+        let onAnyPlatform = false;
         for (const platform of platforms) {
             if (player.x < platform.x + platform.width && player.x + player.width > platform.x && player.y < platform.y + platform.height && player.y + player.height > platform.y && player.vy >= 0 && (player.y + player.height - player.vy) <= platform.y + 1) { // Check for collision from above
-                player.y = platform.y - player.height; player.vy = 0; player.isOnGround = true;
+                player.y = platform.y - player.height; 
+                player.vy = 0; 
+                player.isOnGround = true;
+                onAnyPlatform = true;
+                break; // Player is on this platform, no need to check others
             }
+        }
+        // Reset jumps only if player is on ground and not currently jumping
+        if (onAnyPlatform && player.vy === 0) {
+            player.jumps = 0;
         }
     }
 
@@ -866,16 +879,16 @@ document.addEventListener('DOMContentLoaded', () => {
         platforms = [
             // Initial ground platform
             { x: 0, y: canvas.height - 40, width: 500, height: 40 },
-            // First set of floating platforms
-            { x: 600, y: canvas.height - 120, width: 100, height: 20 },
-            { x: 750, y: canvas.height - 200, width: 120, height: 20 },
-            { x: 900, y: canvas.height - 120, width: 100, height: 20 },
+            // First set of floating platforms (more accessible)
+            { x: 600, y: canvas.height - 100, width: 100, height: 20 },
+            { x: 750, y: canvas.height - 180, width: 120, height: 20 },
+            { x: 900, y: canvas.height - 100, width: 100, height: 20 },
             // Second ground section
             { x: 1100, y: canvas.height - 40, width: 600, height: 40 },
-            // More floating platforms
-            { x: 1800, y: canvas.height - 150, width: 150, height: 20 },
-            { x: 2000, y: canvas.height - 250, width: 100, height: 20 },
-            { x: 2200, y: canvas.height - 150, width: 150, height: 20 },
+            // More floating platforms (varied heights)
+            { x: 1800, y: canvas.height - 120, width: 150, height: 20 },
+            { x: 2000, y: canvas.height - 220, width: 100, height: 20 },
+            { x: 2200, y: canvas.height - 120, width: 150, height: 20 },
             { x: 2400, y: canvas.height - 40, width: 500, height: 40 },
         ];
 
@@ -897,6 +910,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 enemies.push(newEnemy);
             }
         });
+        // Add more dynamic enemy spawning
+        enemySpawnTimer = 0; // Reset timer
+        // Add a few more enemies to the initial spawn
+        enemies.push(new FlyingEnemy());
+        enemies.push(new GroundEnemy(platforms[0])); // Spawn on first ground platform
         // Check if Plasma Blaster is unlocked and add to available weapons
         if (playerState.upgrades.unlockPlasmaBlaster > 0) {
             player.availableWeapons.push('plasma');
