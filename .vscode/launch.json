@@ -7,7 +7,7 @@
         {
             "type": "msedge",
             "request": "launch",
-            "name": "Open HuntingGame.html",
+            "name": "Open Adventure Aliens",
             "file": "c:\\Users\\JyahN\\Bogos\\Bogos\\AdventureAliens\\xenoscape-genesis.html"
         }
     ]

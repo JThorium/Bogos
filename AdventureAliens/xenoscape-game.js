@@ -125,17 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const enemySpawnInterval = 240; // Spawn an enemy every 4 seconds at 60fps for more deliberate encounters
     let runState = { score: 0, dnaCollected: 0 };
 
-    // Defines enemies placed statically in the level
-    const levelEnemies = [
-        // Ground enemies on initial platforms
-        { id: 'enemy1', type: 'GroundEnemy', x: 300, y: canvas.height - 40, platformIndex: 0 },
-        { id: 'enemy2', type: 'SpitterEnemy', x: 700, y: canvas.height - 120, platformIndex: 1 },
-        { id: 'enemy3', type: 'GroundEnemy', x: 1200, y: canvas.height - 40, platformIndex: 4 },
-        { id: 'enemy4', type: 'FlyingEnemy', x: 1500, y: canvas.height - 300 },
-        { id: 'enemy5', type: 'SpitterEnemy', x: 2000, y: canvas.height - 150, platformIndex: 5 },
-        { id: 'enemy6', type: 'GroundEnemy', x: 2500, y: canvas.height - 40, platformIndex: 8 },
-    ];
     let killedEnemies = new Set(); // Stores IDs of enemies that have been killed
+
+    // Defines enemies placed statically in the level (moved inside DOMContentLoaded)
+    let levelEnemies;
 
     function saveState() {
         localStorage.setItem('xenoscapePlayerState', JSON.stringify(playerState));
@@ -952,6 +945,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIALIZATION ---
     function init() {
         loadState();
+        // Defines enemies placed statically in the level
+        levelEnemies = [
+            // Ground enemies on initial platforms
+            { id: 'enemy1', type: 'GroundEnemy', x: 300, y: canvas.height - 40, platformIndex: 0 },
+            { id: 'enemy2', type: 'SpitterEnemy', x: 700, y: canvas.height - 120, platformIndex: 1 },
+            { id: 'enemy3', type: 'GroundEnemy', x: 1200, y: canvas.height - 40, platformIndex: 4 },
+            { id: 'enemy4', type: 'FlyingEnemy', x: 1500, y: canvas.height - 300 },
+            { id: 'enemy5', type: 'SpitterEnemy', x: 2000, y: canvas.height - 150, platformIndex: 5 },
+            { id: 'enemy6', type: 'GroundEnemy', x: 2500, y: canvas.height - 40, platformIndex: 8 },
+        ];
         player = new Player(); // Initialize player here to get its initial x for camera setup
 
         // --- Main Menu & Screen Transitions ---
