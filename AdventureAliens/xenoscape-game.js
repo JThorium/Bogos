@@ -132,55 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentLevel = 1; // Track current level
 
-    // Level data definition
-    const levelData = {
-        1: {
-            platforms: [
-                { x: 0, y: canvas.height - 40, width: 500, height: 40 },
-                { x: 600, y: canvas.height - 100, width: 100, height: 20 },
-                { x: 750, y: canvas.height - 180, width: 120, height: 20 },
-                { x: 900, y: canvas.height - 100, width: 100, height: 20 },
-                { x: 1100, y: canvas.height - 40, width: 600, height: 40 },
-                { x: 1800, y: canvas.height - 120, width: 150, height: 20 },
-                { x: 2000, y: canvas.height - 220, width: 100, height: 20 },
-                { x: 2200, y: canvas.height - 120, width: 150, height: 20 },
-                { x: 2400, y: canvas.height - 40, width: 500, height: 40 },
-                { x: 2900, y: canvas.height - 40, width: 300, height: 40 }, // End of level 1
-            ],
-            enemies: [
-                { id: 'enemy1', type: 'GroundEnemy', x: 500, y: canvas.height - 40, platformIndex: 0 },
-                { id: 'enemy2', type: 'SpitterEnemy', x: 700, y: canvas.height - 120, platformIndex: 1 },
-                { id: 'enemy3', type: 'GroundEnemy', x: 1200, y: canvas.height - 40, platformIndex: 4 },
-                { id: 'enemy4', type: 'FlyingEnemy', x: 1500, y: canvas.height - 300 },
-                { id: 'enemy5', type: 'SpitterEnemy', x: 2000, y: canvas.height - 150, platformIndex: 5 },
-                { id: 'enemy6', type: 'GroundEnemy', x: 2500, y: canvas.height - 40, platformIndex: 8 },
-            ],
-            endX: 3200 // X-coordinate where the level ends
-        },
-        2: { // Placeholder for Level 2
-            platforms: [
-                { x: 0, y: canvas.height - 40, width: 500, height: 40 },
-                { x: 600, y: canvas.height - 150, width: 150, height: 20 },
-                { x: 800, y: canvas.height - 250, width: 100, height: 20 },
-                { x: 1000, y: canvas.height - 150, width: 150, height: 20 },
-                { x: 1300, y: canvas.height - 40, width: 700, height: 40 },
-                { x: 2100, y: canvas.height - 100, width: 100, height: 20 },
-                { x: 2300, y: canvas.height - 200, width: 120, height: 20 },
-                { x: 2500, y: canvas.height - 100, width: 100, height: 20 },
-                { x: 2700, y: canvas.height - 40, width: 500, height: 40 },
-                { x: 3200, y: canvas.height - 40, width: 300, height: 40 }, // End of level 2
-            ],
-            enemies: [
-                { id: 'enemy7', type: 'FlyingEnemy', x: 500, y: canvas.height - 250 },
-                { id: 'enemy8', type: 'GroundEnemy', x: 700, y: canvas.height - 150, platformIndex: 1 },
-                { id: 'enemy9', type: 'SpitterEnemy', x: 1500, y: canvas.height - 40, platformIndex: 4 },
-                { id: 'enemy10', type: 'FlyingEnemy', x: 2000, y: canvas.height - 350 },
-                { id: 'enemy11', type: 'GroundEnemy', x: 2400, y: canvas.height - 40, platformIndex: 8 },
-            ],
-            endX: 3500
-        }
-    };
-
     function saveState() {
         localStorage.setItem('xenoscapePlayerState', JSON.stringify(playerState));
     }
@@ -265,6 +216,61 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GAME LOGIC ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+
+    // Level data definition
+    const levelData = {
+        1: {
+            platforms: [
+                { x: 0, yOffset: 40, width: 500, height: 40 },
+                { x: 600, yOffset: 100, width: 100, height: 20 },
+                { x: 750, yOffset: 180, width: 120, height: 20 },
+                { x: 900, yOffset: 100, width: 100, height: 20 },
+                { x: 1100, yOffset: 40, width: 600, height: 40 },
+                { x: 1800, yOffset: 120, width: 150, height: 20 },
+                { x: 2000, yOffset: 220, width: 100, height: 20 },
+                { x: 2200, yOffset: 120, width: 150, height: 20 },
+                { x: 2400, yOffset: 40, width: 500, height: 40 },
+                { x: 2900, yOffset: 40, width: 300, height: 40 }, // End of level 1
+            ],
+            enemies: [
+                { id: 'enemy1', type: 'GroundEnemy', x: 500, yOffset: 40, platformIndex: 0 },
+                { id: 'enemy2', type: 'SpitterEnemy', x: 700, yOffset: 120, platformIndex: 1 },
+                { id: 'enemy3', type: 'GroundEnemy', x: 1200, yOffset: 40, platformIndex: 4 },
+                { id: 'enemy4', type: 'FlyingEnemy', x: 1500, yOffset: 300 },
+                { id: 'enemy5', type: 'SpitterEnemy', x: 2000, yOffset: 150, platformIndex: 5 },
+                { id: 'enemy6', type: 'GroundEnemy', x: 2500, yOffset: 40, platformIndex: 8 },
+            ],
+            endX: 3200 // X-coordinate where the level ends
+        },
+        2: { // Placeholder for Level 2 - Expanded and more detailed
+            platforms: [
+                { x: 0, yOffset: 40, width: 400, height: 40 }, // Starting ground
+                { x: 500, yOffset: 120, width: 150, height: 20 }, // First floating platform
+                { x: 700, yOffset: 200, width: 100, height: 20 }, // Higher platform
+                { x: 900, yOffset: 120, width: 150, height: 20 }, // Descending platform
+                { x: 1100, yOffset: 40, width: 300, height: 40 }, // Return to ground
+                { x: 1500, yOffset: 180, width: 200, height: 20 }, // Long floating platform
+                { x: 1800, yOffset: 250, width: 100, height: 20 }, // Very high platform
+                { x: 2000, yOffset: 100, width: 120, height: 20 }, // Drop down platform
+                { x: 2200, yOffset: 40, width: 500, height: 40 }, // Long ground stretch
+                { x: 2800, yOffset: 150, width: 150, height: 20 }, // Another floating platform
+                { x: 3000, yOffset: 220, width: 100, height: 20 }, // High platform
+                { x: 3200, yOffset: 40, width: 400, height: 40 }, // Final ground stretch
+            ],
+            enemies: [
+                { id: 'enemy7', type: 'GroundEnemy', x: 300, yOffset: 40, platformIndex: 0 },
+                { id: 'enemy8', type: 'FlyingEnemy', x: 600, yOffset: 250 },
+                { id: 'enemy9', type: 'SpitterEnemy', x: 950, yOffset: 120, platformIndex: 3 },
+                { id: 'enemy10', type: 'GroundEnemy', x: 1250, yOffset: 40, platformIndex: 4 },
+                { id: 'enemy11', type: 'FlyingEnemy', x: 1600, yOffset: 300 },
+                { id: 'enemy12', type: 'SpitterEnemy', x: 1900, yOffset: 180, platformIndex: 5 },
+                { id: 'enemy13', type: 'GroundEnemy', x: 2300, yOffset: 40, platformIndex: 8 },
+                { id: 'enemy14', type: 'FlyingEnemy', x: 2900, yOffset: 200 },
+                { id: 'enemy15', type: 'SpitterEnemy', x: 3300, yOffset: 40, platformIndex: 11 },
+            ],
+            endX: 3600 // X-coordinate where the level ends
+        }
+    };
 
     class ParallaxLayer {
         constructor(color, speedFactor, size) {
@@ -929,29 +935,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Load platforms and enemies for the current level
         const currentLevelData = levelData[currentLevel];
-        platforms = [...currentLevelData.platforms]; // Copy to avoid modifying original
+        platforms = currentLevelData.platforms.map(p => ({
+            x: p.x,
+            y: canvas.height - p.yOffset, // Calculate actual Y based on canvas height
+            width: p.width,
+            height: p.height
+        }));
         
         // Populate enemies based on current level's data
         currentLevelData.enemies.forEach(enemyData => {
             if (!killedEnemies.has(enemyData.id)) {
                 let newEnemy;
-                // Find the platform object by index from the current level's platforms
+                // Find the platform object by index from the newly created platforms array
                 const platformForEnemy = platforms[enemyData.platformIndex]; 
 
                 if (enemyData.type === 'GroundEnemy') {
                     newEnemy = new GroundEnemy(platformForEnemy);
+                    newEnemy.x = enemyData.x;
+                    newEnemy.y = canvas.height - enemyData.yOffset - newEnemy.height; // Adjust Y for ground enemies
                 } else if (enemyData.type === 'SpitterEnemy') {
                     newEnemy = new SpitterEnemy(platformForEnemy);
+                    newEnemy.x = enemyData.x;
+                    newEnemy.y = canvas.height - enemyData.yOffset - newEnemy.height; // Adjust Y for spitter enemies
                 } else if (enemyData.type === 'FlyingEnemy') {
                     newEnemy = new FlyingEnemy();
+                    newEnemy.x = enemyData.x;
+                    newEnemy.y = canvas.height - enemyData.yOffset; // Flying enemies use yOffset as their direct Y
                 }
-                newEnemy.x = enemyData.x;
-                newEnemy.y = enemyData.y;
                 newEnemy.id = enemyData.id;
                 enemies.push(newEnemy);
             }
         });
         // Add dynamic enemy spawning for the current level
+        // Ensure dynamic spawns also use the new yOffset logic if they are ground enemies
         enemies.push(new FlyingEnemy());
         enemies.push(new GroundEnemy(platforms[0])); // Spawn on first ground platform
         // Check if Plasma Blaster is unlocked and add to available weapons
