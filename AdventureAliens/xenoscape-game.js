@@ -705,45 +705,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    class Particle {
-        constructor(x, y, color, size, lifespan, speedX, speedY) {
-            this.x = x;
-            this.y = y;
-            this.speedX = speedX || (Math.random() - 0.5) * 3;
-            this.speedY = speedY || (Math.random() - 0.5) * 3;
-            this.color = color;
-            this.size = size;
-            this.lifespan = lifespan;
-            this.maxLifespan = lifespan;
-        }
-
-        update() {
-            this.x += this.speedX;
-            this.y += this.speedY;
-            this.lifespan--;
-        }
-
-        draw(context) {
-            // Draw relative to cameraX
-            context.save(); 
-            context.globalAlpha = this.lifespan / this.maxLifespan;
-            context.fillStyle = this.color;
-            context.beginPath();
-            context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            context.fill();
-            context.restore();
-        }
-    }
-
-    function createParticles(x, y, color, count, size = 5, lifespan = 30, spread = 3) {
-        for (let i = 0; i < count; i++) {
-            const particleSize = Math.random() * size + 2;
-            const particleLifespan = Math.random() * lifespan + 15;
-            const speedX = (Math.random() - 0.5) * spread;
-            const speedY = (Math.random() - 0.5) * spread;
-            particles.push(new Particle(x, y, color, particleSize, particleLifespan, speedX, speedY));
-        }
-    }
 
     function handleEnemies(context) {
         // Update and draw enemies

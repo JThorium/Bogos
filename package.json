@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "A collection of simple games",
   "scripts": {
-    "deploy": "gh-pages -d src/static"
+    "deploy": "gh-pages -d src/static",
+    "build:tailwind": "npx tailwindcss -i AdventureAliens/input.css -o AdventureAliens/output.css --watch"
   },
   "devDependencies": {
-    "gh-pages": "^6.3.0"
+    "gh-pages": "^6.3.0",
+    "tailwindcss": "^4.1.10"
   }
 }
