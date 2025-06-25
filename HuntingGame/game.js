@@ -32,6 +32,14 @@ const GUNS = {
         ammoCapacity: 10,
         pellets: 1,
         spread: 0
+    },
+    SNIPER: {
+        name: "Sniper Rifle",
+        damage: 3,
+        reloadTime: 3000,
+        ammoCapacity: 1,
+        pellets: 1,
+        spread: 0
     }
 };
 let currentGun = GUNS.SHOTGUN; // Default gun
@@ -360,7 +368,7 @@ function draw() {
         ctx.fillText('Hunting Game', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50);
         ctx.font = '20px Arial';
         ctx.fillText('Click to Start', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
-        ctx.fillText('Press L for Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50); // Option to go to loadout
+        ctx.fillText('Press L for Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60); // Option to go to loadout, adjusted Y
     } else if (currentState === GAME_STATE.RUNNING) {
         // Draw animals, sorted by plane (near to far) for correct layering
         animals.sort((a, b) => b.plane.size_multiplier - a.plane.size_multiplier);
@@ -368,21 +376,24 @@ function draw() {
 
         // Draw score and timer
         ctx.fillStyle = 'black';
-        ctx.font = '20px Arial';
+        ctx.font = '24px Arial'; // Slightly larger font for main stats
         ctx.textAlign = 'left';
-        ctx.fillText(`Score: ${score}`, 10, 30);
-        ctx.fillText(`Pelts: ${pelts}`, 10, 60); // Display pelts
-        ctx.textAlign = 'right';
-        ctx.fillText(`Time: ${Math.max(0, Math.floor(gameTime))}`, GAME_WIDTH - 10, 30);
+        ctx.fillText(`Score: ${score}`, 20, 40);
+        ctx.fillText(`Pelts: ${pelts}`, 20, 70); // Display pelts
 
-        // Draw ammo
+        ctx.textAlign = 'right';
+        ctx.fillText(`Time: ${Math.max(0, Math.floor(gameTime))}`, GAME_WIDTH - 20, 40);
+
+        // Draw ammo and weapon info
         ctx.textAlign = 'center';
-        ctx.fillText(`Ammo: ${ammo}/${currentGun.ammoCapacity}`, GAME_WIDTH / 2, 30);
-        ctx.textAlign = 'center';
-        ctx.fillText(`Weapon: ${currentGun.name}`, GAME_WIDTH / 2, 60);
+        ctx.font = '24px Arial';
+        ctx.fillText(`Ammo: ${ammo}/${currentGun.ammoCapacity}`, GAME_WIDTH / 2, 40);
+        ctx.font = '20px Arial';
+        ctx.fillText(`Weapon: ${currentGun.name}`, GAME_WIDTH / 2, 70);
         if (reloading) {
             ctx.fillStyle = 'orange';
-            ctx.fillText(`Reloading... ${(reloadTimer / 1000).toFixed(1)}s`, GAME_WIDTH / 2, 90);
+            ctx.font = '20px Arial';
+            ctx.fillText(`Reloading... ${(reloadTimer / 1000).toFixed(1)}s`, GAME_WIDTH / 2, 100);
         }
 
         // Draw score pop-ups
@@ -410,6 +421,18 @@ function draw() {
             ctx.arc(shotX, shotY, 20, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Draw reload button
+        ctx.fillStyle = reloading ? 'darkgrey' : 'lightgrey';
+        ctx.fillRect(RELOAD_BUTTON_X, RELOAD_BUTTON_Y, RELOAD_BUTTON_WIDTH, RELOAD_BUTTON_HEIGHT);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(RELOAD_BUTTON_X, RELOAD_BUTTON_Y, RELOAD_BUTTON_WIDTH, RELOAD_BUTTON_HEIGHT);
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Reload (R)', RELOAD_BUTTON_X + RELOAD_BUTTON_WIDTH / 2, RELOAD_BUTTON_Y + RELOAD_BUTTON_HEIGHT / 2 + 7);
+
     } else if (currentState === GAME_STATE.GAMEOVER) {
         ctx.fillStyle = 'black';
         ctx.font = '40px Arial';
@@ -422,10 +445,11 @@ function draw() {
         ctx.fillText('Press L for Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80); // Option to go to loadout
 
         // Display High Scores on Game Over screen
-        ctx.font = '25px Arial';
+        ctx.font = '30px Arial'; // Larger font for High Scores title
         ctx.fillText('High Scores:', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 130);
+        ctx.font = '20px Arial'; // Smaller font for individual scores
         highScores.forEach((hs, index) => {
-            ctx.fillText(`${index + 1}. ${hs.score} (${hs.date})`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 160 + index * 30);
+            ctx.fillText(`${index + 1}. ${hs.score} - ${hs.date}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 160 + index * 30);
         });
 
     } else if (currentState === GAME_STATE.LOADOUT) {
@@ -438,15 +462,15 @@ function draw() {
         for (const gunKey in GUNS) {
             const gun = GUNS[gunKey];
             ctx.font = '25px Arial';
-            ctx.fillText(`${gun.name} (Damage: ${gun.damage}, Ammo: ${gun.ammoCapacity}, Reload: ${gun.reloadTime / 1000}s)`, GAME_WIDTH / 2, yOffset);
+            ctx.fillText(`${gun.name} (Dmg: ${gun.damage}, Ammo: ${gun.ammoCapacity}, Rld: ${gun.reloadTime / 1000}s)`, GAME_WIDTH / 2, yOffset);
             if (currentGun === gun) {
-                ctx.fillText(' (EQUIPPED)', GAME_WIDTH / 2 + ctx.measureText(gun.name).width / 2 + 100, yOffset);
+                ctx.fillText(' (EQUIPPED)', GAME_WIDTH / 2 + ctx.measureText(`${gun.name} (Dmg: ${gun.damage}, Ammo: ${gun.ammoCapacity}, Rld: ${gun.reloadTime / 1000}s)`).width / 2 + 10, yOffset); // Adjust position for "EQUIPPED"
             }
             yOffset += 40;
         }
 
         ctx.font = '20px Arial';
-        ctx.fillText('Press 1 for Shotgun, 2 for Rifle', GAME_WIDTH / 2, yOffset + 30);
+        ctx.fillText('Press 1 for Shotgun, 2 for Rifle, 3 for Sniper Rifle', GAME_WIDTH / 2, yOffset + 30);
         ctx.fillText('Press Enter to Start Game', GAME_WIDTH / 2, yOffset + 60);
         ctx.fillText('Press M for Main Menu', GAME_WIDTH / 2, yOffset + 90);
     }
@@ -613,6 +637,29 @@ canvas.addEventListener('click', (event) => {
     }
 });
 
+// Reload button variables
+const RELOAD_BUTTON_WIDTH = 120;
+const RELOAD_BUTTON_HEIGHT = 40;
+const RELOAD_BUTTON_X = (GAME_WIDTH - RELOAD_BUTTON_WIDTH) / 2;
+const RELOAD_BUTTON_Y = GAME_HEIGHT - RELOAD_BUTTON_HEIGHT - 20; // Position at bottom middle
+
+canvas.addEventListener('click', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    if (currentState === GAME_STATE.RUNNING) {
+        // Check if reload button was clicked
+        if (clickX > RELOAD_BUTTON_X && clickX < RELOLOAD_BUTTON_X + RELOAD_BUTTON_WIDTH &&
+            clickY > RELOAD_BUTTON_Y && clickY < RELOAD_BUTTON_Y + RELOAD_BUTTON_HEIGHT) {
+            if (!reloading && ammo < currentGun.ammoCapacity) {
+                reloading = true;
+                reloadTimer = currentGun.reloadTime;
+            }
+        }
+    }
+});
+
 // Keyboard event for manual reload (e.g., 'R' key)
 document.addEventListener('keydown', (event) => {
     if (currentState === GAME_STATE.RUNNING && event.key.toLowerCase() === 'r' && !reloading && ammo < currentGun.ammoCapacity) {
@@ -630,6 +677,11 @@ document.addEventListener('keydown', (event) => {
             reloadTimer = 0;
         } else if (event.key === '2') {
             currentGun = GUNS.RIFLE;
+            ammo = currentGun.ammoCapacity;
+            reloading = false;
+            reloadTimer = 0;
+        } else if (event.key === '3') { // New key for Sniper Rifle
+            currentGun = GUNS.SNIPER;
             ammo = currentGun.ammoCapacity;
             reloading = false;
             reloadTimer = 0;
