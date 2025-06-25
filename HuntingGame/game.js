@@ -6,6 +6,12 @@ const ctx = canvas.getContext('2d');
 const GAME_WIDTH = canvas.width;
 const GAME_HEIGHT = canvas.height;
 
+// Reload button variables - Defined early to be accessible
+const RELOAD_BUTTON_WIDTH = 120;
+const RELOAD_BUTTON_HEIGHT = 40;
+const RELOAD_BUTTON_X = (GAME_WIDTH - RELOAD_BUTTON_WIDTH) / 2;
+const RELOAD_BUTTON_Y = GAME_HEIGHT - RELOAD_BUTTON_HEIGHT - 20; // Position at bottom middle
+
 let score = 0;
 let pelts = 0; // New variable for collected pelts
 let gameTime = 60; // seconds
@@ -45,8 +51,7 @@ const GUNS = {
 let currentGun = GUNS.SHOTGUN; // Default gun
 
 let ammo = currentGun.ammoCapacity;
-const MAX_AMMO = currentGun.ammoCapacity; // This will be dynamically updated
-const RELOAD_TIME = currentGun.reloadTime; // milliseconds (This will be dynamically updated)
+// MAX_AMMO and RELOAD_TIME will be dynamically updated based on currentGun
 let reloading = false;
 let reloadTimer = 0;
 
@@ -92,6 +97,9 @@ class Animal {
         this.hiding = false; // New property for hiding behavior
         this.hideTimer = 0; // Timer for how long an animal hides
         this.maxHideTime = 3000; // Max hide time in ms
+		this.eating = false; // New property for eating behavior
+		this.eatTimer = 0; // Timer for how long an animal eats
+		this.maxEatTime = 2000; // Max eat time in ms
     }
 
     draw() {
@@ -143,6 +151,19 @@ class Animal {
                 ctx.fillRect(-this.size / 2, -this.size / 3, this.size, this.size * 2 / 3);
                 ctx.fillRect(this.size / 2, 0, this.size / 3, this.size / 4); // Tail
                 break;
+			case "fox":
+				// Triangle for fox
+				ctx.beginPath();
+				ctx.moveTo(0, -this.size / 2);
+				ctx.lineTo(-this.size / 2, this.size / 2);
+				ctx.lineTo(this.size / 2, this.size / 2);
+				ctx.closePath();
+				ctx.fill();
+				break;
+			case "wolf":
+				// Rectangle for wolf
+				ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+				break;
             default:
                 ctx.beginPath();
                 ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
@@ -158,6 +179,14 @@ class Animal {
     }
 
     update(deltaTime) {
+		if (this.eating) {
+			this.eatTimer -= deltaTime;
+			if (this.eatTimer <= 0) {
+				this.eating = false;
+				this.speed = 30 + Math.random() * 70; // Reset speed after eating
+			}
+			return false; // Eating animals don't move or get removed
+        }
         if (this.hiding) {
             this.hideTimer -= deltaTime;
             if (this.hideTimer <= 0) {
@@ -207,6 +236,28 @@ class Animal {
                 }
             }
 
+			// Check for grass patches to eat
+			const grassPatches = [
+				{ x: GAME_WIDTH * 0.4, y: GAME_HEIGHT * 0.8, radius: 50 },
+				{ x: GAME_WIDTH * 0.9, y: GAME_HEIGHT * 0.85, radius: 60 }
+			];
+
+			// Only rabbits eat grass
+			if (this.type === "rabbit" && !this.eating) {
+				for (const grass of grassPatches) {
+					const distToGrass = Math.sqrt(
+						(this.x - grass.x) * (this.x - grass.x) +
+						(this.y - grass.y) * (this.y - grass.y)
+					);
+					if (distToGrass < this.size + grass.radius / 2) { // If close to grass
+						this.eating = true;
+						this.eatTimer = this.maxEatTime;
+						this.speed = 0; // Stop moving while eating
+						return false; // Don't remove, just eat
+					}
+				}
+			}
+
             // Remove animal if it goes completely off-screen on the opposite side
             if (this.direction === 1 && this.x - this.size / 2 > GAME_WIDTH) {
                 return true;
@@ -227,6 +278,8 @@ class Animal {
             case "squirrel": return "orange";
             case "groundhog": return "darkgrey";
             case "beaver": return "darkorange";
+			case "fox": return "red";
+			case "wolf": return "lightgrey";
             default: return "purple";
         }
     }
@@ -242,7 +295,7 @@ class Animal {
 
 // Game Functions
 function spawnAnimal() {
-    const animalTypes = ["deer", "rabbit", "bear", "bird", "squirrel", "groundhog", "beaver"];
+    const animalTypes = ["deer", "rabbit", "bear", "bird", "squirrel", "groundhog", "beaver", "fox", "wolf"];
     const randomType = animalTypes[Math.floor(Math.random() * animalTypes.length)];
 
     let randomPlane;
@@ -273,6 +326,8 @@ function spawnAnimal() {
         case "squirrel": points = 60; break;
         case "groundhog": points = 40; break;
         case "beaver": points = 90; break;
+		case "fox": points = 120; break;
+		case "wolf": points = 150; break;
     }
 
     const newAnimal = new Animal(randomType, x, y, size, speed, points, randomPlane);
@@ -282,18 +337,16 @@ function spawnAnimal() {
 
 // High Score Functions
 async function loadHighScores() {
-    try {
-        const response = await fetch('highscores.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        highScores = await response.json();
-        highScores.sort((a, b) => b.score - a.score); // Sort descending
-        highScores = highScores.slice(0, 5); // Keep top 5
-    } catch (error) {
-        console.error("Could not load high scores:", error);
-        highScores = []; // Initialize as empty if loading fails
-    }
+    // In a client-side only game, fetching from a local file path directly
+    // will result in a "Failed to fetch" error due to security restrictions (CORS).
+    // For demonstration, we'll initialize with an empty array or dummy data.
+    // In a real application, this would involve a backend server to store/retrieve scores.
+    console.warn("Attempted to load high scores from highscores.json. This will fail in a client-side only environment due to browser security restrictions. High scores will be managed in-memory only.");
+    highScores = []; // Initialize as empty
+    // Example of dummy data if you want to see something:
+    // highScores = [{ score: 500, date: "2023-01-01" }, { score: 300, date: "2023-01-02" }];
+    highScores.sort((a, b) => b.score - a.score); // Sort descending
+    highScores = highScores.slice(0, 5); // Keep top 5
 }
 
 async function saveHighScore(newScore) {
@@ -305,20 +358,7 @@ async function saveHighScore(newScore) {
     // For a client-side only game, we can't directly write to a file.
     // This part would require a backend. For now, it will just update the in-memory array.
     console.log("High Scores updated (in-memory):", highScores);
-    // To persist, you'd need a server endpoint:
-    /*
-    try {
-        await fetch('/save-highscore', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(highScores),
-        });
-    } catch (error) {
-        console.error("Could not save high scores:", error);
-    }
-    */
+    console.warn("High scores are only saved in-memory. To persist them, a backend server is required.");
 }
 
 function draw() {
@@ -361,12 +401,22 @@ function draw() {
     ctx.ellipse(GAME_WIDTH * 0.6, GAME_HEIGHT * 0.9, 70, 35, 0, 0, Math.PI * 2);
     ctx.fill();
 
+	// Simple grass patches
+	ctx.fillStyle = 'green';
+	ctx.beginPath();
+	ctx.arc(GAME_WIDTH * 0.4, GAME_HEIGHT * 0.8, 50, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.beginPath();
+	ctx.arc(GAME_WIDTH * 0.9, GAME_HEIGHT * 0.85, 60, 0, Math.PI * 2);
+	ctx.fill();
+
     if (currentState === GAME_STATE.MENU) {
         ctx.fillStyle = 'black';
         ctx.font = '40px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('Hunting Game', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50);
         ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
         ctx.fillText('Click to Start', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
         ctx.fillText('Press L for Loadout', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60); // Option to go to loadout, adjusted Y
     } else if (currentState === GAME_STATE.RUNNING) {
@@ -493,7 +543,7 @@ function update(deltaTime) {
         if (reloading) {
             reloadTimer -= deltaTime;
             if (reloadTimer <= 0) {
-                ammo = MAX_AMMO;
+                ammo = currentGun.ammoCapacity; // Use current gun's ammo capacity
                 reloading = false;
             }
         }
@@ -543,120 +593,96 @@ canvas.addEventListener('mousemove', (event) => {
 });
 
 canvas.addEventListener('click', (event) => {
-    // mouseX and mouseY are already updated by mousemove
-    if (currentState === GAME_STATE.MENU) {
-        currentState = GAME_STATE.RUNNING;
-        score = 0;
-        gameTime = 60;
-        animals = [];
-        lastAnimalSpawnTime = performance.now();
-        currentGun = GUNS.SHOTGUN; // Reset gun to default on new game
-        ammo = currentGun.ammoCapacity; // Reset ammo based on current gun
-        reloading = false;
-        reloadTimer = 0;
-        pelts = 0; // Reset pelts on new game
-    } else if (currentState === GAME_STATE.RUNNING) {
-        if (ammo > 0 && !reloading) {
-            ammo--; // Consume one ammo
-
-            // Handle multiple pellets for shotgun
-            const numPellets = currentGun.pellets;
-            const spreadAngle = currentGun.spread;
-
-            for (let p = 0; p < numPellets; p++) {
-                // Calculate a random offset for each pellet within the spread
-                const angleOffset = (Math.random() - 0.5) * spreadAngle * 2;
-                const adjustedMouseX = mouseX + Math.cos(angleOffset) * 50; // Adjust target slightly
-                const adjustedMouseY = mouseY + Math.sin(angleOffset) * 50;
-
-                // Trigger shot animation for each pellet (optional, might be too many)
-                // For now, just one visual shot feedback
-                if (p === 0) {
-                    shotFired = true;
-                    shotX = mouseX;
-                    shotY = mouseY;
-                    shotAlpha = 1;
-                }
-
-                let hit = false;
-                for (let i = animals.length - 1; i >= 0; i--) {
-                    if (animals[i].hiding) {
-                        continue;
-                    }
-
-                if (animals[i].isClicked(adjustedMouseX, adjustedMouseY)) {
-                    score += animals[i].points * currentGun.damage; // Apply gun damage multiplier
-                    pelts++; // Increment pelts on successful hit
-                    scorePopups.push({
-                        points: animals[i].points * currentGun.damage,
-                        x: animals[i].x,
-                        y: animals[i].y,
-                        alpha: 1,
-                        fontSize: 14
-                    });
-
-                        const hitAnimal = animals[i];
-                        hitAnimal.originalColor = hitAnimal.getColor();
-                        hitAnimal.getColor = () => 'red';
-                        setTimeout(() => {
-                            animals.splice(i, 1);
-                        }, 100);
-                        hit = true;
-                        break; // Only hit one animal per pellet
-                    } else {
-                        const distance = Math.sqrt(
-                            (adjustedMouseX - animals[i].x) * (adjustedMouseX - animals[i].x) +
-                            (adjustedMouseY - animals[i].y) * (adjustedMouseY - animals[i].y)
-                        );
-                        if (distance < animals[i].size * 2) {
-                            animals[i].fleeing = true;
-                        }
-                    }
-                }
-                if (!hit && numPellets === 1) { // Only penalize for a miss if it's a single shot (rifle)
-                    score -= 10;
-                    if (score < 0) score = 0;
-                    scorePopups.push({
-                        points: -10,
-                        x: mouseX,
-                        y: mouseY,
-                        alpha: 1,
-                        fontSize: 14,
-                        color: 'red'
-                    });
-                }
-            }
-        } else if (ammo === 0 && !reloading) {
-            reloading = true;
-            reloadTimer = currentGun.reloadTime;
-        }
-    } else if (currentState === GAME_STATE.GAMEOVER) {
-        currentState = GAME_STATE.MENU;
-    } else if (currentState === GAME_STATE.LOADOUT) {
-        // In loadout, clicking does nothing for now, only keyboard input
-    }
-});
-
-// Reload button variables
-const RELOAD_BUTTON_WIDTH = 120;
-const RELOAD_BUTTON_HEIGHT = 40;
-const RELOAD_BUTTON_X = (GAME_WIDTH - RELOAD_BUTTON_WIDTH) / 2;
-const RELOAD_BUTTON_Y = GAME_HEIGHT - RELOAD_BUTTON_HEIGHT - 20; // Position at bottom middle
-
-canvas.addEventListener('click', (event) => {
     const rect = canvas.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
 
     if (currentState === GAME_STATE.RUNNING) {
         // Check if reload button was clicked
-        if (clickX > RELOAD_BUTTON_X && clickX < RELOLOAD_BUTTON_X + RELOAD_BUTTON_WIDTH &&
+        if (clickX > RELOAD_BUTTON_X && clickX < RELOAD_BUTTON_X + RELOAD_BUTTON_WIDTH &&
             clickY > RELOAD_BUTTON_Y && clickY < RELOAD_BUTTON_Y + RELOAD_BUTTON_HEIGHT) {
             if (!reloading && ammo < currentGun.ammoCapacity) {
                 reloading = true;
                 reloadTimer = currentGun.reloadTime;
             }
+        } else { // Only process shooting if not clicking the reload button
+            // Handle shooting logic here
+            if (ammo > 0 && !reloading) {
+                ammo--; // Consume one ammo
+
+                // Trigger shot animation
+                shotFired = true;
+                shotX = mouseX;
+                shotY = mouseY;
+                shotAlpha = 1; // Start fully opaque
+
+                let hit = false;
+                for (let i = animals.length - 1; i >= 0; i--) {
+                    if (animals[i].isClicked(mouseX, mouseY)) {
+                        score += animals[i].points * currentGun.damage; // Apply gun damage
+                        pelts++; // Increment pelts
+                        // Add score pop-up
+                        scorePopups.push({
+                            points: animals[i].points * currentGun.damage,
+                            x: animals[i].x,
+                            y: animals[i].y,
+                            alpha: 1,
+                            fontSize: 14
+                        });
+
+                        // For visual feedback, briefly change color before removing
+                        const hitAnimal = animals[i];
+                        hitAnimal.originalColor = hitAnimal.getColor(); // Store original color
+                        hitAnimal.getColor = () => 'red'; // Change to red on hit
+                        setTimeout(() => {
+                            animals.splice(i, 1); // Remove after a short delay
+                        }, 100); // 100ms delay for visual feedback
+                        hit = true;
+                        break; // Only hit one animal per click
+                    } else {
+                        // Check for near-miss to trigger fleeing behavior
+                        const distance = Math.sqrt(
+                            (mouseX - animals[i].x) * (mouseX - animals[i].x) +
+                            (mouseY - animals[i].y) * (mouseY - animals[i].y)
+                        );
+                        if (distance < animals[i].size * 2) { // If click is within 2x animal size
+                            animals[i].fleeing = true;
+                        }
+                    }
+                }
+
+                if (!hit) {
+                    score -= 10; // Penalty for missing
+                    if (score < 0) score = 0; // Prevent negative score
+                    scorePopups.push({
+                        points: -10, // Negative points for miss
+                        x: mouseX,
+                        y: mouseY,
+                        alpha: 1,
+                        fontSize: 14,
+                        color: 'red' // Indicate penalty
+                    });
+                }
+            } else if (ammo === 0 && !reloading) {
+                // Auto-reload if out of ammo
+                reloading = true;
+                reloadTimer = currentGun.reloadTime; // Use current gun's reload time
+            }
         }
+    } else if (currentState === GAME_STATE.MENU) {
+        currentState = GAME_STATE.RUNNING;
+        score = 0;
+        pelts = 0;
+        gameTime = 60;
+        animals = [];
+        lastAnimalSpawnTime = performance.now();
+        ammo = currentGun.ammoCapacity; // Reset ammo on new game
+        reloading = false;
+        reloadTimer = 0;
+    } else if (currentState === GAME_STATE.GAMEOVER) {
+        currentState = GAME_STATE.MENU; // Go back to menu to restart
+    } else if (currentState === GAME_STATE.LOADOUT) {
+        // In loadout, clicking does nothing for now, only keyboard input
     }
 });
 
