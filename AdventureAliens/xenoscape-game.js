@@ -8,7 +8,7 @@ import { DnaDrop, setDnaDropDependencies } from './dnaDrop.js';
 import { ParallaxLayer, setParallaxLayerDependencies } from './parallaxLayer.js';
 import { PLATFORM_CHUNK_WIDTH, lastPlatformX, platformPatterns, generateNewPlatforms, addPlatformMesh, checkPlatformCollisions, setPlatformDependencies } from './platforms.js';
 import { upgradeData } from './upgradeData.js';
-import { setUIManagerDependencies, handlePurchase } from './uiManager.js';
+import { setUIManagerDependencies, handlePurchase, renderAll } from './uiManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- PLAYER STATE ---
@@ -69,53 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- UI RENDERING ---
-    function renderAll() {
-        dnaCounter.textContent = playerState.dna;
-        outfitGrid.innerHTML = '';
-        weaponGrid.innerHTML = '';
-
-        Object.keys(upgradeData).forEach(id => {
-            const upgrade = upgradeData[id];
-            const card = createUpgradeCard(id, upgrade);
-            if (upgrade.category === 'outfit') {
-                outfitGrid.appendChild(card);
-            } else if (upgrade.category === 'weapon') {
-                weaponGrid.appendChild(card);
-            }
-        });
-    }
-
-    function createUpgradeCard(id, upgrade) {
-        const level = playerState.upgrades[id] || 0;
-        const isMaxed = level >= upgrade.maxLevel;
-        const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
-        const canAfford = playerState.dna >= cost;
-
-        const card = document.createElement('div');
-        card.className = 'upgrade-card p-3 rounded-lg flex flex-col justify-between';
-        const currentEffect = level > 0 ? upgrade.getEffect(level) : 'None';
-        const nextEffect = !isMaxed ? upgrade.getNextEffect(level) : '---';
-        const costColor = canAfford ? 'text-green-400' : 'text-red-400';
-
-        card.innerHTML = `
-            <div>
-                <h4 class="text-md md:text-lg text-yellow-300 mb-1">${upgrade.name}</h4>
-                <p class="text-xs text-gray-400 mb-2">${upgrade.description}</p>
-                <p class="text-sm text-cyan-300">Level: <span>${level}</span>/<span>${upgrade.maxLevel}</span></p>
-                <p class="text-sm text-white">Current Effect: <span>${currentEffect}</span></p>
-                <p class="text-sm text-gray-300">Next: <span>${nextEffect}</span></p>
-            </div>
-            <div class="mt-3 flex justify-between items-center">
-                <span class="text-sm ${costColor} font-bold">Cost: <span>${isMaxed ? '---' : cost}</span> DNA</span>
-                <button class="menu-button bg-green-600 text-white px-4 py-1 rounded-md text-sm upgrade-button" data-upgrade-id="${id}" ${isMaxed || !canAfford ? 'disabled' : ''}>
-                    ${isMaxed ? 'MAXED' : 'UPGRADE'}
-                </button>
-            </div>`;
-        return card;
-    }
+    // --- UI RENDERING ---
+    // renderAll and createUpgradeCard are now handled by uiManager.js
 
     // --- EVENT HANDLING ---
-    // handlePurchase is now imported from uiManager.js
 
     // --- GAME LOGIC ---
     const canvas = document.getElementById('gameCanvas');
@@ -363,12 +320,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
         if (!gameActive) return;
 
-        // Update camera position to follow player
+        // Update camera position to follow player and update cameraX
         camera.position.x = player.mesh.position.x;
         camera.position.y = player.mesh.position.y + 100; // Keep camera slightly above player
+        cameraX = player.x; // Update global cameraX
 
         // Update parallax layers
-        for (const layer of parallaxLayers) { layer.update(player.x); }
+        for (const layer of parallaxLayers) { layer.update(cameraX); }
 
         // Enemy spawning logic
         enemySpawnTimer++;
