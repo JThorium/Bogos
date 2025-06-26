@@ -24,14 +24,14 @@ import {
     updateShipSelector, buyUFO, updateHangarUI, updatePauseMenuUI,
     updateHangarLikeUI, buyUpgrade, showInGameShopUI, updateFusionLabUI,
     addShipToFusion, clearFusion, activateCombineAll, updateStartScreenInfo,
-    updateUI, resizeCanvas, setGameSize, setupEventListeners, uiElements, initializeUIElements
+    updateUI, resizeCanvas, setGameSize, setupEventListeners, initializeUIElements
 } from './ui.js';
 
 // Global game variables (will be initialized in init)
 export let player;
 export let stars;
-export let powerups;
-export let obstacles;
+export let powerups = [];
+export let obstacles = [];
 export let playerBullets = [];
 export let enemyBullets = [];
 export let enemies = [];
@@ -87,7 +87,7 @@ export async function init() {
 
     updateUI(true);
     hideAllModals();
-    uiElements.bottomUiContainer.style.display = 'flex';
+    window.uiElements.bottomUiContainer.style.display = 'flex';
     startMusic(false);
     gameLoop();
 }
@@ -187,8 +187,8 @@ export const WaveManager = {
         setWaveCount(waveCount + 1);
         const bossModel = (waveCount % 2 !== 0) ? BOSS_MODEL_1 : BOSS_MODEL_2;
         setCurrentBoss(new Boss(bossModel));
-        uiElements.bossNameEl.textContent = currentBoss.name;
-        uiElements.bossHealthBarContainer.style.display = 'block';
+        window.uiElements.bossNameEl.textContent = currentBoss.name;
+        window.uiElements.bossHealthBarContainer.style.display = 'block';
         startMusic(true);
     }
 };
@@ -286,7 +286,7 @@ export function handleBullets(bullets, targets) {
                         setWaveCredits(waveCredits + 250);
                         setMaterialsThisRun(materialsThisRun + 10);
                         setCurrentBoss(null);
-                        uiElements.bossHealthBarContainer.style.display = 'none';
+                        window.uiElements.bossHealthBarContainer.style.display = 'none';
                         startMusic(false);
                         showInGameShopUI();
                     }
@@ -369,9 +369,9 @@ export function quitToMainMenu() {
     turrets.length = 0;
     obstacles.length = 0;
     setCurrentBoss(null);
-    uiElements.bottomUiContainer.style.display = 'none';
+    window.uiElements.bottomUiContainer.style.display = 'none';
     hideAllModals();
-    showModal(uiElements.startScreen);
+    showModal(window.uiElements.startScreen);
     updateStartScreenInfo();
     setScore(0);
     setWaveCredits(0);
@@ -383,7 +383,7 @@ export function togglePause() {
     setIsPaused(!isPaused);
     if (isPaused) {
         updatePauseMenuUI();
-        showModal(uiElements.pauseScreen);
+        showModal(window.uiElements.pauseScreen);
         Tone.Transport.pause();
     } else {
         hideAllModals();

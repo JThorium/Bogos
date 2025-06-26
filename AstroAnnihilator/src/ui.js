@@ -16,92 +16,93 @@ import {
 import { init, gameLoop, quitToMainMenu, togglePause, useBombAction, initAudio, startMusic, stopMusic } from './game.js';
 import { sfx } from './audio.js';
 
-// UI Elements (exported for direct access in game.js and index.js)
-export let uiElements = {};
+// UI Elements (now accessed globally via window.uiElements)
+// export let uiElements = {}; // No longer exported directly
 
 export function initializeUIElements() {
-    uiElements.scoreEl = document.getElementById('score');
-    uiElements.highScoreEl = document.getElementById('highScore');
-    uiElements.healthEl = document.getElementById('health');
-    uiElements.shieldEl = document.getElementById('shield');
-    uiElements.creditsEl = document.getElementById('credits');
-    uiElements.bombsEl = document.getElementById('bombs');
-    uiElements.abilityChargeUI = document.getElementById('abilityChargeUI');
-    uiElements.abilityChargeEl = document.getElementById('abilityCharge');
-    uiElements.modalContainer = document.getElementById('modalContainer');
-    uiElements.startScreen = document.getElementById('startScreen');
-    uiElements.pauseScreen = document.getElementById('pauseScreen');
-    uiElements.gameOverScreen = document.getElementById('gameOverScreen');
-    uiElements.hangarScreen = document.getElementById('hangarScreen');
-    uiElements.inGameShop = document.getElementById('inGameShop');
-    uiElements.devScreen = document.getElementById('devScreen');
-    uiElements.pauseButton = document.getElementById('pauseButton');
-    uiElements.startButton = document.getElementById('startButton');
-    uiElements.resumeButton = document.getElementById('resumeButton');
-    uiElements.restartButton = document.getElementById('restartButton');
-    uiElements.hangarButton = document.getElementById('hangarButton');
-    uiElements.hangarBackButton = document.getElementById('hangarBackButton');
-    uiElements.quitButton = document.getElementById('quitButton');
-    uiElements.continueButton = document.getElementById('continueButton');
-    uiElements.devButton = document.getElementById('devButton');
-    uiElements.resetProgressButton = document.getElementById('resetProgressButton');
-    uiElements.gameTitle = document.getElementById('gameTitle');
-    uiElements.finalScoreEl = document.getElementById('finalScore');
-    uiElements.creditsEarnedEl = document.getElementById('creditsEarned');
-    uiElements.materialsFoundEl = document.getElementById('materialsFound');
-    uiElements.shopCreditsEl = document.getElementById('shopCredits');
-    uiElements.shopItemsEl = document.getElementById('shopItems');
-    uiElements.bossHealthBarContainer = document.getElementById('bossHealthBarContainer');
-    uiElements.bossHealthEl = document.getElementById('bossHealth');
-    uiElements.bossNameEl = document.getElementById('bossName');
-    uiElements.bottomUiContainer = document.getElementById('bottomUiContainer');
-    uiElements.bombButtonLeft = document.getElementById('bombButtonLeft');
-    uiElements.bombButtonRight = document.getElementById('bombButtonRight');
-    uiElements.abilityButton = document.getElementById('abilityButton');
-    uiElements.audioStatusEl = document.getElementById('audio-status');
-    uiElements.hangarView = document.getElementById('hangarView');
-    uiElements.hangarViewHeader = document.getElementById('hangarViewHeader');
-    uiElements.hangarCreditsEl = document.getElementById('hangarCredits');
-    uiElements.hangarMaterialsEl = document.getElementById('hangarMaterials');
-    uiElements.sellMaterialButton = document.getElementById('sellMaterialButton');
-    uiElements.metaGrid = document.getElementById('metaGrid');
-    uiElements.upgradeGrid = document.getElementById('upgradeGrid');
-    uiElements.hangarShipSelector = document.getElementById('hangarShipSelector');
-    uiElements.toFusionLabButton = document.getElementById('toFusionLabButton');
-    uiElements.fusionLabView = document.getElementById('fusionLabView');
-    uiElements.fusionLabViewHeader = document.getElementById('fusionLabViewHeader');
-    uiElements.fusionCreditsEl = document.getElementById('fusionCredits');
-    uiElements.fusionSlotsAvailableEl = document.getElementById('fusionSlotsAvailable');
-    uiElements.fusionSlotsContainer = document.getElementById('fusionSlotsContainer');
-    uiElements.fusionShipSource = document.getElementById('fusionShipSource');
-    uiElements.toHangarButton = document.getElementById('toHangarButton');
-    uiElements.clearFusionButton = document.getElementById('clearFusionButton');
-    uiElements.combineAllButton = document.getElementById('combineAllButton');
-    uiElements.gameModeInfoEl = document.getElementById('gameModeInfo');
-    uiElements.pauseStarCreditsEl = document.getElementById('pauseStarCredits');
-    uiElements.pauseShipSelectorEl = document.getElementById('pauseShipSelector');
-    uiElements.pauseUpgradeGridEl = document.getElementById('pauseUpgradeGrid');
-    uiElements.pauseBuyGridEl = document.getElementById('pauseBuyGrid');
-    uiElements.devScoreInputEl = document.getElementById('devScoreInput');
-    uiElements.devSetScoreButton = document.getElementById('devSetScoreButton');
-    uiElements.devCreditsInputEl = document.getElementById('devCreditsInput');
-    uiElements.devSetCreditsButton = document.getElementById('devSetCreditsButton');
-    uiElements.devMaterialsInputEl = document.getElementById('devMaterialsInput');
-    uiElements.devSetMaterialsButton = document.getElementById('devSetMaterialsButton');
-    uiElements.devUnlockAllButton = document.getElementById('devUnlockAllButton');
-    uiElements.devBackButton = document.getElementById('devBackButton');
-    return uiElements;
+    const elements = {};
+    elements.scoreEl = document.getElementById('score');
+    elements.highScoreEl = document.getElementById('highScore');
+    elements.healthEl = document.getElementById('health');
+    elements.shieldEl = document.getElementById('shield');
+    elements.creditsEl = document.getElementById('credits');
+    elements.bombsEl = document.getElementById('bombs');
+    elements.abilityChargeUI = document.getElementById('abilityChargeUI');
+    elements.abilityChargeEl = document.getElementById('abilityCharge');
+    elements.modalContainer = document.getElementById('modalContainer');
+    elements.startScreen = document.getElementById('startScreen');
+    elements.pauseScreen = document.getElementById('pauseScreen');
+    elements.gameOverScreen = document.getElementById('gameOverScreen');
+    elements.hangarScreen = document.getElementById('hangarScreen');
+    elements.inGameShop = document.getElementById('inGameShop');
+    elements.devScreen = document.getElementById('devScreen');
+    elements.pauseButton = document.getElementById('pauseButton');
+    elements.startButton = document.getElementById('startButton');
+    elements.resumeButton = document.getElementById('resumeButton');
+    elements.restartButton = document.getElementById('restartButton');
+    elements.hangarButton = document.getElementById('hangarButton');
+    elements.hangarBackButton = document.getElementById('hangarBackButton');
+    elements.quitButton = document.getElementById('quitButton');
+    elements.continueButton = document.getElementById('continueButton');
+    elements.devButton = document.getElementById('devButton');
+    elements.resetProgressButton = document.getElementById('resetProgressButton');
+    elements.gameTitle = document.getElementById('gameTitle');
+    elements.finalScoreEl = document.getElementById('finalScore');
+    elements.creditsEarnedEl = document.getElementById('creditsEarned');
+    elements.materialsFoundEl = document.getElementById('materialsFound');
+    elements.shopCreditsEl = document.getElementById('shopCredits');
+    elements.shopItemsEl = document.getElementById('shopItems');
+    elements.bossHealthBarContainer = document.getElementById('bossHealthBarContainer');
+    elements.bossHealthEl = document.getElementById('bossHealth');
+    elements.bossNameEl = document.getElementById('bossName');
+    elements.bottomUiContainer = document.getElementById('bottomUiContainer');
+    elements.bombButtonLeft = document.getElementById('bombButtonLeft');
+    elements.bombButtonRight = document.getElementById('bombButtonRight');
+    elements.abilityButton = document.getElementById('abilityButton');
+    elements.audioStatusEl = document.getElementById('audio-status');
+    elements.hangarView = document.getElementById('hangarView');
+    elements.hangarViewHeader = document.getElementById('hangarViewHeader');
+    elements.hangarCreditsEl = document.getElementById('hangarCredits');
+    elements.hangarMaterialsEl = document.getElementById('hangarMaterials');
+    elements.sellMaterialButton = document.getElementById('sellMaterialButton');
+    elements.metaGrid = document.getElementById('metaGrid');
+    elements.upgradeGrid = document.getElementById('upgradeGrid');
+    elements.hangarShipSelector = document.getElementById('hangarShipSelector');
+    elements.toFusionLabButton = document.getElementById('toFusionLabButton');
+    elements.fusionLabView = document.getElementById('fusionLabView');
+    elements.fusionLabViewHeader = document.getElementById('fusionLabViewHeader');
+    elements.fusionCreditsEl = document.getElementById('fusionCredits');
+    elements.fusionSlotsAvailableEl = document.getElementById('fusionSlotsAvailable');
+    elements.fusionSlotsContainer = document.getElementById('fusionSlotsContainer');
+    elements.fusionShipSource = document.getElementById('fusionShipSource');
+    elements.toHangarButton = document.getElementById('toHangarButton');
+    elements.clearFusionButton = document.getElementById('clearFusionButton');
+    elements.combineAllButton = document.getElementById('combineAllButton');
+    elements.gameModeInfoEl = document.getElementById('gameModeInfo');
+    elements.pauseStarCreditsEl = document.getElementById('pauseStarCredits');
+    elements.pauseShipSelectorEl = document.getElementById('pauseShipSelector');
+    elements.pauseUpgradeGridEl = document.getElementById('pauseUpgradeGrid');
+    elements.pauseBuyGridEl = document.getElementById('pauseBuyGrid');
+    elements.devScoreInputEl = document.getElementById('devScoreInput');
+    elements.devSetScoreButton = document.getElementById('devSetScoreButton');
+    elements.devCreditsInputEl = document.getElementById('devCreditsInput');
+    elements.devSetCreditsButton = document.getElementById('devSetCreditsButton');
+    elements.devMaterialsInputEl = document.getElementById('devMaterialsInput');
+    elements.devSetMaterialsButton = document.getElementById('devSetMaterialsButton');
+    elements.devUnlockAllButton = document.getElementById('devUnlockAllButton');
+    elements.devBackButton = document.getElementById('devBackButton');
+    return elements;
 }
 
 export function hideAllModals() {
-    [uiElements.startScreen, uiElements.pauseScreen, uiElements.gameOverScreen, uiElements.hangarScreen, uiElements.inGameShop, uiElements.devScreen].forEach(m => m.style.display = 'none');
-    uiElements.modalContainer.style.pointerEvents = 'none';
+    [window.uiElements.startScreen, window.uiElements.pauseScreen, window.uiElements.gameOverScreen, window.uiElements.hangarScreen, window.uiElements.inGameShop, window.uiElements.devScreen].forEach(m => m.style.display = 'none');
+    window.uiElements.modalContainer.style.pointerEvents = 'none';
 }
 
 export function showModal(modalElement) {
     hideAllModals();
     modalElement.style.display = modalElement.id === 'pauseScreen' || modalElement.id === 'hangarScreen' ? 'flex' : 'block';
-    modalContainer.style.pointerEvents = 'all';
+    window.uiElements.modalContainer.style.pointerEvents = 'all';
 }
 
 export function handleGameOverUI() {
@@ -117,11 +118,11 @@ export function handleGameOverUI() {
     setRawMaterials(rawMaterials + materialsThisRun);
     localStorage.setItem('starCredits', starCredits);
     localStorage.setItem('rawMaterials', rawMaterials);
-    finalScoreEl.textContent = score.toLocaleString();
-    creditsEarnedEl.textContent = `${totalCreditsEarned.toLocaleString()} (${scoreCredits.toLocaleString()} + ${waveCredits.toLocaleString()} + ${bonusCredits.toLocaleString()} bonus)`;
-    materialsFoundEl.textContent = materialsThisRun.toLocaleString();
-    showModal(gameOverScreen);
-    bottomUiContainer.style.display = 'none';
+    window.uiElements.finalScoreEl.textContent = score.toLocaleString();
+    window.uiElements.creditsEarnedEl.textContent = `${totalCreditsEarned.toLocaleString()} (${scoreCredits.toLocaleString()} + ${waveCredits.toLocaleString()} + ${bonusCredits.toLocaleString()} bonus)`;
+    window.uiElements.materialsFoundEl.textContent = materialsThisRun.toLocaleString();
+    showModal(window.uiElements.gameOverScreen);
+    window.uiElements.bottomUiContainer.style.display = 'none';
 }
 
 export function updateShipSelector(container, isHangarView) {
@@ -180,20 +181,20 @@ export function buyUFO(key, refreshCallback) {
 
 export function updateHangarUI() {
     console.log('updateHangarUI() function called in ui.js');
-    updateHangarLikeUI(hangarCreditsEl, hangarShipSelector, upgradeGrid, true);
-    hangarMaterialsEl.textContent = rawMaterials.toLocaleString();
+    updateHangarLikeUI(window.uiElements.hangarCreditsEl, window.uiElements.hangarShipSelector, window.uiElements.upgradeGrid, true);
+    window.uiElements.hangarMaterialsEl.textContent = rawMaterials.toLocaleString();
     updateFusionLabUI();
 }
 
 export function updatePauseMenuUI() {
-    updateHangarLikeUI(pauseStarCreditsEl, pauseShipSelectorEl, pauseUpgradeGridEl, false);
+    updateHangarLikeUI(window.uiElements.pauseStarCreditsEl, window.uiElements.pauseShipSelectorEl, window.uiElements.pauseUpgradeGridEl, false);
 }
 
 export function updateHangarLikeUI(creditsElement, shipSelectorElement, upgradeGridElement, isHangarView) {
     creditsElement.textContent = starCredits.toLocaleString();
     if (shipSelectorElement) updateShipSelector(shipSelectorElement, isHangarView);
     if (isHangarView) {
-        metaGrid.innerHTML = '';
+        window.uiElements.metaGrid.innerHTML = '';
         const boostCost = 1000;
         const boostCard = document.createElement('div');
         boostCard.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center';
@@ -210,7 +211,7 @@ export function updateHangarLikeUI(creditsElement, shipSelectorElement, upgradeG
                 updateHangarUI();
             }
         });
-        metaGrid.appendChild(boostCard);
+        window.uiElements.metaGrid.appendChild(boostCard);
 
         const challengeCard = document.createElement('div');
         challengeCard.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center';
@@ -223,7 +224,7 @@ export function updateHangarLikeUI(creditsElement, shipSelectorElement, upgradeG
             challengeBtnHtml = `<button id="buy-challenge-1" class="menu-button bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">Bring It On!</button>`;
         }
         challengeCard.innerHTML = `<h4 class="text-lg font-bold text-red-400">Challenge Mode</h4><p class="text-sm my-2">Spawn Rate: x${spawnMultiplier}</p>${challengeBtnHtml}`;
-        metaGrid.appendChild(challengeCard);
+        window.uiElements.metaGrid.appendChild(challengeCard);
 
         const challengeBtn1 = challengeCard.querySelector('#buy-challenge-1');
         const challengeBtn2 = challengeCard.querySelector('#buy-challenge-2');
@@ -259,51 +260,51 @@ export function updateHangarLikeUI(creditsElement, shipSelectorElement, upgradeG
         }
     }
 
-    upgradeGridElement.innerHTML = '';
-    const refreshCallback = isHangarView ? updateHangarUI : updatePauseMenuUI;
-    Object.keys(upgrades).forEach(key => {
-        const upg = upgrades[key];
-        const currentCost = upg.cost + upg.costIncrease * upg.level;
-        const matCost = upg.matCost + upg.matIncrease * upg.level;
-        const isMaxed = upg.level >= upg.maxLevel;
+        upgradeGridElement.innerHTML = '';
+        const refreshCallback = isHangarView ? updateHangarUI : updatePauseMenuUI;
+        Object.keys(upgrades).forEach(key => {
+            const upg = upgrades[key];
+            const currentCost = upg.cost + upg.costIncrease * upg.level;
+            const matCost = upg.matCost + upg.matIncrease * upg.level;
+            const isMaxed = upg.level >= upg.maxLevel;
 
-        const card = document.createElement('div');
-        card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center';
-        card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${upg.name}</h4><p class="text-sm my-2">Level: ${upg.level} / ${upg.maxLevel}</p><button id="buy-${key}-${isHangarView ? 'h' : 'p'}" class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">${isMaxed ? 'MAX LEVEL' : `UPGRADE (${currentCost.toLocaleString()} CR + ${matCost} [M])`}</button>`;
-        const buyButton = card.querySelector(`#buy-${key}-${isHangarView ? 'h' : 'p'}`);
-        if (isMaxed || starCredits < currentCost || rawMaterials < matCost) buyButton.disabled = true;
-        buyButton.addEventListener('click', () => {
-            if (buyUpgrade(key)) refreshCallback();
-        });
-        upgradeGridElement.appendChild(card);
-    });
-
-    if (!isHangarView) {
-        pauseBuyGridEl.innerHTML = '';
-        const items = [
-            { name: 'Buy Health', cost: healthPurchaseCost, action: () => { player.health++; setHealthPurchaseCost(Math.floor(healthPurchaseCost * 1.5)); } },
-            { name: 'Buy Shield', cost: shieldPurchaseCost, action: () => { player.shield++; setShieldPurchaseCost(Math.floor(shieldPurchaseCost * 1.5)); } },
-            { name: 'Buy Bomb', cost: bombPurchaseCost, action: () => { player.bombs++; setBombPurchaseCost(Math.floor(bombPurchaseCost * 1.5)); } }
-        ];
-        items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center';
-            card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${item.name}</h4><button class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full mt-2">BUY (${item.cost.toLocaleString()} CR)</button>`;
-            const btn = card.querySelector('button');
-            if (starCredits < item.cost) btn.disabled = true;
-            btn.addEventListener('click', () => {
-                if (starCredits >= item.cost) {
-                    setStarCredits(starCredits - item.cost);
-                    item.action();
-                    localStorage.setItem('starCredits', starCredits);
-                    sfx.buy.triggerAttackRelease("C4", "8n");
-                    refreshCallback();
-                }
+            card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${upg.name}</h4><p class="text-sm my-2">Level: ${upg.level} / ${upg.maxLevel}</p><button id="buy-${key}-${isHangarView ? 'h' : 'p'}" class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">${isMaxed ? 'MAX LEVEL' : `UPGRADE (${currentCost.toLocaleString()} CR + ${matCost} [M])`}</button>`;
+            const buyButton = card.querySelector(`#buy-${key}-${isHangarView ? 'h' : 'p'}`);
+            if (isMaxed || starCredits < currentCost || rawMaterials < matCost) buyButton.disabled = true;
+            buyButton.addEventListener('click', () => {
+                if (buyUpgrade(key)) refreshCallback();
             });
-            pauseBuyGridEl.appendChild(card);
+            upgradeGridElement.appendChild(card);
         });
+
+        if (!isHangarView) {
+            window.uiElements.pauseBuyGridEl.innerHTML = '';
+            const items = [
+                { name: 'Buy Health', cost: healthPurchaseCost, action: () => { player.health++; setHealthPurchaseCost(Math.floor(healthPurchaseCost * 1.5)); } },
+                { name: 'Buy Shield', cost: shieldPurchaseCost, action: () => { player.shield++; setShieldPurchaseCost(Math.floor(shieldPurchaseCost * 1.5)); } },
+                { name: 'Buy Bomb', cost: bombPurchaseCost, action: () => { player.bombs++; setBombPurchaseCost(Math.floor(bombPurchaseCost * 1.5)); } }
+            ];
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center';
+                card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${item.name}</h4><button class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full mt-2">BUY (${item.cost.toLocaleString()} CR)</button>`;
+                const btn = card.querySelector('button');
+                if (starCredits < item.cost) btn.disabled = true;
+                btn.addEventListener('click', () => {
+                    if (starCredits >= item.cost) {
+                        setStarCredits(starCredits - item.cost);
+                        item.action();
+                        localStorage.setItem('starCredits', starCredits);
+                        sfx.buy.triggerAttackRelease("C4", "8n");
+                        refreshCallback();
+                    }
+                });
+                window.uiElements.pauseBuyGridEl.appendChild(card);
+            });
+        }
     }
-}
 
 export function buyUpgrade(key) {
     const upg = upgrades[key];
@@ -325,8 +326,8 @@ export function buyUpgrade(key) {
 export function showInGameShopUI() {
     setIsPaused(true);
     Tone.Transport.pause();
-    shopCreditsEl.textContent = waveCredits;
-    shopItemsEl.innerHTML = '';
+    window.uiElements.shopCreditsEl.textContent = waveCredits;
+    window.uiElements.shopItemsEl.innerHTML = '';
     const items = [
         { name: 'Repair Hull', cost: shopCosts.health, action: () => { player.health++; setShopCosts({ ...shopCosts, health: Math.floor(shopCosts.health * 1.8) }); } },
         { name: 'Add Shield', cost: shopCosts.shield, action: () => { player.shield++; setShopCosts({ ...shopCosts, shield: Math.floor(shopCosts.shield * 1.5) }); } },
@@ -350,16 +351,16 @@ export function showInGameShopUI() {
             }
         };
         itemEl.appendChild(buyButton);
-        shopItemsEl.appendChild(itemEl);
+        window.uiElements.shopItemsEl.appendChild(itemEl);
     });
-    showModal(inGameShop);
+    showModal(window.uiElements.inGameShop);
 }
 
 export function updateFusionLabUI() {
-    fusionCreditsEl.textContent = starCredits.toLocaleString();
+    window.uiElements.fusionCreditsEl.textContent = starCredits.toLocaleString();
     const slotsUnlocked = (highScore >= 50000 ? 5 : highScore >= 40000 ? 4 : highScore >= 30000 ? 3 : highScore >= 20000 ? 2 : 1);
-    fusionSlotsAvailableEl.textContent = `${fusionConfig.length} / ${slotsUnlocked}`;
-    fusionSlotsContainer.innerHTML = '';
+    window.uiElements.fusionSlotsAvailableEl.textContent = `${fusionConfig.length} / ${slotsUnlocked}`;
+    window.uiElements.fusionSlotsContainer.innerHTML = '';
     for (let i = 0; i < 5; i++) {
         const slot = document.createElement('div');
         slot.className = 'fusion-slot rounded-lg p-2 flex items-center justify-center text-center';
@@ -376,10 +377,10 @@ export function updateFusionLabUI() {
             slot.classList.add('locked');
             slot.innerHTML = `<p class="text-xs text-gray-600">LOCKED<br/>(Score > ${(i) * 10000 + 10000})</p>`;
         }
-        fusionSlotsContainer.appendChild(slot);
+        window.uiElements.fusionSlotsContainer.appendChild(slot);
     }
 
-    fusionShipSource.innerHTML = '';
+    window.uiElements.fusionShipSource.innerHTML = '';
     Object.keys(UFO_TYPES).forEach(key => {
         if (key === 'omega') return;
         const ufo = UFO_TYPES[key];
@@ -391,9 +392,9 @@ export function updateFusionLabUI() {
         if (!isFused) {
             card.addEventListener('click', () => addShipToFusion(key));
         }
-        fusionShipSource.appendChild(card);
+        window.uiElements.fusionShipSource.appendChild(card);
     });
-    combineAllButton.style.display = highScore >= 100000 ? 'inline-flex' : 'none';
+    window.uiElements.combineAllButton.style.display = highScore >= 100000 ? 'inline-flex' : 'none';
 }
 
 export function addShipToFusion(ufoKey) {
@@ -437,27 +438,27 @@ export function activateCombineAll() {
 
 export function updateStartScreenInfo() {
     if (selectedUFO === 'omega') {
-        gameModeInfoEl.textContent = `MODE: OMEGA`;
+        window.uiElements.gameModeInfoEl.textContent = `MODE: OMEGA`;
     } else if (gameMode === 'fusion' && (fusionConfig.length > 0 || isCombineAllActive)) {
         const shipName = isCombineAllActive ? 'CHIMERA' : 'FUSION SHIP';
-        gameModeInfoEl.textContent = `MODE: FUSION (${shipName})`;
+        window.uiElements.gameModeInfoEl.textContent = `MODE: FUSION (${shipName})`;
     } else {
-        gameModeInfoEl.textContent = `MODE: CLASSIC (${UFO_TYPES[selectedUFO].name})`;
+        window.uiElements.gameModeInfoEl.textContent = `MODE: CLASSIC (${UFO_TYPES[selectedUFO].name})`;
     }
 }
 
 export function updateUI(force = false) {
-    if (force || uiState.score !== score) { setUiState('score', score); scoreEl.textContent = score.toLocaleString(); }
-    if (force || uiState.highScore !== highScore) { setUiState('highScore', highScore); highScoreEl.textContent = highScore.toLocaleString(); }
+    if (force || uiState.score !== score) { setUiState('score', score); window.uiElements.scoreEl.textContent = score.toLocaleString(); }
+    if (force || uiState.highScore !== highScore) { setUiState('highScore', highScore); window.uiElements.highScoreEl.textContent = highScore.toLocaleString(); }
     if (player) {
-        if (force || uiState.health !== player.health) { setUiState('health', player.health); healthEl.textContent = player.health; }
-        if (force || uiState.shield !== player.shield) { setUiState('shield', player.shield); shieldEl.textContent = player.shield; }
-        if (force || uiState.bombs !== player.bombs) { setUiState('bombs', player.bombs); bombsEl.textContent = player.bombs; }
-        if (player.abilityState && player.abilities.paladin && (force || uiState.ability !== player.abilityState.charge)) { setUiState('ability', player.abilityState.charge); abilityChargeEl.textContent = player.abilityState.charge; abilityChargeUI.style.display = 'block' }
-        else if (!player.abilities.paladin && !player.abilityState.active) { abilityChargeUI.style.display = 'none' }
+        if (force || uiState.health !== player.health) { setUiState('health', player.health); window.uiElements.healthEl.textContent = player.health; }
+        if (force || uiState.shield !== player.shield) { setUiState('shield', player.shield); window.uiElements.shieldEl.textContent = player.shield; }
+        if (force || uiState.bombs !== player.bombs) { setUiState('bombs', player.bombs); window.uiElements.bombsEl.textContent = player.bombs; }
+        if (player.abilityState && player.abilities.paladin && (force || uiState.ability !== player.abilityState.charge)) { setUiState('ability', player.abilityState.charge); window.uiElements.abilityChargeEl.textContent = player.abilityState.charge; window.uiElements.abilityChargeUI.style.display = 'block' }
+        else if (!player.abilities.paladin && !player.abilityState.active) { window.uiElements.abilityChargeUI.style.display = 'none' }
     }
-    if (force || uiState.credits !== waveCredits) { setUiState('credits', waveCredits); creditsEl.textContent = waveCredits.toLocaleString(); }
-    if (currentBoss) { bossHealthEl.textContent = `${Math.ceil(currentBoss.health).toLocaleString()}/${currentBoss.maxHealth.toLocaleString()}`; }
+    if (force || uiState.credits !== waveCredits) { setUiState('credits', waveCredits); window.uiElements.creditsEl.textContent = waveCredits.toLocaleString(); }
+    if (currentBoss) { window.uiElements.bossHealthEl.textContent = `${Math.ceil(currentBoss.health).toLocaleString()}/${currentBoss.maxHealth.toLocaleString()}`; }
 }
 
 export function resizeCanvas(canvas, wrapper) {
