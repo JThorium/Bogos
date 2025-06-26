@@ -8,7 +8,7 @@ import { DnaDrop, setDnaDropDependencies } from './dnaDrop.js';
 import { ParallaxLayer, setParallaxLayerDependencies } from './parallaxLayer.js';
 import { PLATFORM_CHUNK_WIDTH, lastPlatformX, platformPatterns, generateNewPlatforms, addPlatformMesh, checkPlatformCollisions, setPlatformDependencies } from './platforms.js';
 import { upgradeData } from './upgradeData.js';
-import { setUIManagerDependencies } from './uiManager.js';
+import { setUIManagerDependencies, handlePurchase } from './uiManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- PLAYER STATE ---
@@ -356,8 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('keydown', (e) => { keys[e.key] = true; });
         window.addEventListener('keyup', (e) => keys[e.key] = false);
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        window.addEventListener('resize', () => resizeCanvas(camera, renderer)); // Pass camera and renderer
+        resizeCanvas(camera, renderer); // Call after setupThreeJS
     }
 
     function gameLoop() {
