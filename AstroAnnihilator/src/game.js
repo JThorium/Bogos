@@ -20,26 +20,11 @@ import { Player } from './player.js';
 import { Enemy, Boss } from './enemies.js';
 import { Star, Particle, PowerUp, RawMaterialPickup, Obstacle } from './entities.js';
 import {
-    initializeUIElements, hideAllModals, showModal, handleGameOverUI,
+    hideAllModals, showModal, handleGameOverUI,
     updateShipSelector, buyUFO, updateHangarUI, updatePauseMenuUI,
     updateHangarLikeUI, buyUpgrade, showInGameShopUI, updateFusionLabUI,
     addShipToFusion, clearFusion, activateCombineAll, updateStartScreenInfo,
-    updateUI, resizeCanvas, setGameSize, setupEventListeners,
-    scoreEl, highScoreEl, healthEl, shieldEl, creditsEl, bombsEl,
-    abilityChargeUI, abilityChargeEl, modalContainer, startScreen, pauseScreen,
-    gameOverScreen, hangarScreen, inGameShop, devScreen, pauseButton, startButton,
-    resumeButton, restartButton, hangarButton, hangarBackButton, quitButton,
-    continueButton, devButton, resetProgressButton, gameTitle, finalScoreEl,
-    creditsEarnedEl, materialsFoundEl, shopCreditsEl, shopItemsEl,
-    bossHealthBarContainer, bossHealthEl, bossNameEl, bottomUiContainer,
-    bombButtonLeft, bombButtonRight, abilityButton, audioStatusEl, hangarView,
-    hangarViewHeader, hangarCreditsEl, hangarMaterialsEl, sellMaterialButton,
-    metaGrid, upgradeGrid, hangarShipSelector, toFusionLabButton, fusionLabView,
-    fusionLabViewHeader, fusionCreditsEl, fusionSlotsAvailableEl, fusionSlotsContainer,
-    fusionShipSource, toHangarButton, clearFusionButton, combineAllButton, gameModeInfoEl,
-    pauseStarCreditsEl, pauseShipSelectorEl, pauseUpgradeGridEl, pauseBuyGridEl,
-    devScoreInputEl, devSetScoreButton, devCreditsInputEl, devSetCreditsButton,
-    devMaterialsInputEl, devSetMaterialsButton, devUnlockAllButton, devBackButton
+    updateUI, resizeCanvas, setGameSize, setupEventListeners, uiElements, initializeUIElements
 } from './ui.js';
 
 // Global game variables (will be initialized in init)
@@ -56,17 +41,18 @@ export let turrets = [];
 export let canvas, ctx, wrapper;
 
 export async function init() {
+    console.log('init() function called in game.js');
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
     wrapper = document.getElementById('game-wrapper');
 
-    initializeUIElements(); // Initialize UI elements after canvas is set up
+    // initializeUIElements() is now called in index.js
 
     if (!musicInitialized) {
         await Tone.start();
         initAudio();
-        audioStatusEl.textContent = 'Audio Ready!';
-        setTimeout(() => { audioStatusEl.textContent = ''; }, 2000);
+        window.uiElements.audioStatusEl.textContent = 'Audio Ready!';
+        setTimeout(() => { window.uiElements.audioStatusEl.textContent = ''; }, 2000);
     }
 
     setGameSize(wrapper, canvas);
@@ -101,7 +87,7 @@ export async function init() {
 
     updateUI(true);
     hideAllModals();
-    bottomUiContainer.style.display = 'flex';
+    uiElements.bottomUiContainer.style.display = 'flex';
     startMusic(false);
     gameLoop();
 }
@@ -201,8 +187,8 @@ export const WaveManager = {
         setWaveCount(waveCount + 1);
         const bossModel = (waveCount % 2 !== 0) ? BOSS_MODEL_1 : BOSS_MODEL_2;
         setCurrentBoss(new Boss(bossModel));
-        bossNameEl.textContent = currentBoss.name;
-        bossHealthBarContainer.style.display = 'block';
+        uiElements.bossNameEl.textContent = currentBoss.name;
+        uiElements.bossHealthBarContainer.style.display = 'block';
         startMusic(true);
     }
 };
@@ -300,7 +286,7 @@ export function handleBullets(bullets, targets) {
                         setWaveCredits(waveCredits + 250);
                         setMaterialsThisRun(materialsThisRun + 10);
                         setCurrentBoss(null);
-                        bossHealthBarContainer.style.display = 'none';
+                        uiElements.bossHealthBarContainer.style.display = 'none';
                         startMusic(false);
                         showInGameShopUI();
                     }
@@ -383,9 +369,9 @@ export function quitToMainMenu() {
     turrets.length = 0;
     obstacles.length = 0;
     setCurrentBoss(null);
-    bottomUiContainer.style.display = 'none';
+    uiElements.bottomUiContainer.style.display = 'none';
     hideAllModals();
-    showModal(startScreen);
+    showModal(uiElements.startScreen);
     updateStartScreenInfo();
     setScore(0);
     setWaveCredits(0);
@@ -397,7 +383,7 @@ export function togglePause() {
     setIsPaused(!isPaused);
     if (isPaused) {
         updatePauseMenuUI();
-        showModal(pauseScreen);
+        showModal(uiElements.pauseScreen);
         Tone.Transport.pause();
     } else {
         hideAllModals();

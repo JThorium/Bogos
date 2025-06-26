@@ -16,96 +16,86 @@ import {
 import { init, gameLoop, quitToMainMenu, togglePause, useBombAction, initAudio, startMusic, stopMusic } from './game.js';
 import { sfx } from './audio.js';
 
-// UI Elements
-export let scoreEl, highScoreEl, healthEl, shieldEl, creditsEl, bombsEl;
-export let abilityChargeUI, abilityChargeEl;
-export let modalContainer, startScreen, pauseScreen, gameOverScreen, hangarScreen, inGameShop, devScreen;
-export let pauseButton, startButton, resumeButton, restartButton, hangarButton, hangarBackButton, quitButton, continueButton, devButton, resetProgressButton, gameTitle;
-export let finalScoreEl, creditsEarnedEl, materialsFoundEl, shopCreditsEl, shopItemsEl;
-export let bossHealthBarContainer, bossHealthEl, bossNameEl;
-export let bottomUiContainer, bombButtonLeft, bombButtonRight, abilityButton;
-export let audioStatusEl;
-export let hangarView, hangarViewHeader, hangarCreditsEl, hangarMaterialsEl, sellMaterialButton, metaGrid, upgradeGrid, hangarShipSelector, toFusionLabButton;
-export let fusionLabView, fusionLabViewHeader, fusionCreditsEl, fusionSlotsAvailableEl, fusionSlotsContainer, fusionShipSource, toHangarButton, clearFusionButton, combineAllButton, gameModeInfoEl;
-export let pauseStarCreditsEl, pauseShipSelectorEl, pauseUpgradeGridEl, pauseBuyGridEl;
-export let devScoreInputEl, devSetScoreButton, devCreditsInputEl, devSetCreditsButton, devMaterialsInputEl, devSetMaterialsButton, devUnlockAllButton, devBackButton;
+// UI Elements (exported for direct access in game.js and index.js)
+export let uiElements = {};
 
 export function initializeUIElements() {
-    scoreEl = document.getElementById('score');
-    highScoreEl = document.getElementById('highScore');
-    healthEl = document.getElementById('health');
-    shieldEl = document.getElementById('shield');
-    creditsEl = document.getElementById('credits');
-    bombsEl = document.getElementById('bombs');
-    abilityChargeUI = document.getElementById('abilityChargeUI');
-    abilityChargeEl = document.getElementById('abilityCharge');
-    modalContainer = document.getElementById('modalContainer');
-    startScreen = document.getElementById('startScreen');
-    pauseScreen = document.getElementById('pauseScreen');
-    gameOverScreen = document.getElementById('gameOverScreen');
-    hangarScreen = document.getElementById('hangarScreen');
-    inGameShop = document.getElementById('inGameShop');
-    devScreen = document.getElementById('devScreen');
-    pauseButton = document.getElementById('pauseButton');
-    startButton = document.getElementById('startButton');
-    resumeButton = document.getElementById('resumeButton');
-    restartButton = document.getElementById('restartButton');
-    hangarButton = document.getElementById('hangarButton');
-    hangarBackButton = document.getElementById('hangarBackButton');
-    quitButton = document.getElementById('quitButton');
-    continueButton = document.getElementById('continueButton');
-    devButton = document.getElementById('devButton');
-    resetProgressButton = document.getElementById('resetProgressButton');
-    gameTitle = document.getElementById('gameTitle');
-    finalScoreEl = document.getElementById('finalScore');
-    creditsEarnedEl = document.getElementById('creditsEarned');
-    materialsFoundEl = document.getElementById('materialsFound');
-    shopCreditsEl = document.getElementById('shopCredits');
-    shopItemsEl = document.getElementById('shopItems');
-    bossHealthBarContainer = document.getElementById('bossHealthBarContainer');
-    bossHealthEl = document.getElementById('bossHealth');
-    bossNameEl = document.getElementById('bossName');
-    bottomUiContainer = document.getElementById('bottomUiContainer');
-    bombButtonLeft = document.getElementById('bombButtonLeft');
-    bombButtonRight = document.getElementById('bombButtonRight');
-    abilityButton = document.getElementById('abilityButton');
-    audioStatusEl = document.getElementById('audio-status');
-    hangarView = document.getElementById('hangarView');
-    hangarViewHeader = document.getElementById('hangarViewHeader');
-    hangarCreditsEl = document.getElementById('hangarCredits');
-    hangarMaterialsEl = document.getElementById('hangarMaterials');
-    sellMaterialButton = document.getElementById('sellMaterialButton');
-    metaGrid = document.getElementById('metaGrid');
-    upgradeGrid = document.getElementById('upgradeGrid');
-    hangarShipSelector = document.getElementById('hangarShipSelector');
-    toFusionLabButton = document.getElementById('toFusionLabButton');
-    fusionLabView = document.getElementById('fusionLabView');
-    fusionLabViewHeader = document.getElementById('fusionLabViewHeader');
-    fusionCreditsEl = document.getElementById('fusionCredits');
-    fusionSlotsAvailableEl = document.getElementById('fusionSlotsAvailable');
-    fusionSlotsContainer = document.getElementById('fusionSlotsContainer');
-    fusionShipSource = document.getElementById('fusionShipSource');
-    toHangarButton = document.getElementById('toHangarButton');
-    clearFusionButton = document.getElementById('clearFusionButton');
-    combineAllButton = document.getElementById('combineAllButton');
-    gameModeInfoEl = document.getElementById('gameModeInfo');
-    pauseStarCreditsEl = document.getElementById('pauseStarCredits');
-    pauseShipSelectorEl = document.getElementById('pauseShipSelector');
-    pauseUpgradeGridEl = document.getElementById('pauseUpgradeGrid');
-    pauseBuyGridEl = document.getElementById('pauseBuyGrid');
-    devScoreInputEl = document.getElementById('devScoreInput');
-    devSetScoreButton = document.getElementById('devSetScoreButton');
-    devCreditsInputEl = document.getElementById('devCreditsInput');
-    devSetCreditsButton = document.getElementById('devSetCreditsButton');
-    devMaterialsInputEl = document.getElementById('devMaterialsInput');
-    devSetMaterialsButton = document.getElementById('devSetMaterialsButton');
-    devUnlockAllButton = document.getElementById('devUnlockAllButton');
-    devBackButton = document.getElementById('devBackButton');
+    uiElements.scoreEl = document.getElementById('score');
+    uiElements.highScoreEl = document.getElementById('highScore');
+    uiElements.healthEl = document.getElementById('health');
+    uiElements.shieldEl = document.getElementById('shield');
+    uiElements.creditsEl = document.getElementById('credits');
+    uiElements.bombsEl = document.getElementById('bombs');
+    uiElements.abilityChargeUI = document.getElementById('abilityChargeUI');
+    uiElements.abilityChargeEl = document.getElementById('abilityCharge');
+    uiElements.modalContainer = document.getElementById('modalContainer');
+    uiElements.startScreen = document.getElementById('startScreen');
+    uiElements.pauseScreen = document.getElementById('pauseScreen');
+    uiElements.gameOverScreen = document.getElementById('gameOverScreen');
+    uiElements.hangarScreen = document.getElementById('hangarScreen');
+    uiElements.inGameShop = document.getElementById('inGameShop');
+    uiElements.devScreen = document.getElementById('devScreen');
+    uiElements.pauseButton = document.getElementById('pauseButton');
+    uiElements.startButton = document.getElementById('startButton');
+    uiElements.resumeButton = document.getElementById('resumeButton');
+    uiElements.restartButton = document.getElementById('restartButton');
+    uiElements.hangarButton = document.getElementById('hangarButton');
+    uiElements.hangarBackButton = document.getElementById('hangarBackButton');
+    uiElements.quitButton = document.getElementById('quitButton');
+    uiElements.continueButton = document.getElementById('continueButton');
+    uiElements.devButton = document.getElementById('devButton');
+    uiElements.resetProgressButton = document.getElementById('resetProgressButton');
+    uiElements.gameTitle = document.getElementById('gameTitle');
+    uiElements.finalScoreEl = document.getElementById('finalScore');
+    uiElements.creditsEarnedEl = document.getElementById('creditsEarned');
+    uiElements.materialsFoundEl = document.getElementById('materialsFound');
+    uiElements.shopCreditsEl = document.getElementById('shopCredits');
+    uiElements.shopItemsEl = document.getElementById('shopItems');
+    uiElements.bossHealthBarContainer = document.getElementById('bossHealthBarContainer');
+    uiElements.bossHealthEl = document.getElementById('bossHealth');
+    uiElements.bossNameEl = document.getElementById('bossName');
+    uiElements.bottomUiContainer = document.getElementById('bottomUiContainer');
+    uiElements.bombButtonLeft = document.getElementById('bombButtonLeft');
+    uiElements.bombButtonRight = document.getElementById('bombButtonRight');
+    uiElements.abilityButton = document.getElementById('abilityButton');
+    uiElements.audioStatusEl = document.getElementById('audio-status');
+    uiElements.hangarView = document.getElementById('hangarView');
+    uiElements.hangarViewHeader = document.getElementById('hangarViewHeader');
+    uiElements.hangarCreditsEl = document.getElementById('hangarCredits');
+    uiElements.hangarMaterialsEl = document.getElementById('hangarMaterials');
+    uiElements.sellMaterialButton = document.getElementById('sellMaterialButton');
+    uiElements.metaGrid = document.getElementById('metaGrid');
+    uiElements.upgradeGrid = document.getElementById('upgradeGrid');
+    uiElements.hangarShipSelector = document.getElementById('hangarShipSelector');
+    uiElements.toFusionLabButton = document.getElementById('toFusionLabButton');
+    uiElements.fusionLabView = document.getElementById('fusionLabView');
+    uiElements.fusionLabViewHeader = document.getElementById('fusionLabViewHeader');
+    uiElements.fusionCreditsEl = document.getElementById('fusionCredits');
+    uiElements.fusionSlotsAvailableEl = document.getElementById('fusionSlotsAvailable');
+    uiElements.fusionSlotsContainer = document.getElementById('fusionSlotsContainer');
+    uiElements.fusionShipSource = document.getElementById('fusionShipSource');
+    uiElements.toHangarButton = document.getElementById('toHangarButton');
+    uiElements.clearFusionButton = document.getElementById('clearFusionButton');
+    uiElements.combineAllButton = document.getElementById('combineAllButton');
+    uiElements.gameModeInfoEl = document.getElementById('gameModeInfo');
+    uiElements.pauseStarCreditsEl = document.getElementById('pauseStarCredits');
+    uiElements.pauseShipSelectorEl = document.getElementById('pauseShipSelector');
+    uiElements.pauseUpgradeGridEl = document.getElementById('pauseUpgradeGrid');
+    uiElements.pauseBuyGridEl = document.getElementById('pauseBuyGrid');
+    uiElements.devScoreInputEl = document.getElementById('devScoreInput');
+    uiElements.devSetScoreButton = document.getElementById('devSetScoreButton');
+    uiElements.devCreditsInputEl = document.getElementById('devCreditsInput');
+    uiElements.devSetCreditsButton = document.getElementById('devSetCreditsButton');
+    uiElements.devMaterialsInputEl = document.getElementById('devMaterialsInput');
+    uiElements.devSetMaterialsButton = document.getElementById('devSetMaterialsButton');
+    uiElements.devUnlockAllButton = document.getElementById('devUnlockAllButton');
+    uiElements.devBackButton = document.getElementById('devBackButton');
+    return uiElements;
 }
 
 export function hideAllModals() {
-    [startScreen, pauseScreen, gameOverScreen, hangarScreen, inGameShop, devScreen].forEach(m => m.style.display = 'none');
-    modalContainer.style.pointerEvents = 'none';
+    [uiElements.startScreen, uiElements.pauseScreen, uiElements.gameOverScreen, uiElements.hangarScreen, uiElements.inGameShop, uiElements.devScreen].forEach(m => m.style.display = 'none');
+    uiElements.modalContainer.style.pointerEvents = 'none';
 }
 
 export function showModal(modalElement) {
@@ -189,6 +179,7 @@ export function buyUFO(key, refreshCallback) {
 }
 
 export function updateHangarUI() {
+    console.log('updateHangarUI() function called in ui.js');
     updateHangarLikeUI(hangarCreditsEl, hangarShipSelector, upgradeGrid, true);
     hangarMaterialsEl.textContent = rawMaterials.toLocaleString();
     updateFusionLabUI();
@@ -496,30 +487,30 @@ export function setupEventListeners(canvas, wrapper) {
         window.mouse.y = (touch.clientY - rect.top) * (canvas.height / rect.height);
     }, { passive: false });
 
-    startButton.addEventListener('click', () => {
+    window.uiElements.startButton.addEventListener('click', () => {
         initAudio();
         init();
     });
-    resumeButton.addEventListener('click', togglePause);
-    restartButton.addEventListener('click', init);
-    pauseButton.addEventListener('click', togglePause);
-    hangarButton.addEventListener('click', () => { updateHangarUI(); showModal(hangarScreen); });
-    hangarBackButton.addEventListener('click', () => { showModal(startScreen); updateStartScreenInfo(); });
-    continueButton.addEventListener('click', () => { setIsPaused(false); hideAllModals(); Tone.Transport.start(); gameLoop(); player.ghostTimer = 180; });
-    quitButton.addEventListener('click', quitToMainMenu);
-    bombButtonLeft.addEventListener('click', useBombAction);
-    bombButtonRight.addEventListener('click', useBombAction);
-    abilityButton.addEventListener('pointerdown', () => { setIsAbilityHeld(true); });
+    window.uiElements.resumeButton.addEventListener('click', togglePause);
+    window.uiElements.restartButton.addEventListener('click', init);
+    window.uiElements.pauseButton.addEventListener('click', togglePause);
+    window.uiElements.hangarButton.addEventListener('click', () => { updateHangarUI(); showModal(window.uiElements.hangarScreen); });
+    window.uiElements.hangarBackButton.addEventListener('click', () => { showModal(window.uiElements.startScreen); updateStartScreenInfo(); });
+    window.uiElements.continueButton.addEventListener('click', () => { setIsPaused(false); hideAllModals(); Tone.Transport.start(); gameLoop(); player.ghostTimer = 180; });
+    window.uiElements.quitButton.addEventListener('click', quitToMainMenu);
+    window.uiElements.bombButtonLeft.addEventListener('click', useBombAction);
+    window.uiElements.bombButtonRight.addEventListener('click', useBombAction);
+    window.uiElements.abilityButton.addEventListener('pointerdown', () => { setIsAbilityHeld(true); });
     document.body.addEventListener('pointerup', () => { setIsAbilityHeld(false); if (player) player.releaseAbility(); });
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !isGameOver && player) togglePause();
         if (e.code === 'Space') useBombAction();
     });
-    toFusionLabButton.addEventListener('click', () => { hangarView.style.display = 'none'; hangarViewHeader.style.display = 'none'; fusionLabView.style.display = 'block'; fusionLabViewHeader.style.display = 'block'; });
-    toHangarButton.addEventListener('click', () => { fusionLabView.style.display = 'none'; fusionLabViewHeader.style.display = 'none'; hangarView.style.display = 'block'; hangarViewHeader.style.display = 'block'; });
-    clearFusionButton.addEventListener('click', clearFusion);
-    combineAllButton.addEventListener('click', activateCombineAll);
-    sellMaterialButton.addEventListener('click', () => {
+    window.uiElements.toFusionLabButton.addEventListener('click', () => { window.uiElements.hangarView.style.display = 'none'; window.uiElements.hangarViewHeader.style.display = 'none'; window.uiElements.fusionLabView.style.display = 'block'; window.uiElements.fusionLabViewHeader.style.display = 'block'; });
+    window.uiElements.toHangarButton.addEventListener('click', () => { window.uiElements.fusionLabView.style.display = 'none'; window.uiElements.fusionLabViewHeader.style.display = 'none'; window.uiElements.hangarView.style.display = 'block'; window.uiElements.hangarViewHeader.style.display = 'block'; });
+    window.uiElements.clearFusionButton.addEventListener('click', clearFusion);
+    window.uiElements.combineAllButton.addEventListener('click', activateCombineAll);
+    window.uiElements.sellMaterialButton.addEventListener('click', () => {
         if (rawMaterials > 0) {
             setRawMaterials(rawMaterials - 1);
             setStarCredits(starCredits + 25);
@@ -528,10 +519,10 @@ export function setupEventListeners(canvas, wrapper) {
             updateHangarUI();
         }
     });
-    devButton.addEventListener('click', () => showModal(devScreen));
-    devBackButton.addEventListener('click', () => showModal(startScreen));
-    devSetScoreButton.addEventListener('click', () => {
-        const newScore = parseInt(devScoreInputEl.value);
+    window.uiElements.devButton.addEventListener('click', () => showModal(window.uiElements.devScreen));
+    window.uiElements.devBackButton.addEventListener('click', () => showModal(window.uiElements.startScreen));
+    window.uiElements.devSetScoreButton.addEventListener('click', () => {
+        const newScore = parseInt(window.uiElements.devScoreInputEl.value);
         if (!isNaN(newScore)) {
             setScore(newScore);
             if (newScore > highScore) {
@@ -540,25 +531,25 @@ export function setupEventListeners(canvas, wrapper) {
             }
             updateUI(true);
         }
-        devScoreInputEl.value = '';
+        window.uiElements.devScoreInputEl.value = '';
     });
-    devSetCreditsButton.addEventListener('click', () => {
-        const newCredits = parseInt(devCreditsInputEl.value);
+    window.uiElements.devSetCreditsButton.addEventListener('click', () => {
+        const newCredits = parseInt(window.uiElements.devCreditsInputEl.value);
         if (!isNaN(newCredits)) {
             setStarCredits(newCredits);
             localStorage.setItem('starCredits', starCredits);
         }
-        devCreditsInputEl.value = '';
+        window.uiElements.devCreditsInputEl.value = '';
     });
-    devSetMaterialsButton.addEventListener('click', () => {
-        const newMaterials = parseInt(devMaterialsInputEl.value);
+    window.uiElements.devSetMaterialsButton.addEventListener('click', () => {
+        const newMaterials = parseInt(window.uiElements.devMaterialsInputEl.value);
         if (!isNaN(newMaterials)) {
             setRawMaterials(newMaterials);
             localStorage.setItem('rawMaterials', rawMaterials);
         }
-        devMaterialsInputEl.value = '';
+        window.uiElements.devMaterialsInputEl.value = '';
     });
-    devUnlockAllButton.addEventListener('click', () => {
+    window.uiElements.devUnlockAllButton.addEventListener('click', () => {
         setStarCredits(9999999);
         setRawMaterials(99999);
         setHighScore(100000);
@@ -573,14 +564,14 @@ export function setupEventListeners(canvas, wrapper) {
         alert('All ships and upgrades unlocked/maxed! High score set to 100k.');
         updateHangarUI();
     });
-    gameTitle.addEventListener('click', () => {
+    window.uiElements.gameTitle.addEventListener('click', () => {
         setTitleClickCount(titleClickCount + 1);
         if (titleClickCount >= 10) {
-            devButton.style.display = 'block';
+            window.uiElements.devButton.style.display = 'block';
             alert('Developer Menu Unlocked!');
         }
     });
-    resetProgressButton.addEventListener('click', () => {
+    window.uiElements.resetProgressButton.addEventListener('click', () => {
         if (confirm('ARE YOU ABSOLUTELY SURE?\n\nThis will reset ALL progress, unlocks, and stats.\n\nThis action cannot be undone.')) {
             const keysToRemove = ['highScore', 'starCredits', 'rawMaterials', 'hasPurchasedScoreBoost', 'spawnMultiplier', 'upgrades', 'selectedUFO', 'unlockedUFOs', 'fusionConfig', 'isCombineAllActive', 'gameMode'];
             keysToRemove.forEach(key => localStorage.removeItem(key));
