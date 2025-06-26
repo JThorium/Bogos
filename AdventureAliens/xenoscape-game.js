@@ -233,16 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 { x: 2900, yOffset: 40, width: 300, height: 40 }, // End of level 1
             ],
             enemies: [
-                { id: 'enemy1', type: 'GroundEnemy', x: 500, yOffset: 40, platformIndex: 0 },
-                { id: 'enemy2', type: 'SpitterEnemy', x: 700, yOffset: 120, platformIndex: 1 },
-                { id: 'enemy3', type: 'GroundEnemy', x: 1200, yOffset: 40, platformIndex: 4 },
-                { id: 'enemy4', type: 'FlyingEnemy', x: 1500, yOffset: 300 },
-                { id: 'enemy5', type: 'SpitterEnemy', x: 2000, yOffset: 150, platformIndex: 5 },
-                { id: 'enemy6', type: 'GroundEnemy', x: 2500, yOffset: 40, platformIndex: 8 },
+                { id: 'enemy1', type: 'GroundEnemy', x: 800, yOffset: 40, platformIndex: 0 },
+                { id: 'enemy2', type: 'SpitterEnemy', x: 1000, yOffset: 120, platformIndex: 1 },
+                { id: 'enemy3', type: 'GroundEnemy', x: 1500, yOffset: 40, platformIndex: 4 },
+                { id: 'enemy4', type: 'FlyingEnemy', x: 1800, yOffset: 300 },
+                { id: 'enemy5', type: 'SpitterEnemy', x: 2300, yOffset: 150, platformIndex: 5 },
+                { id: 'enemy6', type: 'GroundEnemy', x: 2800, yOffset: 40, platformIndex: 8 },
             ],
             endX: 3200 // X-coordinate where the level ends
         },
-        2: { // Placeholder for Level 2 - Expanded and more detailed
+        2: { // Level 2 - Expanded and more detailed
             platforms: [
                 { x: 0, yOffset: 40, width: 400, height: 40 }, // Starting ground
                 { x: 500, yOffset: 120, width: 150, height: 20 }, // First floating platform
@@ -256,6 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 { x: 2800, yOffset: 150, width: 150, height: 20 }, // Another floating platform
                 { x: 3000, yOffset: 220, width: 100, height: 20 }, // High platform
                 { x: 3200, yOffset: 40, width: 400, height: 40 }, // Final ground stretch
+                { x: 3700, yOffset: 100, width: 200, height: 20 }, // New platform
+                { x: 4000, yOffset: 180, width: 150, height: 20 }, // New platform
+                { x: 4300, yOffset: 40, width: 500, height: 40 }, // New ground stretch
             ],
             enemies: [
                 { id: 'enemy7', type: 'GroundEnemy', x: 300, yOffset: 40, platformIndex: 0 },
@@ -267,8 +270,83 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'enemy13', type: 'GroundEnemy', x: 2300, yOffset: 40, platformIndex: 8 },
                 { id: 'enemy14', type: 'FlyingEnemy', x: 2900, yOffset: 200 },
                 { id: 'enemy15', type: 'SpitterEnemy', x: 3300, yOffset: 40, platformIndex: 11 },
+                { id: 'enemy16', type: 'GroundEnemy', x: 4400, yOffset: 40, platformIndex: 14 },
+                { id: 'enemy17', type: 'FlyingEnemy', x: 4100, yOffset: 280 },
             ],
-            endX: 3600 // X-coordinate where the level ends
+            endX: 4800 // X-coordinate where the level ends
+        },
+        3: { // Level 3
+            platforms: [
+                { x: 0, yOffset: 40, width: 600, height: 40 },
+                { x: 700, yOffset: 150, width: 100, height: 20 },
+                { x: 900, yOffset: 250, width: 120, height: 20 },
+                { x: 1100, yOffset: 150, width: 100, height: 20 },
+                { x: 1300, yOffset: 40, width: 700, height: 40 },
+                { x: 2100, yOffset: 180, width: 150, height: 20 },
+                { x: 2300, yOffset: 280, width: 100, height: 20 },
+                { x: 2500, yOffset: 180, width: 150, height: 20 },
+                { x: 2700, yOffset: 40, width: 600, height: 40 },
+                { x: 3400, yOffset: 100, width: 200, height: 20 },
+                { x: 3700, yOffset: 200, width: 150, height: 20 },
+                { x: 4000, yOffset: 40, width: 500, height: 40 },
+            ],
+            enemies: [
+                { id: 'enemy18', type: 'GroundEnemy', x: 500, yOffset: 40, platformIndex: 0 },
+                { id: 'enemy19', type: 'FlyingEnemy', x: 800, yOffset: 300 },
+                { id: 'enemy20', type: 'SpitterEnemy', x: 1000, yOffset: 250, platformIndex: 2 },
+                { id: 'enemy21', type: 'GroundEnemy', x: 1600, yOffset: 40, platformIndex: 4 },
+                { id: 'enemy22', type: 'FlyingEnemy', x: 2000, yOffset: 350 },
+                { id: 'enemy23', type: 'SpitterEnemy', x: 2400, yOffset: 280, platformIndex: 6 },
+                { id: 'enemy24', type: 'GroundEnemy', x: 3000, yOffset: 40, platformIndex: 8 },
+                { id: 'enemy25', type: 'FlyingEnemy', x: 3500, yOffset: 250 },
+                { id: 'enemy26', type: 'SpitterEnemy', x: 3800, yOffset: 200, platformIndex: 10 },
+                { id: 'enemy27', type: 'GroundEnemy', x: 4200, yOffset: 40, platformIndex: 11 },
+            ],
+            endX: 4500
+        },
+        4: { // Level 4
+            platforms: [
+                { x: 0, yOffset: 40, width: 700, height: 40 },
+                { x: 800, yOffset: 100, width: 120, height: 20 },
+                { x: 1000, yOffset: 200, width: 100, height: 20 },
+                { x: 1200, yOffset: 300, width: 80, height: 20 },
+                { x: 1400, yOffset: 200, width: 100, height: 20 },
+                { x: 1600, yOffset: 100, width: 120, height: 20 },
+                { x: 1800, yOffset: 40, width: 800, height: 40 },
+                { x: 2700, yOffset: 150, width: 200, height: 20 },
+                { x: 3000, yOffset: 250, width: 150, height: 20 },
+                { x: 3300, yOffset: 150, width: 200, height: 20 },
+                { x: 3600, yOffset: 40, width: 700, height: 40 },
+            ],
+            enemies: [
+                { id: 'enemy28', type: 'GroundEnemy', x: 600, yOffset: 40, platformIndex: 0 },
+                { id: 'enemy29', type: 'FlyingEnemy', x: 900, yOffset: 250 },
+                { id: 'enemy30', type: 'SpitterEnemy', x: 1100, yOffset: 300, platformIndex: 3 },
+                { id: 'enemy31', type: 'GroundEnemy', x: 1500, yOffset: 100, platformIndex: 5 },
+                { id: 'enemy32', type: 'FlyingEnemy', x: 2000, yOffset: 350 },
+                { id: 'enemy33', type: 'SpitterEnemy', x: 2800, yOffset: 150, platformIndex: 7 },
+                { id: 'enemy34', type: 'GroundEnemy', x: 3400, yOffset: 150, platformIndex: 9 },
+                { id: 'enemy35', type: 'FlyingEnemy', x: 3900, yOffset: 200 },
+                { id: 'enemy36', type: 'SpitterEnemy', x: 4100, yOffset: 40, platformIndex: 10 },
+            ],
+            endX: 4300
+        },
+        5: { // Level 5 - Final Boss Level (conceptual, will be simple for now)
+            platforms: [
+                { x: 0, yOffset: 40, width: 1000, height: 40 }, // Large starting platform
+                { x: 1200, yOffset: 150, width: 200, height: 20 },
+                { x: 1500, yOffset: 250, width: 150, height: 20 },
+                { x: 1800, yOffset: 150, width: 200, height: 20 },
+                { x: 2100, yOffset: 40, width: 1000, height: 40 }, // Large arena
+            ],
+            enemies: [
+                { id: 'enemy37', type: 'GroundEnemy', x: 800, yOffset: 40, platformIndex: 0 },
+                { id: 'enemy38', type: 'FlyingEnemy', x: 1300, yOffset: 300 },
+                { id: 'enemy39', type: 'SpitterEnemy', x: 1600, yOffset: 250, platformIndex: 2 },
+                { id: 'enemy40', type: 'GroundEnemy', x: 2500, yOffset: 40, platformIndex: 4 },
+                { id: 'enemy41', type: 'FlyingEnemy', x: 2800, yOffset: 350 },
+            ],
+            endX: 3100
         }
     };
 
@@ -449,6 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.health = this.maxHealth;
             this.maxShield = (playerState.upgrades.shieldEmitter || 0) * 5;
             this.shield = this.maxShield;
+            this.shieldRegenRate = (playerState.upgrades.shieldEmitter || 0) * 0.05; // Shield regenerates faster with upgrades
+            this.healthRegenRate = (playerState.upgrades.exoskeletonPlating || 0) * 0.01; // Health regenerates slowly with upgrades
 
             // Emergency Warp ability
             this.warpUnlocked = (playerState.upgrades.emergencyWarp || 0) > 0;
@@ -512,7 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.shootCooldown > 0) this.shootCooldown--;
             if (keys[' '] && this.shootCooldown <= 0) { // Spacebar to shoot
                 this.shoot();
-                keys[' '] = false; // Consume key press only if shot
             }
 
             // Weapon switching
@@ -522,6 +601,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (this.y > canvas.height) gameOver(); // Fell off the world
+
+            // Regenerate shield and health
+            this.regenerateShield();
+            this.regenerateHealth();
+        }
+
+        regenerateShield() {
+            if (this.shield < this.maxShield) {
+                this.shield = Math.min(this.maxShield, this.shield + this.shieldRegenRate);
+            }
+        }
+
+        regenerateHealth() {
+            if (this.health < this.maxHealth) {
+                this.health = Math.min(this.maxHealth, this.health + this.healthRegenRate);
+            }
         }
 
         switchWeapon() {
@@ -552,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.vy = -2; // Slight upward lift
             this.warpCooldown = this.warpMaxCooldown;
             this.isWarping = true;
-            createParticles(this.x, this.y, '#f0abfc', 20); // Warp effect
+            createParticles(this.x + this.width / 2, this.y + this.height / 2, '#f0abfc', 30, 8, 40, 5); // More prominent warp effect
             setTimeout(() => this.isWarping = false, 200); // Warp effect duration
         }
 
@@ -573,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.health -= damage;
             }
 
-            createParticles(this.x + this.width / 2, this.y + this.height / 2, '#facc15', 10); // Yellow hit spark
+            createParticles(this.x + this.width / 2, this.y + this.height / 2, '#facc15', 15, 6, 25, 4); // More prominent hit spark
 
             if (this.health <= 0) {
                 this.health = 0;
@@ -609,6 +704,17 @@ document.addEventListener('DOMContentLoaded', () => {
             context.fillStyle = 'black';
             context.fillRect(drawX + 11, this.y + 11, 3, 3);
             context.fillRect(drawX + this.width - 14, this.y + 11, 3, 3);
+
+            // Draw DNA Magnet radius if active
+            const dnaMagnetLevel = playerState.upgrades.dnaMagnet || 0;
+            if (dnaMagnetLevel > 0) {
+                const collectionRadius = (this.width / 2 + 8) + (dnaMagnetLevel * 15);
+                context.strokeStyle = 'rgba(16, 185, 129, 0.3)'; // Semi-transparent emerald
+                context.lineWidth = 2;
+                context.beginPath();
+                context.arc(drawX + this.width / 2, this.y + this.height / 2, collectionRadius, 0, Math.PI * 2);
+                context.stroke();
+            }
         }
     }
 
@@ -968,8 +1074,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         // Add dynamic enemy spawning for the current level
         // Ensure dynamic spawns also use the new yOffset logic if they are ground enemies
-        enemies.push(new FlyingEnemy());
-        enemies.push(new GroundEnemy(platforms[0])); // Spawn on first ground platform
         // Check if Plasma Blaster is unlocked and add to available weapons
         if (playerState.upgrades.unlockPlasmaBlaster > 0) {
             player.availableWeapons.push('plasma');
