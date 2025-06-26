@@ -1,16 +1,15 @@
 import * as THREE from 'three';
 import { LaserProjectile, PlasmaProjectile } from './projectiles.js'; // Import projectile classes
 
-export class Player {
-    constructor(gameToThreeJS, playerState, projectiles, createParticles, gameOver, updateHud, scene) {
-        this.gameToThreeJS = gameToThreeJS;
-        this.playerState = playerState;
-        this.projectiles = projectiles;
-        this.createParticles = createParticles;
-        this.gameOver = gameOver;
-        this.updateHud = updateHud;
-        this.scene = scene;
+// Dependencies will be injected via setPlayerDependencies
+let gameToThreeJS, playerState, projectiles, createParticles, gameOver, updateHud, scene;
 
+export function setPlayerDependencies(dependencies) {
+    ({ gameToThreeJS, playerState, projectiles, createParticles, gameOver, updateHud, scene } = dependencies);
+}
+
+export class Player {
+    constructor() { // Constructor no longer takes dependencies directly
         this.width = 40;
         this.height = 30;
         this.x = 100;
@@ -29,19 +28,19 @@ export class Player {
 
         this.shootCooldown = 0;
 
-        const fireRateLevel = this.playerState.upgrades.rapidFireModule || 0;
+        const fireRateLevel = playerState.upgrades.rapidFireModule || 0;
         this.fireRate = 15 - fireRateLevel;
 
-        this.maxHealth = 100 + (this.playerState.upgrades.exoskeletonPlating || 0) * 10;
+        this.maxHealth = 100 + (playerState.upgrades.exoskeletonPlating || 0) * 10;
         this.health = this.maxHealth;
-        this.maxShield = (this.playerState.upgrades.shieldEmitter || 0) * 5;
+        this.maxShield = (playerState.upgrades.shieldEmitter || 0) * 5;
         this.shield = this.maxShield;
-        this.shieldRegenRate = (this.playerState.upgrades.shieldEmitter || 0) * 0.05;
-        this.healthRegenRate = (this.playerState.upgrades.exoskeletonPlating || 0) * 0.01;
+        this.shieldRegenRate = (playerState.upgrades.shieldEmitter || 0) * 0.05;
+        this.healthRegenRate = (playerState.upgrades.exoskeletonPlating || 0) * 0.01;
 
-        this.warpUnlocked = (this.playerState.upgrades.emergencyWarp || 0) > 0;
+        this.warpUnlocked = (playerState.upgrades.emergencyWarp || 0) > 0;
         this.warpCooldown = 0;
-        const warpLevel = this.playerState.upgrades.emergencyWarp || 0;
+        const warpLevel = playerState.upgrades.emergencyWarp || 0;
         this.warpMaxCooldown = (10 - warpLevel * 1.5) * 60;
         this.isWarping = false;
 
@@ -88,10 +87,10 @@ export class Player {
         this.mesh.add(this.leftLeg);
         this.mesh.add(this.rightLeg);
         this.mesh.add(this.facingPointer); // Add the pointer to the player group
-        this.scene.add(this.mesh);
+        scene.add(this.mesh); // Use the injected scene
 
         // Initial position in game coordinates
-        this.mesh.position.copy(this.gameToThreeJS(this.x, this.y, 0)); // Ensure Z is 0 for player
+        this.mesh.position.copy(gameToThreeJS(this.x, this.y, 0)); // Use injected gameToThreeJS
         this.mesh.rotation.order = 'YXZ'; // Set rotation order for proper orientation
     }
 
@@ -131,8 +130,8 @@ export class Player {
         if (this.laserSight) {
             this.laserSight.rotation.x = 0; // Reset X rotation
             this.laserSight.rotation.y = this.facingDirection === 1 ? Math.PI / 2 : -Math.PI / 2; // Rotate to point horizontally
-            this.laserSight.position.x = this.gameToThreeJS(this.x + this.width / 2, this.y + this.height / 2, 0).x + (this.facingDirection * 100); // Extend from player
-            this.laserSight.position.y = this.gameToThreeJS(this.x + this.width / 2, this.y + this.height / 2, 0).y;
+            this.laserSight.position.x = gameToThreeJS(this.x + this.width / 2, this.y + this.height / 2, 0).x + (this.facingDirection * 100); // Extend from player
+            this.laserSight.position.y = gameToThreeJS(this.x + this.width / 2, this.y + this.height / 2, 0).y;
             this.laserSight.position.z = 0;
         }
 
@@ -176,18 +175,18 @@ export class Player {
             keys['q'] = false;
         }
 
-        if (this.y > window.innerHeight + 100) this.gameOver(); // Fell off the world
+        if (this.y > window.innerHeight + 100) gameOver(); // Fell off the world
 
         this.regenerateShield();
         this.regenerateHealth();
 
         // Update Three.js mesh position
-        this.mesh.position.copy(this.gameToThreeJS(this.x, this.y, 0)); // Ensure Z is 0 for player
+        this.mesh.position.copy(gameToThreeJS(this.x, this.y, 0)); // Use injected gameToThreeJS
         this.mesh.rotation.y = this.facingDirection === 1 ? 0 : Math.PI; // Rotate player model
 
         // Update laser sight position and visibility
         if (this.laserSight) {
-            this.laserSight.position.copy(this.gameToThreeJS(this.x + this.width / 2, this.y + this.height / 2, 0));
+            this.laserSight.position.copy(gameToThreeJS(this.x + this.width / 2, this.y + this.height / 2, 0));
             this.laserSight.rotation.y = this.facingDirection === 1 ? 0 : Math.PI;
         }
     }
@@ -198,12 +197,12 @@ export class Player {
         const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 }); // Red, semi-transparent
         this.laserSight = new THREE.Mesh(geometry, material);
         this.laserSight.rotation.x = Math.PI / 2; // Point along X-axis
-        this.scene.add(this.laserSight);
+        scene.add(this.laserSight); // Use injected scene
     }
 
     removeLaserSight() {
         if (this.laserSight) {
-            this.scene.remove(this.laserSight);
+            scene.remove(this.laserSight); // Use injected scene
             this.laserSight.geometry.dispose();
             this.laserSight.material.dispose();
             this.laserSight = null;
@@ -235,9 +234,9 @@ export class Player {
         const projectileX = this.facingDirection > 0 ? this.x + this.width : this.x;
 
         if (this.currentWeapon === 'laser') {
-            this.projectiles.push(new LaserProjectile(projectileX, projectileY, this.facingDirection, this.gameToThreeJS, this.scene));
+            projectiles.push(new LaserProjectile(projectileX, projectileY, this.facingDirection)); // Use injected projectiles
         } else if (this.currentWeapon === 'plasma') {
-            this.projectiles.push(new PlasmaProjectile(projectileX, projectileY, this.facingDirection, this.gameToThreeJS, this.scene));
+            projectiles.push(new PlasmaProjectile(projectileX, projectileY, this.facingDirection)); // Use injected projectiles
         }
         this.shootCooldown = this.fireRate;
     }
@@ -248,7 +247,7 @@ export class Player {
         this.vy = -2;
         this.warpCooldown = this.warpMaxCooldown;
         this.isWarping = true;
-        this.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#f0abfc', 30, 8, 40, 5);
+        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#f0abfc', 30, 8, 40, 5); // Use injected createParticles
         setTimeout(() => this.isWarping = false, 200);
     }
 
@@ -267,11 +266,11 @@ export class Player {
             this.health -= damage;
         }
 
-        this.createParticles(this.x + this.width / 2, this.y + this.height / 2, '#facc15', 15, 6, 25, 4);
+        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#facc15', 15, 6, 25, 4); // Use injected createParticles
 
         if (this.health <= 0) {
             this.health = 0;
-            this.gameOver();
+            gameOver(); // Use injected gameOver
         }
     }
 }

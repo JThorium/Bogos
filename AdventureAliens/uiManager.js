@@ -1,28 +1,18 @@
-// Global variables that will be passed from the main game file
-let playerState;
-let upgradeData;
-let saveState;
-let dnaCounter;
-let outfitGrid;
-let weaponGrid;
+// Dependencies will be injected via setUIManagerDependencies
+let playerState, upgradeData, saveState, dnaCounter, outfitGrid, weaponGrid;
 
-export function setUIManagerDependencies(deps) {
-    playerState = deps.playerState;
-    upgradeData = deps.upgradeData;
-    saveState = deps.saveState;
-    dnaCounter = deps.dnaCounter;
-    outfitGrid = deps.outfitGrid;
-    weaponGrid = deps.weaponGrid;
+export function setUIManagerDependencies(dependencies) {
+    ({ playerState, upgradeData, saveState, dnaCounter, outfitGrid, weaponGrid } = dependencies);
 }
 
-export function renderAll() {
+export function renderAll() { // Remove arguments, use injected dependencies
     dnaCounter.textContent = playerState.dna;
     outfitGrid.innerHTML = '';
     weaponGrid.innerHTML = '';
 
     Object.keys(upgradeData).forEach(id => {
         const upgrade = upgradeData[id];
-        const card = createUpgradeCard(id, upgrade);
+        const card = createUpgradeCard(id, upgrade); // Call without dependencies
         if (upgrade.category === 'outfit') {
             outfitGrid.appendChild(card);
         } else if (upgrade.category === 'weapon') {
@@ -31,11 +21,11 @@ export function renderAll() {
     });
 }
 
-function createUpgradeCard(id, upgrade) {
-    const level = playerState.upgrades[id] || 0;
+function createUpgradeCard(id, upgrade) { // Remove playerState, upgradeData from arguments
+    const level = playerState.upgrades[id] || 0; // Use injected playerState
     const isMaxed = level >= upgrade.maxLevel;
     const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
-    const canAfford = playerState.dna >= cost;
+    const canAfford = playerState.dna >= cost; // Use injected playerState
 
     const card = document.createElement('div');
     card.className = 'upgrade-card p-3 rounded-lg flex flex-col justify-between';
@@ -60,19 +50,19 @@ function createUpgradeCard(id, upgrade) {
     return card;
 }
 
-export function handlePurchase(event) {
+export function handlePurchase(event) { // Remove playerState, upgradeData, saveState, renderAll, dnaCounter, outfitGrid, weaponGrid from arguments
     const button = event.target.closest('.upgrade-button');
     if (!button || button.disabled) return;
     
     const upgradeId = button.dataset.upgradeId;
-    const upgrade = upgradeData[upgradeId];
-    const level = playerState.upgrades[upgradeId] || 0;
+    const upgrade = upgradeData[upgradeId]; // Use injected upgradeData
+    const level = playerState.upgrades[upgradeId] || 0; // Use injected playerState
     const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
 
-    if (playerState.dna >= cost && level < upgrade.maxLevel) {
-        playerState.dna -= cost;
-        playerState.upgrades[upgradeId]++;
-        saveState();
-        renderAll();
+    if (playerState.dna >= cost && level < upgrade.maxLevel) { // Use injected playerState
+        playerState.dna -= cost; // Use injected playerState
+        playerState.upgrades[upgradeId]++; // Use injected playerState
+        saveState(); // Call injected saveState
+        renderAll(); // Call without dependencies
     }
 }

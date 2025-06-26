@@ -1,16 +1,10 @@
 import * as THREE from 'three';
 
-// Global variables that will be passed from the main game file
-let gameToThreeJS;
-let scene;
-let cameraX;
-let platforms;
+// Dependencies will be injected via setPlatformDependencies
+let gameToThreeJS, scene, cameraX, platforms;
 
-export function setPlatformDependencies(deps) {
-    gameToThreeJS = deps.gameToThreeJS;
-    scene = deps.scene;
-    cameraX = deps.cameraX;
-    platforms = deps.platforms;
+export function setPlatformDependencies(dependencies) {
+    ({ gameToThreeJS, scene, cameraX, platforms } = dependencies);
 }
 
 export const PLATFORM_CHUNK_WIDTH = 1000;
@@ -45,13 +39,13 @@ export let platformPatterns = [
 ];
 export let currentPatternIndex = 0;
 
-export function generateNewPlatforms() {
-    if (cameraX + window.innerWidth > lastPlatformX - 200) {
+export function generateNewPlatforms() { // Remove cameraX, platforms, gameToThreeJS, scene from arguments
+    if (cameraX + window.innerWidth > lastPlatformX - 200) { // Use injected cameraX
         const currentChunkStart = lastPlatformX;
 
         const groundPlatform = { x: currentChunkStart, y: window.innerHeight - 40, width: 200, height: 40 };
-        platforms.push(groundPlatform);
-        addPlatformMesh(groundPlatform); // Add Three.js mesh
+        platforms.push(groundPlatform); // Use injected platforms
+        addPlatformMesh(groundPlatform); // Call without dependencies
         lastPlatformX = currentChunkStart + 200;
 
         const pattern = platformPatterns[currentPatternIndex];
@@ -62,8 +56,8 @@ export function generateNewPlatforms() {
                 width: p.width,
                 height: p.height
             };
-            platforms.push(newPlatform);
-            addPlatformMesh(newPlatform); // Add Three.js mesh
+            platforms.push(newPlatform); // Use injected platforms
+            addPlatformMesh(newPlatform); // Call without dependencies
         });
         lastPlatformX += PLATFORM_CHUNK_WIDTH;
 
@@ -71,18 +65,18 @@ export function generateNewPlatforms() {
     }
 }
 
-export function addPlatformMesh(platform) {
+export function addPlatformMesh(platform) { // Remove gameToThreeJS, scene from arguments
     const geometry = new THREE.BoxGeometry(platform.width, platform.height, 50); // Give platforms some depth
     const material = new THREE.MeshBasicMaterial({ color: 0x4a044e }); // Dark purple
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.copy(gameToThreeJS(platform.x + platform.width / 2, platform.y + platform.height / 2, -25)); // Center and push back slightly
+    mesh.position.copy(gameToThreeJS(platform.x + platform.width / 2, platform.y + platform.height / 2, -25)); // Use injected gameToThreeJS
     platform.mesh = mesh; // Store mesh reference
-    scene.add(mesh);
+    scene.add(mesh); // Use injected scene
 }
 
-export function checkPlatformCollisions(player, platforms) {
+export function checkPlatformCollisions(player) { // Remove platforms from arguments
     let onAnyPlatform = false;
-    for (const platform of platforms) {
+    for (const platform of platforms) { // Use injected platforms
         // Simple AABB collision for now
         if (player.x < platform.x + platform.width && player.x + player.width > platform.x &&
             player.y < platform.y + platform.height && player.y + player.height > platform.y &&

@@ -1,14 +1,5 @@
 import * as THREE from 'three';
 
-// Global variables that will be passed from the main game file
-let camera;
-let renderer;
-
-export function setGameUtilsDependencies(deps) {
-    camera = deps.camera;
-    renderer = deps.renderer;
-}
-
 // Helper to convert 2D game coordinates to 3D Three.js coordinates
 // Assuming game coordinates (0,0) is top-left and canvas.height is max Y
 // Three.js (0,0,0) is center, Y-up, Z-out
@@ -19,7 +10,7 @@ export function gameToThreeJS(x, y, z = 0) {
     return new THREE.Vector3(threeX, threeY, z);
 }
 
-export function resizeCanvas() {
+export function resizeCanvas(camera, renderer) {
     const width = window.innerWidth;
     const height = window.innerHeight;
     renderer.setSize(width, height);

@@ -1,94 +1,16 @@
 import * as THREE from 'three';
+import { gameToThreeJS, resizeCanvas } from './gameUtils.js';
+import { Player, setPlayerDependencies } from './player.js';
+import { LaserProjectile, PlasmaProjectile, EnemyProjectile, setProjectileDependencies } from './projectiles.js';
+import { FlyingEnemy, GroundEnemy, SpitterEnemy, setEnemyDependencies } from './enemies.js';
+import { Particle, createParticles, setParticleDependencies } from './particles.js';
+import { DnaDrop, setDnaDropDependencies } from './dnaDrop.js';
+import { ParallaxLayer, setParallaxLayerDependencies } from './parallaxLayer.js';
+import { PLATFORM_CHUNK_WIDTH, lastPlatformX, platformPatterns, generateNewPlatforms, addPlatformMesh, checkPlatformCollisions, setPlatformDependencies } from './platforms.js';
+import { upgradeData } from './upgradeData.js';
+import { setUIManagerDependencies } from './uiManager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DATA DEFINITIONS ---
-
-    // Defines all possible upgrades in the game
-    const upgradeData = {
-        // OUTFIT UPGRADES
-        exoskeletonPlating: {
-            name: "Exoskeleton Plating",
-            description: "Reinforces Xylar's suit, increasing maximum health.",
-            maxLevel: 10,
-            baseCost: 1,
-            costMultiplier: 1.1,
-            getEffect: (level) => `+${level * 10} Max Health`,
-            getNextEffect: (level) => `+${(level + 1) * 10} Max Health`,
-            category: 'outfit'
-        },
-        jetpackEfficiency: {
-            name: "Jetpack Efficiency",
-            description: "Improves fuel consumption for longer flight time.",
-            maxLevel: 5,
-            baseCost: 2,
-            costMultiplier: 1.15,
-            getEffect: (level) => `+${level * 10}% Efficiency`,
-            getNextEffect: (level) => `+${(level + 1) * 10}% Efficiency`,
-            category: 'outfit'
-        },
-        dnaMagnet: {
-            name: "DNA Magnet",
-            description: "Increases the collection radius for DNA drops.",
-            maxLevel: 5,
-            baseCost: 1,
-            costMultiplier: 1.125,
-            getEffect: (level) => `+${level * 20}% Radius`,
-            getNextEffect: (level) => `+${(level + 1) * 20}% Radius`,
-            category: 'outfit'
-        },
-        shieldEmitter: {
-            name: "Shield Emitter",
-            description: "Grants a regenerating shield that absorbs damage.",
-            maxLevel: 8,
-            baseCost: 2,
-            costMultiplier: 1.15,
-            getEffect: (level) => `+${level * 5} Shield HP`,
-            getNextEffect: (level) => `+${(level + 1) * 5} Shield HP`,
-            category: 'outfit'
-        },
-        emergencyWarp: {
-            name: "Emergency Warp",
-            description: "Unlocks a short-range dash to evade attacks. Upgrades reduce cooldown.",
-            maxLevel: 5,
-            baseCost: 5,
-            costMultiplier: 1.2,
-            getEffect: (level) => `Cooldown: ${10 - level * 1.5}s`,
-            getNextEffect: (level) => `Cooldown: ${10 - (level + 1) * 1.5}s`,
-            category: 'outfit'
-        },
-        // WEAPON UPGRADES
-        laserCoreOvercharge: {
-            name: "Laser Core Overcharge",
-            description: "Increases base laser damage.",
-            maxLevel: 10,
-            baseCost: 1,
-            costMultiplier: 1.1,
-            getEffect: (level) => `+${level * 5}% Damage`,
-            getNextEffect: (level) => `+${(level + 1) * 5}% Damage`,
-            category: 'weapon'
-        },
-        rapidFireModule: {
-            name: "Rapid Fire Module",
-            description: "Increases the weapon's rate of fire.",
-            maxLevel: 7,
-            baseCost: 2,
-            costMultiplier: 1.125,
-            getEffect: (level) => `+${level * 7}% Fire Rate`,
-            getNextEffect: (level) => `+${(level + 1) * 7}% Fire Rate`,
-            category: 'weapon'
-        },
-        unlockPlasmaBlaster: {
-            name: "Unlock: Plasma Blaster",
-            description: "Unlocks the Plasma Blaster. Slower, high-damage explosive shots.",
-            maxLevel: 1,
-            baseCost: 50,
-            costMultiplier: 1,
-            getEffect: (level) => level > 0 ? 'Unlocked' : 'Locked',
-            getNextEffect: (level) => 'Unlock Weapon',
-            category: 'weapon'
-        },
-    };
-
     // --- PLAYER STATE ---
     let playerState = {
         dna: 1250,
@@ -193,22 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT HANDLING ---
-    function handlePurchase(event) {
-        const button = event.target.closest('.upgrade-button');
-        if (!button || button.disabled) return;
-        
-        const upgradeId = button.dataset.upgradeId;
-        const upgrade = upgradeData[upgradeId];
-        const level = playerState.upgrades[upgradeId] || 0;
-        const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
-
-        if (playerState.dna >= cost && level < upgrade.maxLevel) {
-            playerState.dna -= cost;
-            playerState.upgrades[upgradeId]++;
-            saveState();
-            renderAll();
-        }
-    }
+    // handlePurchase is now imported from uiManager.js
 
     // --- GAME LOGIC ---
     const canvas = document.getElementById('gameCanvas');
@@ -243,16 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper to convert 2D game coordinates to 3D Three.js coordinates
     // Assuming game coordinates (0,0) is top-left and canvas.height is max Y
     // Three.js (0,0,0) is center, Y-up, Z-out
-    // This function is now in gameUtils.js
-    // function gameToThreeJS(x, y, z = 0) {
-    //     const threeX = x - window.innerWidth / 2;
-    //     const threeY = (window.innerHeight / 2) - y;
-    //     return new THREE.Vector3(threeX, threeY, z);
-    // }
-
-    // Classes are now imported from their respective files
-    // ParallaxLayer, Particle, DnaDrop, LaserProjectile, PlasmaProjectile, EnemyProjectile, Player, FlyingEnemy, GroundEnemy, SpitterEnemy
-    // These classes are now imported and their dependencies will be set in init()
 
     function handleEnemies() {
         for (let i = enemies.length - 1; i >= 0; i--) {
@@ -272,8 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // PLATFORM_CHUNK_WIDTH, lastPlatformX, platformPatterns, currentPatternIndex, generateNewPlatforms, addPlatformMesh, checkPlatformCollisions
-    // These are now imported from platforms.js
 
     function checkCollisions() {
         for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -346,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function startGame() {
             gameActive = true;
-            player = new Player();
+            player = new Player(); // Instantiate Player without arguments
             enemies = [];
             projectiles = [];
             particles = [];
@@ -390,14 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
             gameLoop();
         }
 
-    // resizeCanvas is now in gameUtils.js
-    // function resizeCanvas() {
-    //     const width = window.innerWidth;
-    //     const height = window.innerHeight;
-    //     renderer.setSize(width, height);
-    //     camera.aspect = width / height;
-    //     camera.updateProjectionMatrix();
-    // }
 
     function gameOver() {
         gameActive = false;
@@ -433,11 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setupThreeJS(); // Initialize Three.js here
 
         // Set dependencies for imported modules
-        setGameUtilsDependencies({ camera, renderer });
+        // gameUtils does not need dependencies set, it exports functions directly
         setPlayerDependencies({ gameToThreeJS, playerState, projectiles, createParticles, gameOver, updateHud, scene });
         setEnemyDependencies({ gameToThreeJS, scene, player, enemyProjectiles, createParticles, dnaDrops, runState, killedEnemies });
         setProjectileDependencies({ gameToThreeJS, scene });
-        setParticleDependencies({ gameToThreeJS, scene });
+        setParticleDependencies({ gameToThreeJS, scene, particlesArray: particles });
         setDnaDropDependencies({ gameToThreeJS, scene });
         setParallaxLayerDependencies({ scene });
         setPlatformDependencies({ gameToThreeJS, scene, cameraX, platforms });
@@ -551,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         handlePlatforms(); // No drawing, just managing platform objects
         handleEnemies();
         player.update(keys);
-        checkPlatformCollisions(player, platforms); // Pass player and platforms
+        checkPlatformCollisions(player); // Pass player only
         checkCollisions();
         updateHud();
 

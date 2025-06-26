@@ -1,11 +1,15 @@
 import * as THREE from 'three';
 import { EnemyProjectile } from './projectiles.js'; // Import EnemyProjectile
 
-export class FlyingEnemy {
-    constructor(gameToThreeJS, scene) {
-        this.gameToThreeJS = gameToThreeJS;
-        this.scene = scene;
+// Dependencies will be injected via setEnemyDependencies
+let gameToThreeJS, scene, player, enemyProjectiles, createParticles, dnaDrops, runState, killedEnemies;
 
+export function setEnemyDependencies(dependencies) {
+    ({ gameToThreeJS, scene, player, enemyProjectiles, createParticles, dnaDrops, runState, killedEnemies } = dependencies);
+}
+
+export class FlyingEnemy {
+    constructor() { // Constructor no longer takes dependencies directly
         this.width = 30;
         this.height = 30;
         this.x = window.innerWidth; // Initial spawn off-screen to the right
@@ -18,28 +22,25 @@ export class FlyingEnemy {
         const geometry = new THREE.SphereGeometry(this.width / 2, 16, 16);
         const material = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // Red
         this.mesh = new THREE.Mesh(geometry, material);
-        this.scene.add(this.mesh);
+        scene.add(this.mesh); // Use injected scene
 
-        this.mesh.position.copy(this.gameToThreeJS(this.x, this.y));
+        this.mesh.position.copy(gameToThreeJS(this.x, this.y)); // Use injected gameToThreeJS
     }
 
     update(cameraX) {
         this.x -= this.speed;
-        this.mesh.position.copy(this.gameToThreeJS(this.x, this.y));
+        this.mesh.position.copy(gameToThreeJS(this.x, this.y)); // Use injected gameToThreeJS
     }
 
     remove() {
-        this.scene.remove(this.mesh);
+        scene.remove(this.mesh); // Use injected scene
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
     }
 }
 
 export class GroundEnemy {
-    constructor(platform, gameToThreeJS, scene) {
-        this.gameToThreeJS = gameToThreeJS;
-        this.scene = scene;
-
+    constructor(platform) { // Constructor no longer takes dependencies directly
         this.width = 40;
         this.height = 40;
         this.x = platform.x + Math.random() * (platform.width - this.width); // Spawn randomly on the given platform
@@ -54,9 +55,9 @@ export class GroundEnemy {
         const geometry = new THREE.BoxGeometry(this.width, this.height, 20);
         const material = new THREE.MeshBasicMaterial({ color: 0x8b5cf6 }); // Violet
         this.mesh = new THREE.Mesh(geometry, material);
-        this.scene.add(this.mesh);
+        scene.add(this.mesh); // Use injected scene
 
-        this.mesh.position.copy(this.gameToThreeJS(this.x, this.y));
+        this.mesh.position.copy(gameToThreeJS(this.x, this.y)); // Use injected gameToThreeJS
     }
 
     update() {
@@ -66,23 +67,20 @@ export class GroundEnemy {
             this.direction *= -1;
             this.x = Math.max(this.platform.x, Math.min(this.x, this.platform.x + this.platform.width - this.width));
         }
-        this.mesh.position.copy(this.gameToThreeJS(this.x, this.y));
+        this.mesh.position.copy(gameToThreeJS(this.x, this.y)); // Use injected gameToThreeJS
         this.mesh.rotation.y = this.direction === 1 ? 0 : Math.PI;
     }
 
     remove() {
-        this.scene.remove(this.mesh);
+        scene.remove(this.mesh); // Use injected scene
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
     }
 }
 
 export class SpitterEnemy extends GroundEnemy {
-    constructor(platform, gameToThreeJS, scene, player, enemyProjectiles) {
-        super(platform, gameToThreeJS, scene); // Pass gameToThreeJS and scene to super constructor
-        this.player = player;
-        this.enemyProjectiles = enemyProjectiles;
-
+    constructor(platform) { // Constructor no longer takes dependencies directly
+        super(platform); // Pass platform to super constructor
         this.health = 3;
         this.dnaValue = 25;
         this.scoreValue = 200;
@@ -99,9 +97,9 @@ export class SpitterEnemy extends GroundEnemy {
         if (this.shootCooldown > 0) {
             this.shootCooldown--;
         } else {
-            const playerScreenX = this.player.x - cameraX;
+            const playerScreenX = player.x - cameraX; // Use injected player
             const selfScreenX = this.x - cameraX;
-            const distanceToPlayer = Math.abs(this.player.x - this.x);
+            const distanceToPlayer = Math.abs(player.x - this.x); // Use injected player
 
             if (distanceToPlayer < this.detectionRange && playerScreenX > 0 && playerScreenX < window.innerWidth && selfScreenX > 0 && selfScreenX < window.innerWidth) {
                 this.shoot();
@@ -110,13 +108,11 @@ export class SpitterEnemy extends GroundEnemy {
     }
 
     shoot() {
-        this.enemyProjectiles.push(new EnemyProjectile(
+        enemyProjectiles.push(new EnemyProjectile( // Use injected enemyProjectiles
             this.x + this.width / 2,
             this.y + this.height / 2,
-            this.player.x + this.player.width / 2,
-            this.player.y + this.player.height / 2,
-            this.gameToThreeJS,
-            this.scene
+            player.x + player.width / 2, // Use injected player
+            player.y + player.height / 2 // Use injected player
         ));
         this.shootCooldown = this.fireRate + Math.random() * 60;
     }

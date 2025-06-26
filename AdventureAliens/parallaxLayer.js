@@ -1,11 +1,17 @@
 import * as THREE from 'three';
 
+// Dependencies will be injected via setParallaxLayerDependencies
+let scene;
+
+export function setParallaxLayerDependencies(dependencies) {
+    ({ scene } = dependencies);
+}
+
 export class ParallaxLayer {
-    constructor(color, speedFactor, size, scene) {
+    constructor(color, speedFactor, size) { // Constructor no longer takes scene directly
         this.speedFactor = speedFactor;
         this.stars = [];
         this.starMaterial = new THREE.PointsMaterial({ color: color, size: size, sizeAttenuation: false });
-        this.scene = scene;
 
         const starGeometry = new THREE.BufferGeometry();
         const positions = [];
@@ -20,7 +26,7 @@ export class ParallaxLayer {
         }
         starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         this.starField = new THREE.Points(starGeometry, this.starMaterial);
-        this.scene.add(this.starField);
+        scene.add(this.starField); // Use injected scene
     }
 
     update(cameraX) {
