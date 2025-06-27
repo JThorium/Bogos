@@ -488,11 +488,7 @@ export function setupEventListeners(canvas, wrapper) {
         window.mouse.y = (touch.clientY - rect.top) * (canvas.height / rect.height);
     }, { passive: false });
 
-    window.uiElements.startButton.addEventListener('click', () => {
-        console.log('Start button clicked!'); // Added for debugging
-        initAudio();
-        init();
-    });
+    window.uiElements.startButton.addEventListener('click', init);
     window.uiElements.resumeButton.addEventListener('click', togglePause);
     window.uiElements.restartButton.addEventListener('click', init);
     window.uiElements.pauseButton.addEventListener('click', togglePause);

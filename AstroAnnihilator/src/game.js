@@ -4,18 +4,16 @@ import {
     waveCount, waveCredits, bombPurchaseCost, healthPurchaseCost, shieldPurchaseCost,
     mouse, currentBoss, scoreMultiplier, ghostTimer, spectreTimer, isAbilityHeld,
     screenShake, uiState, gameMode, fusionConfig, isCombineAllActive, shopCosts,
-    musicInitialized, normalMusicLoop, bossMusicLoop, titleClickCount,
-    defaultUpgrades, upgrades, UFO_TYPES, selectedUFO, unlockedUFOs, enemySpawnTable,
+    musicInitialized, titleClickCount, defaultUpgrades, upgrades, UFO_TYPES, selectedUFO, unlockedUFOs, enemySpawnTable,
     setScore, setHighScore, setStarCredits, setRawMaterials, setMaterialsThisRun,
     setHasPurchasedScoreBoost, setSpawnMultiplier, setIsPaused, setIsGameOver,
     setGameFrame, setWaveCount, setWaveCredits, setBombPurchaseCost,
     setHealthPurchaseCost, setShieldPurchaseCost, setMouse, setCurrentBoss,
     setScoreMultiplier, setGhostTimer, setSpectreTimer, setIsAbilityHeld,
     setScreenShake, setUiState, setGameMode, setFusionConfig, setIsCombineAllActive,
-    setShopCosts, setMusicInitialized, setNormalMusicLoop, setBossMusicLoop,
-    setTitleClickCount, setSelectedUFO, setUnlockedUFOs, setUpgrades
+    setShopCosts, setMusicInitialized, setTitleClickCount, setSelectedUFO, setUnlockedUFOs, setUpgrades
 } from './gameData.js';
-import { initAudio, startMusic, stopMusic, sfx } from './audio.js';
+import { initAudio, startMusic, stopMusic, sfx, normalMusicLoopInstance, bossMusicLoopInstance } from './audio.js';
 import { Player } from './player.js';
 import { Enemy, Boss } from './enemies.js';
 import { Star, Particle, PowerUp, RawMaterialPickup, Obstacle, Nebula } from './entities.js';
@@ -55,7 +53,7 @@ export async function init() {
         if (Tone.context.state !== 'running') {
             await Tone.start();
         }
-        initAudio();
+        initAudio(); // Call initAudio to set up all Tone.js instruments and loops
         window.uiElements.audioStatusEl.textContent = 'Audio Ready!';
         setTimeout(() => { window.uiElements.audioStatusEl.textContent = ''; }, 2000);
     }

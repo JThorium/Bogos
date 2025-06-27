@@ -2,8 +2,8 @@ import * as Tone from 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.
 import { setMusicInitialized, setNormalMusicLoop, setBossMusicLoop } from './gameData.js';
 
 export const sfx = {};
-let normalMusicLoopInstance;
-let bossMusicLoopInstance;
+export let normalMusicLoopInstance;
+export let bossMusicLoopInstance;
 
 export function initAudio() {
     const reverb = new Tone.Reverb(1.5).toDestination();
@@ -20,14 +20,14 @@ export function initAudio() {
     sfx.blackhole = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 2, decay: 1, sustain: 1, release: 2 }, volume: -15 }).connect(reverb);
     const normalMusicSynth = new Tone.FMSynth({ modulationIndex: 10, harmonicity: 3, envelope: { attack: 2, decay: 1, sustain: 0.5, release: 4 }, volume: -25 }).connect(reverb);
     const bossMusicSynth = new Tone.AMSynth({ harmonicity: 1.5, envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 0.8 }, volume: -20 }).toDestination();
-    normalMusicLoopInstance = new Tone.Sequence((time, note) => { normalMusicSynth.triggerAttackRelease(note, '2n', time); }, ['C2', 'G2', 'Eb2', 'Bb2'], '1m').start(0);
-    bossMusicLoopInstance = new Tone.Sequence((time, note) => { bossMusicSynth.triggerAttackRelease(note, '16n', time); }, ['C3', null, 'C#3', 'C3', 'G2', null, 'G#2', null], '4n').start(0);
+    normalMusicLoopInstance = new Tone.Sequence((time, note) => { normalMusicSynth.triggerAttackRelease(note, '2n', time); }, ['C2', 'G2', 'Eb2', 'Bb2'], '1m'); // Removed .start(0)
+    bossMusicLoopInstance = new Tone.Sequence((time, note) => { bossMusicSynth.triggerAttackRelease(note, '16n', time); }, ['C3', null, 'C#3', 'C3', 'G2', null, 'G#2', null], '4n'); // Removed .start(0)
     normalMusicLoopInstance.humanize = bossMusicLoopInstance.humanize = true;
     setMusicInitialized(true);
 }
 
 export function startMusic(isBoss) {
-    if (!Tone.context.state === 'running') return; // Ensure audio context is running
+    if (Tone.context.state !== 'running') return; // Ensure audio context is running
     Tone.Transport.bpm.value = isBoss ? 160 : 80;
     if (isBoss) {
         normalMusicLoopInstance.stop();

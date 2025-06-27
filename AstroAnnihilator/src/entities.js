@@ -2,7 +2,6 @@ import { gameFrame, ghostTimer, spectreTimer, setGhostTimer, setMaterialsThisRun
 import { enemies, enemyBullets, particles, powerups, obstacles, turrets, createExplosion, addScore, isColliding, triggerScreenShake, showInGameShopUI as showInGameShop, startMusic } from './game.js';
 import { projectAndDrawWireframe } from './utils.js';
 import { ASTEROID_MODEL, QUASAR_MODEL, MAGNETAR_MODEL } from './models.js';
-import { createExplosion, addScore, isColliding, triggerScreenShake, showInGameShop, startMusic } from './game.js';
 import { sfx } from './audio.js';
 
 export class Bullet { constructor(x, y, speedX, speedY, color, damage = 1) { this.x = x; this.y = y; this.speedX = speedX; this.speedY = speedY; this.size = 5; this.color = color; this.damage = damage; this.canSlow = false; } update() { let timeMod = 1; if (player.abilityState.name === 'chronomancer' && player.abilityState.active && Math.hypot(this.x-player.x, this.y-player.y) < 200) { timeMod = 0.2; } this.x += this.speedX * timeMod; this.y += this.speedY * timeMod; if (gameFrame % 3 === 0) particles.push(new Particle(this.x, this.y, 0, this.speedY * 0.2, this.color, 2, 8)); } draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } }

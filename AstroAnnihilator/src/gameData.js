@@ -28,8 +28,6 @@ export let fusionConfig = JSON.parse(localStorage.getItem('fusionConfig') || '[]
 export let isCombineAllActive = JSON.parse(localStorage.getItem('isCombineAllActive') || 'false');
 export let shopCosts;
 export let musicInitialized = false;
-export let normalMusicLoop;
-export let bossMusicLoop;
 export let titleClickCount = 0;
 
 export const defaultUpgrades = { startShield: { level: 0, maxLevel: 10, cost: 100, costIncrease: 150, matCost: 1, matIncrease: 1, name: "Start Shield" }, startMinion: { level: 0, maxLevel: 10, cost: 500, costIncrease: 500, matCost: 5, matIncrease: 2, name: "Start Minion" }, fireRate: { level: 0, maxLevel: 10, cost: 250, costIncrease: 250, matCost: 2, matIncrease: 2, name: "Fire Rate" }, startBomb: { level: 0, maxLevel: 10, cost: 750, costIncrease: 750, matCost: 3, matIncrease: 1, name: "Start Bomb" }, powerupDuration: { level: 0, maxLevel: 10, cost: 400, costIncrease: 400, matCost: 2, matIncrease: 1, name: "Powerup Duration" }, creditBonus: { level: 0, maxLevel: 10, cost: 1000, costIncrease: 1000, matCost: 10, matIncrease: 5, name: "Credit Bonus" } };
@@ -87,8 +85,6 @@ export function setFusionConfig(value) { fusionConfig = value; }
 export function setIsCombineAllActive(value) { isCombineAllActive = value; }
 export function setShopCosts(value) { shopCosts = value; }
 export function setMusicInitialized(value) { musicInitialized = value; }
-export function setNormalMusicLoop(value) { normalMusicLoop = value; }
-export function setBossMusicLoop(value) { bossMusicLoop = value; }
 export function setTitleClickCount(value) { titleClickCount = value; }
 export function setSelectedUFO(value) { selectedUFO = value; }
 export function setUnlockedUFOs(value) { unlockedUFOs = value; }
