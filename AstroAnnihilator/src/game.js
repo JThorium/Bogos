@@ -18,7 +18,7 @@ import {
 import { initAudio, startMusic, stopMusic, sfx } from './audio.js';
 import { Player } from './player.js';
 import { Enemy, Boss } from './enemies.js';
-import { Star, Particle, PowerUp, RawMaterialPickup, Obstacle } from './entities.js';
+import { Star, Particle, PowerUp, RawMaterialPickup, Obstacle, Nebula } from './entities.js';
 import {
     hideAllModals, showModal, handleGameOverUI,
     updateShipSelector, buyUFO, updateHangarUI, updatePauseMenuUI,
@@ -37,6 +37,7 @@ export let enemyBullets = [];
 export let enemies = [];
 export let particles = [];
 export let turrets = [];
+export let nebulae = [];
 
 export let canvas, ctx, wrapper;
 
@@ -74,6 +75,7 @@ export async function init() {
 
     player = new Player();
     stars = Array.from({ length: 150 }, () => new Star());
+    nebulae = Array.from({ length: 3 }, () => new Nebula());
     particles.length = 0;
     powerups.length = 0;
     enemies.length = 0;
@@ -127,6 +129,7 @@ export function gameLoop() {
         setGameFrame(gameFrame + 1);
         if (ghostTimer > 0) setGhostTimer(ghostTimer - 1);
 
+        nebulae.forEach(n => { n.update(); n.draw(); });
         stars.forEach(s => { s.update(); s.draw(); });
         handleObstacles();
         handleBullets(playerBullets, enemies.concat(currentBoss ? [currentBoss] : []).concat(obstacles));
@@ -165,21 +168,45 @@ export const WaveManager = {
         if (score >= this.nextBossScore) {
             this.spawnBoss();
             this.nextBossScore += 10000 + this.nextBossScore * 0.2;
-        } else if (gameFrame % 100 === 0 && enemies.length < 15 * spawnMultiplier) {
-            const availableTypes = enemySpawnTable.filter(e => score >= e.score).flatMap(e => e.types);
-            const waveSize = Math.min(5, 1 + Math.floor(score / 4000)) * spawnMultiplier;
-            for (let i = 0; i < waveSize; i++) {
-                const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-                enemies.push(new Enemy(type));
+        } else {
+            // Asteroid field segment (e.g., every 10,000 score after the first boss, for 2000 score duration)
+            const asteroidSegmentStart = 10000;
+            const segmentDuration = 2000;
+            const segmentInterval = 10000; // How often the segment repeats
+
+            const inAsteroidSegment = (score > asteroidSegmentStart) &&
+                                       ((score - asteroidSegmentStart) % segmentInterval < segmentDuration);
+
+            if (inAsteroidSegment) {
+                if (gameFrame % 30 === 0 && obstacles.filter(o => o.type === 'asteroid').length < 30) {
+                    obstacles.push(new Obstacle('asteroid'));
+                }
+            } else {
+                // Normal enemy spawning
+                if (gameFrame % 100 === 0 && enemies.length < 15 * spawnMultiplier) {
+                    const availableTypes = enemySpawnTable.filter(e => score >= e.score).flatMap(e => e.types);
+                    const waveSize = Math.min(5, 1 + Math.floor(score / 4000)) * spawnMultiplier;
+                    for (let i = 0; i < waveSize; i++) {
+                        const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+                        enemies.push(new Enemy(type));
+                    }
+                }
             }
-        }
 
-        if (gameFrame % (120 - Math.min(100, score / 1000)) === 0 && obstacles.filter(o => o.type === 'asteroid').length < 20) {
-            obstacles.push(new Obstacle('asteroid'));
-        }
+            // Blackhole spawning (less frequent, higher score)
+            if (score > 50000 && gameFrame % 900 === 0 && !obstacles.some(o => o.type === 'blackhole')) {
+                obstacles.push(new Obstacle('blackhole'));
+            }
 
-        if (score > 50000 && gameFrame % 900 === 0 && !obstacles.some(o => o.type === 'blackhole')) {
-            obstacles.push(new Obstacle('blackhole'));
+            // Quasar spawning (e.g., every 25,000 score, not during asteroid segment)
+            if (score > 25000 && gameFrame % 1500 === 0 && !obstacles.some(o => o.type === 'quasar') && !inAsteroidSegment) {
+                obstacles.push(new Quasar());
+            }
+
+            // Magnetar spawning (e.g., every 40,000 score, not during asteroid segment)
+            if (score > 40000 && gameFrame % 2000 === 0 && !obstacles.some(o => o.type === 'magnetar') && !inAsteroidSegment) {
+                obstacles.push(new Magnetar());
+            }
         }
     },
     spawnBoss: function () {
@@ -252,6 +279,7 @@ export function handleBullets(bullets, targets) {
             if (target.health <= 0 && !(target instanceof Obstacle && target.type === 'blackhole')) continue;
 
             if (isColliding(bullet, target)) {
+                if (target.health <= 0) continue;
                 bullets.splice(bIndex, 1);
                 if (target instanceof Player) {
                     target.hit();
@@ -369,6 +397,9 @@ export function quitToMainMenu() {
     turrets.length = 0;
     obstacles.length = 0;
     setCurrentBoss(null);
+    setGhostTimer(0);
+    setSpectreTimer(0);
+    setGameFrame(0);
     window.uiElements.bottomUiContainer.style.display = 'none';
     hideAllModals();
     showModal(window.uiElements.startScreen);
