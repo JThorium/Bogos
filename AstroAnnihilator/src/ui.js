@@ -489,6 +489,7 @@ export function setupEventListeners(canvas, wrapper) {
     }, { passive: false });
 
     window.uiElements.startButton.addEventListener('click', () => {
+        console.log('Start button clicked!'); // Added for debugging
         initAudio();
         init();
     });

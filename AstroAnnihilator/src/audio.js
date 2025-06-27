@@ -6,9 +6,6 @@ let normalMusicLoopInstance;
 let bossMusicLoopInstance;
 
 export function initAudio() {
-    if (Tone.context.state !== 'running') {
-        Tone.start();
-    }
     const reverb = new Tone.Reverb(1.5).toDestination();
     sfx.shoot = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.1 }, volume: -22 }).toDestination();
     sfx.laser = new Tone.Synth({ oscillator: { type: 'sawtooth' }, filter: { type: 'lowpass', frequency: 3000 }, envelope: { attack: 0.01, decay: 0.4, sustain: 0.1, release: 0.2 }, volume: -15 }).toDestination();

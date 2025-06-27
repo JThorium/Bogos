@@ -50,7 +50,11 @@ export async function init() {
     // initializeUIElements() is now called in index.js
 
     if (!musicInitialized) {
-        await Tone.start();
+        // Ensure Tone.js context is running. This requires a user gesture.
+        // The start button click will trigger this.
+        if (Tone.context.state !== 'running') {
+            await Tone.start();
+        }
         initAudio();
         window.uiElements.audioStatusEl.textContent = 'Audio Ready!';
         setTimeout(() => { window.uiElements.audioStatusEl.textContent = ''; }, 2000);

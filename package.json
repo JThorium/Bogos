@@ -4,7 +4,9 @@
   "description": "A collection of simple games",
   "scripts": {
     "deploy": "gh-pages -d src/static",
-    "build:tailwind": "npx tailwindcss -i AdventureAliens/input.css -o AdventureAliens/output.css --watch"
+    "build:tailwind": "npx tailwindcss -i AdventureAliens/input.css -o AdventureAliens/output.css --watch",
+    "build:astro": "npx tailwindcss -i ./AstroAnnihilator/src/input.css -o ./AstroAnnihilator/src/output.css --watch",
+    "start": "live-server AstroAnnihilator --host=0.0.0.0"
   },
   "devDependencies": {
     "gh-pages": "^6.3.0",

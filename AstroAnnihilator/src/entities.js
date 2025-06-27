@@ -1,4 +1,5 @@
-import { gameFrame, ghostTimer, spectreTimer, setGhostTimer, setMaterialsThisRun, setWaveCredits, scoreMultiplier, currentBoss, player, enemies, enemyBullets, particles, powerups, obstacles, turrets } from './gameData.js';
+import { gameFrame, ghostTimer, spectreTimer, setGhostTimer, setMaterialsThisRun, setWaveCredits, scoreMultiplier, currentBoss, player } from './gameData.js';
+import { enemies, enemyBullets, particles, powerups, obstacles, turrets, createExplosion, addScore, isColliding, triggerScreenShake, showInGameShopUI as showInGameShop, startMusic } from './game.js';
 import { projectAndDrawWireframe } from './utils.js';
 import { ASTEROID_MODEL, QUASAR_MODEL, MAGNETAR_MODEL } from './models.js';
 import { createExplosion, addScore, isColliding, triggerScreenShake, showInGameShop, startMusic } from './game.js';
