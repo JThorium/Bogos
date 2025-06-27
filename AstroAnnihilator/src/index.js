@@ -1,6 +1,7 @@
 import { init, gameLoop } from './game.js';
-import { initializeUIElements, setupEventListeners, setGameSize, updateStartScreenInfo, updateUI, uiElements } from './ui.js';
-import { MOUSE_Y_OFFSET, score, highScore, starCredits, rawMaterials, materialsThisRun, hasPurchasedScoreBoost, spawnMultiplier, isPaused, isGameOver, gameFrame, waveCount, waveCredits, bombPurchaseCost, healthPurchaseCost, shieldPurchaseCost, mouse, currentBoss, scoreMultiplier, ghostTimer, spectreTimer, isAbilityHeld, screenShake, uiState, gameMode, fusionConfig, isCombineAllActive, shopCosts, musicInitialized, normalMusicLoop, bossMusicLoop, titleClickCount, defaultUpgrades, upgrades, UFO_TYPES, selectedUFO, unlockedUFOs, enemySpawnTable } from './gameData.js';
+import { initializeUIElements, setupEventListeners, setGameSize, updateStartScreenInfo, updateUI } from './ui.js';
+import { MOUSE_Y_OFFSET, score, highScore, starCredits, rawMaterials, materialsThisRun, hasPurchasedScoreBoost, spawnMultiplier, isPaused, isGameOver, gameFrame, waveCount, waveCredits, bombPurchaseCost, healthPurchaseCost, shieldPurchaseCost, mouse, currentBoss, scoreMultiplier, ghostTimer, spectreTimer, isAbilityHeld, screenShake, uiState, gameMode, fusionConfig, isCombineAllActive, shopCosts, musicInitialized, titleClickCount, defaultUpgrades, upgrades, UFO_TYPES, selectedUFO, unlockedUFOs, enemySpawnTable } from './gameData.js';
+import { normalMusicLoopInstance, bossMusicLoopInstance } from './audio.js'; // Import actual Tone.js instances
 
 // Expose global variables for canvas context and dimensions
 window.canvas = document.getElementById('gameCanvas');
@@ -38,8 +39,8 @@ window.fusionConfig = fusionConfig;
 window.isCombineAllActive = isCombineAllActive;
 window.shopCosts = shopCosts;
 window.musicInitialized = musicInitialized;
-window.normalMusicLoop = normalMusicLoop;
-window.bossMusicLoop = bossMusicLoop;
+window.normalMusicLoop = normalMusicLoopInstance; // Use the actual Tone.js instance
+window.bossMusicLoop = bossMusicLoopInstance;     // Use the actual Tone.js instance
 window.titleClickCount = titleClickCount;
 window.defaultUpgrades = defaultUpgrades;
 window.upgrades = upgrades;
@@ -56,5 +57,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setGameSize(window.wrapper, window.canvas);
     updateUI(true);
     updateStartScreenInfo();
-    showModal(window.uiElements.startScreen);
+    window.showModal(window.uiElements.startScreen); // Use window.showModal
 });
