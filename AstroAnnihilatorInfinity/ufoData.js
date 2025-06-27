@@ -1,5 +1,5 @@
 // UFO data (50 UFOs, geometries halved)
-const ufos = [
+window.ufos = [
   { id: 'scout', name: 'Stellar Scout', geometry: new THREE.CylinderGeometry(0.2, 0.4, 0.1, 32), colors: [1, 0, 0, 0, 1, 0], pattern: 2, stats: { moveSpeed: 0.2, health: 1, shotCooldown: 0.2, superchargePower: 1, drones: 0 }, shoot: 'single', thrusterColor: 0x00ff00, unlocked: true, cost: 0 },
   { id: 'destroyer', name: 'Nebula Destroyer', geometry: new THREE.SphereGeometry(0.4, 32, 32), colors: [0.7, 0.7, 0.7, 0, 0, 1], pattern: 1, stats: { moveSpeed: 0.15, health: 2, shotCooldown: 0.3, superchargePower: 3, drones: 0 }, shoot: 'spread', thrusterColor: 0x0000ff, unlocked: true, cost: 0 },
   { id: 'mothership', name: 'Cosmic Mothership', geometry: new THREE.SphereGeometry(0.5, 32, 32), colors: [0.5, 0, 1, 1, 1, 0], pattern: 0, stats: { moveSpeed: 0.1, health: 3, shotCooldown: 0.3, superchargePower: 1, drones: 2 }, shoot: 'homing', thrusterColor: 0xffff00, unlocked: true, cost: 0 },

@@ -39,11 +39,11 @@
 </head>
 <body class="m-0 p-0">
     <div id="game-wrapper" class="relative w-full">
-        <canvas id="gameCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></canvas>
-        <div id="threeJsContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="threeJsContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
 
         <!-- In-Game UI -->
-        <div id="uiContainer" class="absolute top-0 left-0 right-0 p-2 sm:p-4 text-white">
+        <div id="uiContainer" class="absolute top-0 left-0 right-0 p-2 sm:p-4 text-white pointer-events-none">
             <div class="flex justify-between text-xs sm:text-lg">
                 <div class="ui-element">SCORE: <span id="score">0</span></div>
                 <div class="ui-element">HEALTH: <span id="health">0</span></div>
@@ -61,16 +61,13 @@
         </div>
 
         <!-- Bottom UI Buttons -->
-        <div id="bottomUiContainer" class="absolute bottom-0 left-0 right-0 p-2 sm:p-4 text-white pointer-events-auto flex justify-between items-center">
-            <button id="bombButtonLeft" class="ui-element menu-button bg-red-700/70 px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm md:text-lg">BOMB</button>
-            <button id="abilityButton" class="ui-element menu-button ability-button bg-yellow-500/80 text-black px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm md:text-lg font-bold">🌟 ABILITY</button>
-            <button id="bombButtonRight" class="ui-element menu-button bg-red-700/70 px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm md:text-lg">BOMB</button>
+        <div id="bottomUiContainer" class="absolute bottom-0 left-0 right-0 p-2 sm:p-4 text-white pointer-events-auto flex justify-between items-center" style="display: none;">
             <button id="pauseButton" class="absolute right-2 top-2 menu-button bg-gray-700/70 p-2 rounded-lg text-xs">PAUSE</button>
         </div>
 
 
         <!-- Modals -->
-        <div id="modalContainer" class="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4" style="background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); pointer-events: all; display: flex !important;">
+        <div id="modalContainer" class="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
             <!-- Start Screen -->
             <div id="startScreen" class="modal w-full max-w-xl">
                 <div class="p-4">

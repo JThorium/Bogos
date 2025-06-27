@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const scoreEl = document.getElementById('score'), highScoreEl = document.getElementById('highScore'), healthEl = document.getElementById('health'), shieldEl = document.getElementById('shield'), creditsEl = document.getElementById('credits'), bombsEl = document.getElementById('bombs');
     const abilityChargeUI = document.getElementById('abilityChargeUI'), abilityChargeEl = document.getElementById('abilityCharge');
-    const modalContainer = document.getElementById('modalContainer'), startScreen = document.getElementById('startScreen'), pauseScreen = document.getElementById('pauseScreen'), gameOverScreen = document.getElementById('gameOverScreen'), hangarScreen = document.getElementById('hangarScreen'), inGameShop = document.getElementById('inGameShop'), devScreen = document.getElementById('devScreen');
+    const modalContainer = document.getElementById('modalContainer'), startScreen = document.getElementById('startScreen'), pauseScreen = document.getElementById('pauseScreen'), gameOverScreen = document.getElementById('gameOverScreen'), hangarScreen = document.getElementById('hangarScreen'), inGameShop = document.getElementById('inGameShop'), devScreen = document('devScreen');
     const pauseButton = document.getElementById('pauseButton'), startButton = document.getElementById('startButton'), resumeButton = document.getElementById('resumeButton'), restartButton = document.getElementById('restartButton'), hangarButton = document.getElementById('hangarButton'), hangarBackButton = document.getElementById('hangarBackButton'), quitButton = document.getElementById('quitButton'), continueButton = document.getElementById('continueButton'), devButton = document.getElementById('devButton'), resetProgressButton = document.getElementById('resetProgressButton'), gameTitle = document.getElementById('gameTitle');
     const finalScoreEl = document.getElementById('finalScore'), creditsEarnedEl = document.getElementById('creditsEarned'), materialsFoundEl = document.getElementById('materialsFound'), shopCreditsEl = document.getElementById('shopCredits'), shopItemsEl = document.getElementById('shopItems');
     const bossHealthBarContainer = document.getElementById('bossHealthBarContainer'), bossHealthEl = document.getElementById('bossHealth'), bossNameEl = document.getElementById('bossName');
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.abilityState = { name: null, active: false, charge: 0, duration: 0, cooldown: 0, cycleIndex: 0 };
             
             if (selectedUFO === 'omega') { this.setupOmegaShip(); }
-            else if (gameMode === 'fusion' && (fusionConfig.length > 0 || isCombineAllActive)) { this.setupFusedShip(); }
+            else if (gameMode === 'fusion' && (fusionConfig.length > 0 || isCombineAllAllActive)) { this.setupFusedShip(); }
             else { this.setupClassicShip(); }
 
             this.shield += upgrades.startShield.level; this.bombs = upgrades.startBomb.level;
