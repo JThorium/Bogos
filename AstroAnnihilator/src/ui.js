@@ -1,8 +1,7 @@
 import {
-    score, highScore, health, shield, credits, bombs, abilityCharge,
-    finalScore, creditsEarned, materialsFound, shopCredits,
+    score, highScore, health, shield,
+    materialsFound, shopCredits,
     pauseStarCredits, hangarCredits, hangarMaterials, fusionCredits, fusionSlotsAvailable,
-    devScoreInput, devCreditsInput, devMaterialsInput,
     setScore, setHighScore, setStarCredits, setRawMaterials, setMaterialsThisRun,
     setHasPurchasedScoreBoost, setSpawnMultiplier, setIsPaused, setIsGameOver,
     setGameMode, setFusionConfig, setIsCombineAllActive, setSelectedUFO,

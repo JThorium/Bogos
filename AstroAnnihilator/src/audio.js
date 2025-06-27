@@ -1,5 +1,5 @@
 import * as Tone from 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js';
-import { setMusicInitialized, setNormalMusicLoop, setBossMusicLoop } from './gameData.js';
+import { setMusicInitialized } from './gameData.js';
 
 export const sfx = {};
 export let normalMusicLoopInstance;

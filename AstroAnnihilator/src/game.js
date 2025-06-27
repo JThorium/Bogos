@@ -37,28 +37,43 @@ export let particles = [];
 export let turrets = [];
 export let nebulae = [];
 
-export let canvas, ctx, wrapper;
+// Three.js specific exports
+export let scene, camera, renderer;
 
 export async function init() {
     console.log('init() function called in game.js');
-    canvas = document.getElementById('gameCanvas');
-    ctx = canvas.getContext('2d');
-    wrapper = document.getElementById('game-wrapper');
+    const canvas = document.getElementById('gameCanvas');
+    const wrapper = document.getElementById('game-wrapper');
 
-    // initializeUIElements() is now called in index.js
+    // Three.js Setup
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 1); // Black background
+
+    // Initial camera position (adjust as needed for your game's perspective)
+    camera.position.z = 100;
+    camera.position.y = 0;
+    camera.position.x = 0;
+
+    // Add some basic lighting
+    const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(0, 1, 1).normalize();
+    scene.add(directionalLight);
 
     if (!musicInitialized) {
-        // Ensure Tone.js context is running. This requires a user gesture.
-        // The start button click will trigger this.
         if (Tone.context.state !== 'running') {
             await Tone.start();
         }
-        initAudio(); // Call initAudio to set up all Tone.js instruments and loops
+        initAudio();
         window.uiElements.audioStatusEl.textContent = 'Audio Ready!';
         setTimeout(() => { window.uiElements.audioStatusEl.textContent = ''; }, 2000);
     }
 
-    setGameSize(wrapper, canvas);
+    setGameSize(wrapper, canvas); // This will handle canvas resizing for Three.js too
     setScore(0);
     setWaveCount(0);
     setWaveCredits(0);
@@ -116,21 +131,23 @@ export function gameLoop() {
     if (isPaused) return;
     requestAnimationFrame(gameLoop);
 
-    ctx.save();
+    // Three.js rendering logic
     try {
         if (screenShake.duration > 0) {
-            const dx = (Math.random() - 0.5) * screenShake.intensity;
-            const dy = (Math.random() - 0.5) * screenShake.intensity;
-            ctx.translate(dx, dy);
+            // Apply screen shake to camera position
+            camera.position.x = (Math.random() - 0.5) * screenShake.intensity;
+            camera.position.y = (Math.random() - 0.5) * screenShake.intensity;
             setScreenShake(screenShake.intensity * 0.9, screenShake.duration - 1);
+        } else {
+            // Reset camera position if no shake
+            camera.position.x = 0;
+            camera.position.y = 0;
         }
-
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, window.screenWidth, window.screenHeight);
 
         setGameFrame(gameFrame + 1);
         if (ghostTimer > 0) setGhostTimer(ghostTimer - 1);
 
+        // Update and render entities
         nebulae.forEach(n => { n.update(); n.draw(); });
         stars.forEach(s => { s.update(); s.draw(); });
         handleObstacles();
@@ -149,16 +166,17 @@ export function gameLoop() {
 
         if (player) { player.update(); player.draw(); }
 
-        if (!isPaused) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.beginPath();
-            ctx.arc(mouse.x, mouse.y, 10, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // Mouse cursor in 3D (optional, can be done with a mesh)
+        // if (!isPaused) {
+        //     // For now, no 3D mouse cursor. The HTML UI handles the cursor.
+        // }
+
         WaveManager.update();
         updateUI();
+
+        renderer.render(scene, camera);
     } finally {
-        ctx.restore();
+        // No ctx.restore() needed for Three.js
     }
 }
 
