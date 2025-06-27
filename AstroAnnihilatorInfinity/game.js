@@ -1,194 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Astro Annihilator: Infinity</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Press Start 2P', cursive; overflow: hidden; touch-action: none; margin: 0; padding: 0; background-color: #000; }
-        canvas { background-color: #000; cursor: none; display: block; width: 100%; height: 100%; }
-        .ui-element { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9); }
-        .modal { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); pointer-events: all; }
-        .menu-button { transition: transform 0.2s ease, background-color 0.2s ease; }
-        .menu-button:hover:not(:disabled) { transform: scale(1.05); background-color: #f59e0b; }
-        .menu-button:disabled { background-color: #4b5563; cursor: not-allowed; }
-        .ship-select-card { border: 2px solid #4b5563; transition: all 0.2s ease; }
-        .ship-select-card.selected { border-color: #f59e0b; background-color: #1f2937; }
-        .ship-select-card:not(.locked):hover { background-color: #374151; transform: translateY(-5px); }
-        .ship-select-card.locked { opacity: 0.5; cursor: not-allowed; }
-        .upgrade-card { background-color: #1f2937; border: 1px solid #4b5563; }
-        .dev-input { background-color: #1f2937; border: 1px solid #4b5563; color: white; padding: 8px; font-family: 'Press Start 2P', cursive; text-align: center; }
-        .fusion-slot { border: 2px dashed #4b5563; background-color: #111827; min-height: 80px; }
-        .fusion-slot.filled { border-style: solid; border-color: #f59e0b; }
-        .fusion-source-ship:hover { background-color: #374151; cursor: pointer; }
-        .fusion-source-ship.fused { opacity: 0.4; cursor: not-allowed; }
-        .ability-button.active {
-            animation: pulse-yellow 1.5s infinite;
-            box-shadow: 0 0 15px #fde047, 0 0 25px #fde047;
-        }
-        @keyframes pulse-yellow {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-    </style>
-</head>
-<body class="m-0 p-0">
-    <div id="game-wrapper" class="relative w-full">
-        <canvas id="gameCanvas"></canvas>
-
-        <!-- In-Game UI -->
-        <div id="uiContainer" class="absolute top-0 left-0 right-0 p-2 sm:p-4 text-white pointer-events-none">
-            <div class="flex justify-between text-xs sm:text-lg">
-                <div class="ui-element">SCORE: <span id="score">0</span></div>
-                <div class="ui-element">HEALTH: <span id="health">0</span></div>
-                <div class="ui-element">SHIELD: <span id="shield">0</span></div>
-                <div class="ui-element">WAVE CR: <span id="credits">0</span></div>
-            </div>
-             <div class="flex justify-between text-xs sm:text-lg ui-element">
-                <div>BOMBS: <span id="bombs">0</span></div>
-                <div id="abilityChargeUI" class="ui-element text-yellow-300" style="display: none;">ABILITY: <span id="abilityCharge">0</span></div>
-                <div>HIGH SCORE: <span id="highScore">0</span></div>
-            </div>
-            <div class="ui-element text-center mt-2 text-yellow-400 text-base sm:text-lg" id="bossHealthBarContainer" style="display: none;">
-                <span id="bossName">BOSS</span> HEALTH: <span id="bossHealth"></span>
-            </div>
-        </div>
-
-        <!-- Bottom UI Buttons -->
-        <div id="bottomUiContainer" class="absolute bottom-0 left-0 right-0 p-2 sm:p-4 text-white pointer-events-auto flex justify-between items-center" style="display: none;">
-            <button id="bombButtonLeft" class="ui-element menu-button bg-red-700/70 px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm md:text-lg">BOMB</button>
-            <button id="abilityButton" class="ui-element menu-button ability-button bg-yellow-500/80 text-black px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm md:text-lg font-bold">🌟 ABILITY</button>
-            <button id="bombButtonRight" class="ui-element menu-button bg-red-700/70 px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm md:text-lg">BOMB</button>
-            <button id="pauseButton" class="absolute right-2 top-2 menu-button bg-gray-700/70 p-2 rounded-lg text-xs">PAUSE</button>
-        </div>
-
-
-        <!-- Modals -->
-        <div id="modalContainer" class="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-            <!-- Start Screen -->
-            <div id="startScreen" class="modal w-full max-w-xl">
-                <div class="p-4">
-                    <h1 id="gameTitle" class="text-3xl md:text-5xl mb-2 ui-element cursor-pointer">Astro Annihilator</h1>
-                    <h2 class="text-lg md:text-3xl mb-6 text-amber-400 ui-element">INFINITY</h2>
-                    <div class="flex flex-col space-y-4">
-                        <button id="startButton" class="menu-button bg-amber-400 text-black font-bold py-3 px-6 rounded-lg text-base md:text-xl">START GAME</button>
-                        <button id="hangarButton" class="menu-button bg-blue-500 text-white font-bold py-2 px-6 rounded-lg text-sm md:text-lg">HANGAR</button>
-                        <button id="devButton" style="display: none;" class="menu-button bg-purple-600 text-white font-bold py-2 px-6 rounded-lg text-sm md:text-lg">DEV</button>
-                        <button id="resetProgressButton" class="menu-button bg-red-800 text-white font-bold py-2 px-6 rounded-lg text-sm md:text-lg">RESET PROGRESS</button>
-                    </div>
-                     <p id="gameModeInfo" class="text-sm text-cyan-300 mt-4"></p>
-                    <div class="mt-8 text-xs md:text-sm text-gray-300">
-                        <p>MOVE: MOUSE/DRAG | BOMB: SPACEBAR</p>
-                        <p>ABILITY: CLICK/HOLD 🌟 BUTTON</p>
-                        <p id="audio-status" class="text-yellow-400 mt-2">Click "Start Game" to enable audio</p>
-                    </div>
-                </div>
-            </div>
-            <!-- Pause Screen -->
-            <div id="pauseScreen" style="display: none;" class="modal flex flex-col h-full max-h-[90vh] w-full max-w-4xl p-1 md:p-4">
-                 <div class="flex-shrink-0">
-                    <h2 class="text-2xl md:text-4xl mb-1">PAUSED</h2>
-                    <p class="text-base md:text-lg mb-2 text-blue-400">STAR CREDITS: <span id="pauseStarCredits">0</span></p>
-                </div>
-                <div class="mb-2 py-2 overflow-y-auto flex-grow min-h-0">
-                    <h3 class="text-lg md:text-xl mb-3 text-amber-400">EMERGENCY SUPPLIES</h3>
-                    <div id="pauseBuyGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
-                    <h3 class="text-lg md:text-xl mb-3 text-amber-400">SELECT SHIP (CLASSIC MODE)</h3>
-                    <div id="pauseShipSelector" class="grid grid-cols-2 gap-2 md:gap-4 mb-6"></div>
-                    <h3 class="text-lg md:text-xl mb-3 text-amber-400">PERMANENT UPGRADES</h3>
-                    <div id="pauseUpgradeGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                </div>
-                <div class="mt-auto flex-shrink-0 flex items-center justify-center space-x-4">
-                    <button id="quitButton" class="menu-button bg-red-600 text-white font-bold py-2 px-8 rounded-lg text-base md:text-lg">QUIT</button>
-                    <button id="resumeButton" class="menu-button bg-green-500 text-white font-bold py-2 px-8 rounded-lg text-base md:text-lg">RESUME</button>
-                </div>
-            </div>
-            <!-- Game Over Screen -->
-            <div id="gameOverScreen" style="display: none;" class="modal w-full max-w-lg p-4">
-                <h2 class="text-2xl md:text-4xl mb-4">GAME OVER</h2>
-                <p class="text-base md:text-xl mb-2 text-amber-400">FINAL SCORE: <span id="finalScore">0</span></p>
-                <p class="sm md:text-lg mb-2 text-blue-400">CREDITS EARNED: <span id="creditsEarned">0</span></p>
-                <p class="sm md:text-lg mb-6 text-gray-400">MATERIALS FOUND: <span id="materialsFound">0</span></p>
-                <button id="restartButton" class="menu-button bg-amber-400 text-black font-bold py-3 px-6 rounded-lg text-lg md:text-xl">PLAY AGAIN</button>
-            </div>
-            <!-- Hangar/Upgrade Screen -->
-            <div id="hangarScreen" style="display: none;" class="modal flex flex-col h-full max-h-[90vh] w-full max-w-5xl p-1 md:p-4">
-                <div id="hangarHeader" class="flex-shrink-0">
-                    <div id="hangarViewHeader">
-                        <div class="flex justify-between items-center">
-                             <h2 class="text-2xl md:text-4xl mb-1">HANGAR</h2>
-                             <button id="toFusionLabButton" class="menu-button bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm">FUSION LAB</button>
-                        </div>
-                        <p class="text-base md:text-lg mb-2 text-blue-400">STAR CREDITS: <span id="hangarCredits">0</span></p>
-                        <div class="text-base md:text-lg mb-2 text-gray-400">
-                             RAW MATERIALS: <span id="hangarMaterials">0</span> [M]
-                             <button id="sellMaterialButton" class="menu-button bg-green-700 text-white text-xs px-2 py-1 rounded-md ml-2">SELL 1 FOR 25 CR</button>
-                        </div>
-                    </div>
-                    <div id="fusionLabViewHeader" style="display:none;">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-2xl md:text-4xl mb-1 text-purple-400">FUSION LAB</h2>
-                            <button id="toHangarButton" class="menu-button bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-sm">CLASSIC HANGAR</button>
-                        </div>
-                        <p class="text-base md:text-lg mb-2 text-blue-400">STAR CREDITS: <span id="fusionCredits">0</span></p>
-                    </div>
-                </div>
-                <div id="hangarContent" class="flex-grow min-h-0 overflow-y-auto py-2">
-                    <div id="hangarView">
-                         <h3 class="text-lg md:text-xl mb-3 text-amber-400">META & CHALLENGE</h3>
-                         <div id="metaGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
-                         <h3 class="text-lg md:text-xl mb-3 text-amber-400">PURCHASE & SELECT SHIP</h3>
-                         <div id="hangarShipSelector" class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 mb-6"></div>
-                         <h3 class="text-lg md:text-xl mb-3 text-amber-400">PERMANENT UPGRADES</h3>
-                         <div id="upgradeGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                    </div>
-                    <div id="fusionLabView" style="display:none;">
-                        <p class="text-sm mb-2 text-gray-300">Combine unlocked ships to create a custom fighter! Fusion slots unlock with high score.</p>
-                        <p class="text-sm mb-4 text-cyan-300">FUSION SLOTS UNLOCKED: <span id="fusionSlotsAvailable">0</span> / 5</p>
-                        <div id="fusionSlotsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
-                        <div class="flex space-x-4 mb-4">
-                            <button id="clearFusionButton" class="flex-1 menu-button bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm">CLEAR FUSION</button>
-                            <button id="combineAllButton" style="display:none;" class="flex-1 menu-button bg-yellow-400 text-black font-bold py-2 px-4 rounded-lg text-sm">COMBINE ALL</button>
-                        </div>
-                        <h3 class="text-lg md:text-xl mb-3 text-amber-400">AVAILABLE SHIPS FOR FUSION</h3>
-                        <div id="fusionShipSource" class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-6"></div>
-                    </div>
-                </div>
-                <button id="hangarBackButton" class="menu-button bg-gray-500 text-white font-bold py-2 px-8 rounded-lg text-base md:text-lg mt-auto flex-shrink-0">BACK</button>
-            </div>
-            <!-- In-Game Shop -->
-            <div id="inGameShop" style="display: none;" class="modal w-full max-w-2xl p-4">
-                <h2 class="text-2xl md:text-4xl mb-2">UPGRADE STATION</h2>
-                <p class="text-lg mb-4 text-blue-400">WAVE CREDITS: <span id="shopCredits">0</span></p>
-                <div id="shopItems" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6"></div>
-                <button id="continueButton" class="menu-button bg-green-500 text-white font-bold py-2 px-8 rounded-lg text-base md:text-lg">CONTINUE</button>
-            </div>
-            <!-- Dev Options Modal -->
-            <div id="devScreen" style="display: none;" class="modal w-full max-w-lg p-4 space-y-4">
-                <h2 class="text-2xl md:text-4xl mb-4">DEV OPTIONS</h2>
-                <div class="flex items-center justify-center space-x-2">
-                    <input type="number" id="devScoreInput" class="dev-input w-48" placeholder="Set Score">
-                    <button id="devSetScoreButton" class="menu-button bg-blue-500 text-white font-bold p-2 rounded-lg text-sm">SET</button>
-                </div>
-                <div class="flex items-center justify-center space-x-2">
-                    <input type="number" id="devCreditsInput" class="dev-input w-48" placeholder="Set Star Credits">
-                    <button id="devSetCreditsButton" class="menu-button bg-blue-500 text-white font-bold p-2 rounded-lg text-sm">SET</button>
-                </div>
-                 <div class="flex items-center justify-center space-x-2">
-                    <input type="number" id="devMaterialsInput" class="dev-input w-48" placeholder="Set Raw Materials">
-                    <button id="devSetMaterialsButton" class="menu-button bg-blue-500 text-white font-bold p-2 rounded-lg text-sm">SET</button>
-                </div>
-                <button id="devUnlockAllButton" class="menu-button bg-green-500 text-white font-bold py-2 px-4 rounded-lg text-base w-full">UNLOCK/MAX ALL</button>
-                <button id="devBackButton" class="menu-button bg-gray-500 text-white font-bold py-2 px-8 rounded-lg text-base mt-auto w-full">BACK</button>
-            </div>
-        </div>
-    </div>
-
-<script>
 document.addEventListener('DOMContentLoaded', () => {
     // --- Setup ---
     const canvas = document.getElementById('gameCanvas');
@@ -207,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hangarView = document.getElementById('hangarView'), hangarViewHeader = document.getElementById('hangarViewHeader'), hangarCreditsEl = document.getElementById('hangarCredits'), hangarMaterialsEl = document.getElementById('hangarMaterials'), sellMaterialButton = document.getElementById('sellMaterialButton'), metaGrid = document.getElementById('metaGrid'), upgradeGrid = document.getElementById('upgradeGrid'), hangarShipSelector = document.getElementById('hangarShipSelector'), toFusionLabButton = document.getElementById('toFusionLabButton');
     const fusionLabView = document.getElementById('fusionLabView'), fusionLabViewHeader = document.getElementById('fusionLabViewHeader'), fusionCreditsEl = document.getElementById('fusionCredits'), fusionSlotsAvailableEl = document.getElementById('fusionSlotsAvailable'), fusionSlotsContainer = document.getElementById('fusionSlotsContainer'), fusionShipSource = document.getElementById('fusionShipSource'), toHangarButton = document.getElementById('toHangarButton'), clearFusionButton = document.getElementById('clearFusionButton'), combineAllButton = document.getElementById('combineAllButton'), gameModeInfoEl = document.getElementById('gameModeInfo');
     const pauseStarCreditsEl = document.getElementById('pauseStarCredits'), pauseShipSelectorEl = document.getElementById('pauseShipSelector'), pauseUpgradeGridEl = document.getElementById('pauseUpgradeGrid'), pauseBuyGridEl = document.getElementById('pauseBuyGrid');
-    const devScoreInput = document.getElementById('devScoreInput'), devSetScoreButton = document.getElementById('devSetScoreButton'), devCreditsInput = document.getElementById('devCreditsInput'), devSetCreditsButton = document.getElementById('devSetCreditsButton'), devMaterialsInput = document.getElementById('devMaterialsInput'), devSetMaterialsButton = document.getElementById('devSetMaterialsButton'), devUnlockAllButton = document.getElementById('devUnlockAllButton'), devBackButton = document.getElementById('devBackButton');
+    const devScoreInput = document.getElementById('devScoreInput'), devSetScoreButton = document.getElementById('devSetScoreButton'), devCreditsInput = document.getElementById('devCreditsInput'), devSetCreditsButton = document.getElementById('devSetCreditsButton'), devMaterialsInput = document.getElementById('devMaterialsInput'), devSetMaterialsButton = document.getElementById('devMaterialsInput'), devUnlockAllButton = document.getElementById('devUnlockAllButton'), devBackButton = document.getElementById('devBackButton');
     
     // --- Game State ---
     const MOUSE_Y_OFFSET = 80; // Player ship vertical offset
@@ -399,14 +208,14 @@ document.addEventListener('DOMContentLoaded', () => {
         update() { let isSlowed = this.slowTimer > 0 || (player && player.abilityState.name === 'chronomancer' && player.abilityState.active && Math.hypot(this.x-player.x, this.y-player.y) < 200); if(isSlowed) this.slowTimer--; const speedMod = isSlowed ? 0.2 : 1; this.angleX += 0.01; this.angleY += 0.02; this.phase++; this.y += this.speedY * speedMod; switch(this.type){ case 'grunt': this.x += this.speedX * speedMod; if(this.x<0||this.x>screenWidth) this.speedX*=-1; break; case 'weaver': this.x += Math.sin(this.phase * 0.1) * this.speedX * speedMod; break; case 'dodger': const dx=mouse.x-this.x; if(Math.abs(dx)<100) this.x -= Math.sign(dx)*2*speedMod; break; case 'orbiter': if(this.y > this.targetY) { this.y = this.targetY; this.speedY=0; this.x += Math.cos(this.phase * 0.05) * 2 * speedMod; } break; case 'kamikaze': const angle = Math.atan2(player.y-this.y, player.x-this.x); this.x += Math.cos(angle)*this.speedY*speedMod; this.y += Math.sin(angle)*this.speedY*speedMod; break; case 'sniper': this.x += this.speedX * speedMod; if(this.x<0||this.x>screenWidth) this.speedX*=-1; break; case 'stealth': this.x += this.speedX * speedMod; if(this.x<0||this.x>screenWidth) this.speedX*=-1; break; } this.shootCooldown--; if(this.shootCooldown <= 0 && player) { switch(this.type) { case 'grunt': enemyBullets.push(new Bullet(this.x,this.y,0,5,this.color)); this.shootCooldown=120; break; case 'tank': for(let i=-1; i<=1; i++) enemyBullets.push(new Bullet(this.x,this.y, i*1.5, 5, this.color, 2)); this.shootCooldown=180; break; case 'orbiter': if(this.speedY === 0) {for(let i=0;i<4;i++){const a=(i/4)*Math.PI*2+this.phase*0.1; enemyBullets.push(new Bullet(this.x,this.y,Math.cos(a)*3,Math.sin(a)*3,this.color));} this.shootCooldown=60;} break; case 'sniper': const angle=Math.atan2(player.y-this.y, player.x-this.x); enemyBullets.push(new Bullet(this.x,this.y,Math.cos(angle)*8,Math.sin(angle)*8, this.color)); this.shootCooldown=150; break; default: enemyBullets.push(new Bullet(this.x,this.y,0,5,this.color)); this.shootCooldown=150; break;}}}
         draw() { let color = this.color; if(this.type === 'stealth' && Math.sin(this.phase * 0.1) > 0) color = 'transparent'; projectAndDrawWireframe(this.model, this.x, this.y, this.size * 0.8, {x:this.angleX, y:this.angleY, z:this.angleZ}, color, 2); if (this.health > 1) { ctx.fillStyle = '#fff'; ctx.font = '10px monospace'; ctx.fillText(Math.ceil(this.health), this.x-4, this.y - 20); } }
         takeDamage(amount) { this.health -= amount; return this.health <= 0; }
-        onDeath(){ if(this.type==='splitter'){for(let i=0; i<3; i++) enemies.push(new Enemy('grunt', this.x, this.y));} if(player.abilities.alchemist && player.abilityState.active && Math.random() < 0.2) { powerups.push(new PowerUp(this.x, this.y)); }}
+        onDeath(){ if(this.type==='splitter'){for(let i=0; i<3; i++) enemies.push(new Enemy('grunt', this.x, this.y));} if(player.abilities.alchemist && Math.random() < 0.2) { powerups.push(new PowerUp(this.x, this.y)); }}
     }
     class Boss { constructor(bossModel) { this.model = bossModel; this.name = bossModel.name; this.size = 60; this.x = screenWidth / 2; this.y = -this.size; this.targetY = 150; this.health = (80 + Math.floor(score / 1000)) * (waveCount > 1 ? 1.5 : 1); this.maxHealth = this.health; this.color = '#ec4899'; this.shootCooldown = 0; this.phase = 'entering'; this.angleX = 0; this.angleY = 0; this.angleZ = 0; this.speedX = 2; } update() { let isSlowed = player.abilityState.name === 'chronomancer' && player.abilityState.active && Math.hypot(this.x-player.x, this.y-player.y) < 200; const speedMod = isSlowed ? 0.2 : 1; this.angleX += 0.005 * speedMod; this.angleY += 0.01 * speedMod; if (this.phase === 'entering') { this.y += (this.targetY - this.y) * 0.05 * speedMod; if (Math.abs(this.y - this.targetY) < 1) this.phase = 'fighting'; } else if (this.phase === 'fighting') { this.x += this.speedX * speedMod; if (this.x < this.size || this.x > screenWidth - this.size) this.speedX *= -1; this.shootCooldown--; if (this.shootCooldown <= 0) { this.shoot(); this.shootCooldown = this.health < this.maxHealth / 2 ? 30 : 50; } } } draw() { projectAndDrawWireframe(this.model, this.x, this.y, this.size, {x:this.angleX, y:this.angleY, z:this.angleZ}, this.color, 4); } shoot() { const patterns = [ () => { for (let i = 0; i < 6; i++) { const angle = (i / 6) * Math.PI * 2 + this.angleY * 2; enemyBullets.push(new Bullet(this.x, this.y, Math.sin(angle) * 2.5, Math.cos(angle) * 2.5, this.color)); } }, () => { enemyBullets.push(new Bullet(this.x, this.y, 0, 5, this.color)); enemyBullets.push(new Bullet(this.x, this.y, -1.5, 5, this.color)); enemyBullets.push(new Bullet(this.x, this.y, 1.5, 5, this.color)); } ]; if (this.name === "BEHEMOTH") { patterns.push(() => { const angle = Math.atan2(player.y - this.y, player.x - this.x); for(let i=-1; i<=1; i++) {enemyBullets.push(new Bullet(this.x, this.y, Math.cos(angle + i*0.2) * 4, Math.sin(angle + i*0.2) * 4, this.color));}}) } patterns[Math.floor(Math.random() * patterns.length)](); } takeDamage(amount) { this.health -= amount; return this.health <= 0; } }
     class Star { constructor() { this.x = Math.random() * screenWidth; this.y = Math.random() * screenHeight; this.size = Math.random() * 2 + 1; this.speed = this.size * 0.5; } update() { let timeMod = 1; if (player && player.abilityState.name === 'chronomancer' && player.abilityState.active && Math.hypot(this.x-player.x, this.y-player.y) < 200) { timeMod = 0.2; } this.y += this.speed * timeMod; if (this.y > screenHeight) { this.y = -this.size; this.x = Math.random() * screenWidth; } } draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.size / 3})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } }
     class Particle { constructor(x, y, speedX, speedY, color, size, lifespan) { this.x = x; this.y = y; this.speedX = speedX + (Math.random() - 0.5) * 2; this.speedY = speedY + (Math.random() - 0.5) * 2; this.color = color; this.size = size; this.lifespan = lifespan; this.maxLifespan = lifespan; } update() { this.x += this.speedX; this.y += this.speedY; this.lifespan--; this.size *= 0.95; } draw() { const rgb = `${parseInt(this.color.slice(1, 3), 16)}, ${parseInt(this.color.slice(3, 5), 16)}, ${parseInt(this.color.slice(5, 7), 16)}`; ctx.fillStyle = `rgba(${rgb}, ${this.lifespan / this.maxLifespan})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } }
     class PowerUp { constructor(x, y) { this.x = x; this.y = y; this.size = 10; this.speedY = 2; const types = ['shield', 'minion', 'ghost', 'bomb']; this.type = types[Math.floor(Math.random() * types.length)]; this.color = { shield: '#60a5fa', minion: '#a78bfa', ghost: '#e5e7eb', bomb: '#ffffff'}[this.type]; } update() { this.y += this.speedY; } draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2); ctx.fillStyle = "black"; ctx.font = "12px 'Press Start 2P'"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const label = { shield: 'S', minion: 'M', ghost: 'G', bomb: 'B'}[this.type]; ctx.fillText(label, this.x, this.y); } }
     class RawMaterialPickup extends PowerUp { constructor(x, y) { super(x, y); this.type = 'material'; this.color = '#94a3b8'; } draw() { ctx.fillStyle = this.color; ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Math.PI / 4); ctx.fillRect(-this.size, -this.size, this.size * 2, this.size * 2); ctx.restore(); ctx.fillStyle = "black"; ctx.font = "12px 'Press Start 2P'"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('[M]', this.x, this.y); } }
-    class Obstacle { constructor(type) { this.type = type; this.x = Math.random() * screenWidth; this.y = -50; this.speedY = Math.random() * 1 + 0.5; this.size = Math.random() * 20 + 15; this.angleX = Math.random()*Math.PI*2; this.angleY = Math.random()*Math.PI*2; this.angleZ = 0; this.rotationSpeed = (Math.random() - 0.5) * 0.02; if(type === 'asteroid') { this.health = this.size / 10; this.color = '#a1a1aa'; this.model = ASTEROID_MODEL; } else if (type === 'blackhole') { this.color = '#000'; this.size = Math.random() * 30 + 40; this.gravityWell = this.size * 4; this.lifespan = 600; this.y = Math.random() * screenHeight * 0.6; sfx.blackhole.triggerAttack(); } } update() { this.angleY += this.rotationSpeed; if(this.type === 'asteroid') { this.y += this.speedY; } else if(this.type === 'blackhole') { if(player) { const dx = this.x-player.x; const dy = this.y-player.y; const dist = Math.hypot(dx,dy); if(dist < this.gravityWell) { const pull = (1 - dist / this.gravityWell) * 0.2; player.x += dx/dist * pull; player.y += dy/dist * pull; if(dist < this.size) player.hit(); }} this.lifespan--; if(this.lifespan <= 0) sfx.blackhole.triggerRelease(); }} draw() { if(this.type === 'asteroid') { projectAndDrawWireframe(this.model, this.x, this.y, this.size, {x:this.angleX, y:this.angleY, z:this.angleZ}, this.color, 1.5); } else if(this.type === 'blackhole') { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = `rgba(200, 50, 255, ${0.5 + Math.sin(gameFrame*0.1)*0.2})`; ctx.lineWidth = 3; ctx.stroke(); } } takeDamage(amount) { if(this.type !== 'asteroid') return false; this.health -= amount; return this.health <= 0; } }
+    class Obstacle { constructor(type) { this.type = type; this.x = Math.random() * screenWidth; this.y = -50; this.speedY = Math.random() * 1 + 0.5; this.size = Math.random() * 20 + 15; this.angleX = Math.random()*Math.PI*2; this.angleY = Math.random()*Math.PI*2; this.angleZ = 0; this.rotationSpeed = (Math.random() - 0.5) * 0.02; if(type === 'asteroid') { this.health = this.size / 10; this.color = '#a1a1aa'; this.model = ASTEROID_MODEL; } else if (type === 'blackhole') { this.color = '#000'; this.size = Math.random() * 30 + 40; this.gravityWell = this.size * 4; this.lifespan = 600; this.y = Math.random() * screenHeight * 0.6; sfx.blackhole.triggerAttack(); } } update() { this.angleY += this.rotationSpeed; if(this.type === 'asteroid') { this.y += this.speedY; } else if(this.type === 'blackhole') { if(player) { const dx = this.x-player.x; const dy = this.y-player.y; const dist = Math.hypot(dx,dy); if(dist < this.gravityWell) { const pull = (1 - dist / this.gravityWell) * 0.2; player.x += dx/dist * pull; player.y += dy/dist * pull; if(dist < this.size) player.hit(); }} this.lifespan--; if(this.lifespan <= 0) sfx.blackhole.triggerRelease(); }} draw() { if(this.type === 'asteroid') { projectAndDrawWireframe(this.model, this.x, this.y, this.size, {x:this.angleX, y:this.angleY, z:this.angleZ}, this.color, 1.5); } else if (this.type === 'blackhole') { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = `rgba(200, 50, 255, ${0.5 + Math.sin(gameFrame*0.1)*0.2})`; ctx.lineWidth = 3; ctx.stroke(); } } takeDamage(amount) { if(this.type !== 'asteroid') return false; this.health -= amount; return this.health <= 0; } }
     
     // --- Game Management ---
     async function init() {
@@ -418,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasPurchasedScoreBoost) { score = Math.floor(highScore / 3); hasPurchasedScoreBoost = false; localStorage.setItem('hasPurchasedScoreBoost', 'false'); }
         player = new Player();
         stars = Array.from({ length: 150 }, () => new Star());
-        particles = []; powerups = []; enemies = []; playerBullets = []; enemyBullets = []; turrets = []; obstacles = [];
+        particles = []; powerups = []; enemies = []; playerBullets = [], enemyBullets = []; turrets = []; obstacles = [];
         currentBoss = null; ghostTimer = 0; spectreTimer = 0;
         updateUI(true); hideAllModals(); bottomUiContainer.style.display = 'flex';
         startMusic(false); gameLoop();
@@ -478,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function buyUFO(key, refreshCallback) { const ufo = UFO_TYPES[key]; if (starCredits >= ufo.cost && !unlockedUFOs.has(key)) { starCredits -= ufo.cost; unlockedUFOs.add(key); localStorage.setItem('starCredits', starCredits); localStorage.setItem('unlockedUFOs', JSON.stringify([...unlockedUFOs])); sfx.buy.triggerAttackRelease("E5", "8n"); if (refreshCallback) refreshCallback(); } }
     function updateHangarUI() { updateHangarLikeUI(hangarCreditsEl, hangarShipSelector, upgradeGrid, true); hangarMaterialsEl.textContent = rawMaterials.toLocaleString(); updateFusionLabUI(); }
     function updatePauseMenuUI() { updateHangarLikeUI(pauseStarCreditsEl, pauseShipSelectorEl, pauseUpgradeGridEl, false); }
-    function updateHangarLikeUI(creditsElement, shipSelectorElement, upgradeGridElement, isHangarView) { creditsElement.textContent = starCredits.toLocaleString(); if(shipSelectorElement) updateShipSelector(shipSelectorElement, isHangarView); if(isHangarView) { metaGrid.innerHTML = ''; const boostCost = 1000; const boostCard = document.createElement('div'); boostCard.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; boostCard.innerHTML = `<h4 class="text-lg font-bold text-amber-400">Score Boost</h4><p class="text-sm my-2">Start with 1/3 high score.<br/>(${Math.floor(highScore / 3).toLocaleString()} score)</p><button id="buy-score-boost" class="menu-button bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">${hasPurchasedScoreBoost ? 'ACTIVE' : `BUY (${boostCost.toLocaleString()} CR)`}</button>`; const boostButton = boostCard.querySelector('#buy-score-boost'); if (hasPurchasedScoreBoost || starCredits < boostCost || highScore < 1000) boostButton.disabled = true; boostButton.addEventListener('click', () => { if (starCredits >= boostCost) { starCredits -= boostCost; hasPurchasedScoreBoost = true; localStorage.setItem('starCredits', starCredits); localStorage.setItem('hasPurchasedScoreBoost', 'true'); sfx.buy.triggerAttackRelease("A4", "8n"); updateHangarUI(); } }); metaGrid.appendChild(boostCard); const challengeCard = document.createElement('div'); challengeCard.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; let challengeBtnHtml; if(spawnMultiplier >= 4) { challengeBtnHtml = `<button class="menu-button w-full" disabled>MAXIMUM CARNAGE</button>`; } else if (spawnMultiplier >= 2) { challengeBtnHtml = `<button id="buy-challenge-2" class="menu-button bg-red-800 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">REALLY BRING IT ON!!</button>`; } else { challengeBtnHtml = `<button id="buy-challenge-1" class="menu-button bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">Bring It On!</button>`; } challengeCard.innerHTML = `<h4 class="text-lg font-bold text-red-400">Challenge Mode</h4><p class="text-sm my-2">Spawn Rate: x${spawnMultiplier}</p>${challengeBtnHtml}`; metaGrid.appendChild(challengeCard); const challengeBtn1 = challengeCard.querySelector('#buy-challenge-1'); const challengeBtn2 = challengeCard.querySelector('#buy-challenge-2'); if(challengeBtn1) { const cost = 100000; if(starCredits < cost) challengeBtn1.disabled = true; challengeBtn1.textContent += ` (${cost.toLocaleString()} CR)`; challengeBtn1.addEventListener('click', () => {if(starCredits >= cost){starCredits -= cost; spawnMultiplier = 2; localStorage.setItem('starCredits', starCredits); localStorage.setItem('spawnMultiplier', spawnMultiplier); sfx.unlock.triggerAttackRelease(['C3', 'E3', 'G3'], '2n'); updateHangarUI();}}); } if(challengeBtn2) { const cost = 1000000; if(starCredits < cost) challengeBtn2.disabled = true; challengeBtn2.textContent += ` (${cost.toLocaleString()} CR)`; challengeBtn2.addEventListener('click', () => {if(starCredits >= cost){starCredits -= cost; spawnMultiplier = 4; localStorage.setItem('starCredits', starCredits); localStorage.setItem('spawnMultiplier', spawnMultiplier); sfx.unlock.triggerAttackRelease(['C2', 'E2', 'G2'], '1n'); updateHangarUI();}}); } } upgradeGridElement.innerHTML = ''; const refreshCallback = isHangarView ? updateHangarUI : updatePauseMenuUI; Object.keys(upgrades).forEach(key => { const upg = upgrades[key]; const currentCost = upg.cost + upg.costIncrease * upg.level; const matCost = upg.matCost + upg.matIncrease * upg.level; const isMaxed = upg.level >= upg.maxLevel; const card = document.createElement('div'); card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${upg.name}</h4><p class="text-sm my-2">Level: ${upg.level} / ${upg.maxLevel}</p><button id="buy-${key}-${isHangarView ? 'h' : 'p'}" class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">${isMaxed ? 'MAX LEVEL' : `UPGRADE (${currentCost.toLocaleString()} CR + ${matCost} [M])`}</button>`; const buyButton = card.querySelector(`#buy-${key}-${isHangarView ? 'h' : 'p'}`); if (isMaxed || starCredits < currentCost || rawMaterials < matCost) buyButton.disabled = true; buyButton.addEventListener('click', () => { if (buyUpgrade(key)) refreshCallback(); }); upgradeGridElement.appendChild(card); }); if (!isHangarView) { pauseBuyGridEl.innerHTML = ''; const items = [{name: 'Buy Health', cost: healthPurchaseCost, action: () => { player.health++; healthPurchaseCost = Math.floor(healthPurchaseCost * 1.5); }}, {name: 'Buy Shield', cost: shieldPurchaseCost, action: () => { player.shield++; shieldPurchaseCost = Math.floor(shieldPurchaseCost * 1.5); }}, {name: 'Buy Bomb', cost: bombPurchaseCost, action: () => { player.bombs++; bombPurchaseCost = Math.floor(bombPurchaseCost * 1.5); }}]; items.forEach(item => { const card = document.createElement('div'); card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${item.name}</h4><button class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full mt-2">BUY (${item.cost.toLocaleString()} CR)</button>`; const btn = card.querySelector('button'); if (starCredits < item.cost) btn.disabled = true; btn.addEventListener('click', () => { if(starCredits >= item.cost) { starCredits -= item.cost; item.action(); localStorage.setItem('starCredits', starCredits); sfx.buy.triggerAttackRelease("C4", "8n"); refreshCallback(); }}); pauseBuyGridEl.appendChild(card);}); } }
+    function updateHangarLikeUI(creditsElement, shipSelectorElement, upgradeGridElement, isHangarView) { creditsElement.textContent = starCredits.toLocaleString(); if(shipSelectorElement) updateShipSelector(shipSelectorElement, isHangarView); if(isHangarView) { metaGrid.innerHTML = ''; const boostCost = 1000; const boostCard = document.createElement('div'); boostCard.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; boostCard.innerHTML = `<h4 class="text-lg font-bold text-amber-400">Score Boost</h4><p class="text-sm my-2">Start with 1/3 high score.<br/>(${Math.floor(highScore / 3).toLocaleString()} score)</p><button id="buy-score-boost" class="menu-button bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">${hasPurchasedScoreBoost ? 'ACTIVE' : `BUY (${boostCost.toLocaleString()} CR)`}</button>`; const boostButton = boostCard.querySelector('#buy-score-boost'); if (hasPurchasedScoreBoost || starCredits < boostCost || highScore < 1000) boostButton.disabled = true; boostButton.addEventListener('click', () => { if (starCredits >= boostCost) { starCredits -= boostCost; hasPurchasedScoreBoost = true; localStorage.setItem('starCredits', starCredits); localStorage.setItem('hasPurchasedScoreBoost', 'true'); sfx.buy.triggerAttackRelease("A4", "8n"); updateHangarUI(); } }); metaGrid.appendChild(boostCard); const challengeCard = document.createElement('div'); challengeCard.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; let challengeBtnHtml; if(spawnMultiplier >= 4) { challengeBtnHtml = `<button class="menu-button w-full" disabled>MAXIMUM CARNAGE</button>`; } else if (spawnMultiplier >= 2) { challengeBtnHtml = `<button id="buy-challenge-2" class="menu-button bg-red-800 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">REALLY BRING IT ON!!</button>`; } else { challengeBtnHtml = `<button id="buy-challenge-1" class="menu-button bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">Bring It On!</button>`; } challengeCard.innerHTML = `<h4 class="text-lg font-bold text-red-400">Challenge Mode</h4><p class="text-sm my-2">Spawn Rate: x${spawnMultiplier}</p>${challengeBtnHtml}`; metaGrid.appendChild(challengeBtn); const challengeBtn1 = challengeCard.querySelector('#buy-challenge-1'); const challengeBtn2 = challengeCard.querySelector('#buy-challenge-2'); if(challengeBtn1) { const cost = 100000; if(starCredits < cost) challengeBtn1.disabled = true; challengeBtn1.textContent += ` (${cost.toLocaleString()} CR)`; challengeBtn1.addEventListener('click', () => {if(starCredits >= cost){starCredits -= cost; spawnMultiplier = 2; localStorage.setItem('starCredits', starCredits); localStorage.setItem('spawnMultiplier', spawnMultiplier); sfx.unlock.triggerAttackRelease(['C3', 'E3', 'G3'], '2n'); updateHangarUI();}}); } if(challengeBtn2) { const cost = 1000000; if(starCredits < cost) challengeBtn2.disabled = true; challengeBtn2.textContent += ` (${cost.toLocaleString()} CR)`; challengeBtn2.addEventListener('click', () => {if(starCredits >= cost){starCredits -= cost; spawnMultiplier = 4; localStorage.setItem('starCredits', starCredits); localStorage.setItem('spawnMultiplier', spawnMultiplier); sfx.unlock.triggerAttackRelease(['C2', 'E2', 'G2'], '1n'); updateHangarUI();}}); } } upgradeGridElement.innerHTML = ''; const refreshCallback = isHangarView ? updateHangarUI : updatePauseMenuUI; Object.keys(upgrades).forEach(key => { const upg = upgrades[key]; const currentCost = upg.cost + upg.costIncrease * upg.level; const matCost = upg.matCost + upg.matIncrease * upg.level; const isMaxed = upg.level >= upg.maxLevel; const card = document.createElement('div'); card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${upg.name}</h4><p class="text-sm my-2">Level: ${upg.level} / ${upg.maxLevel}</p><button id="buy-${key}-${isHangarView ? 'h' : 'p'}" class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full">${isMaxed ? 'MAX LEVEL' : `UPGRADE (${currentCost.toLocaleString()} CR + ${matCost} [M])`}</button>`; const buyButton = card.querySelector(`#buy-${key}-${isHangarView ? 'h' : 'p'}`); if (isMaxed || starCredits < currentCost || rawMaterials < matCost) buyButton.disabled = true; buyButton.addEventListener('click', () => { if (buyUpgrade(key)) refreshCallback(); }); upgradeGridElement.appendChild(card); }); if (!isHangarView) { pauseBuyGridEl.innerHTML = ''; const items = [{name: 'Buy Health', cost: healthPurchaseCost, action: () => { player.health++; healthPurchaseCost = Math.floor(healthPurchaseCost * 1.5); }}, {name: 'Buy Shield', cost: shieldPurchaseCost, action: () => { player.shield++; shieldPurchaseCost = Math.floor(shieldPurchaseCost * 1.5); }}, {name: 'Buy Bomb', cost: bombPurchaseCost, action: () => { player.bombs++; bombPurchaseCost = Math.floor(bombPurchaseCost * 1.5); }}]; items.forEach(item => { const card = document.createElement('div'); card.className = 'upgrade-card p-4 rounded-lg flex flex-col items-center text-center'; card.innerHTML = `<h4 class="text-lg font-bold text-amber-400">${item.name}</h4><button class="menu-button bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm w-full mt-2">BUY (${item.cost.toLocaleString()} CR)</button>`; const btn = card.querySelector('button'); if (starCredits < item.cost) btn.disabled = true; btn.addEventListener('click', () => { if(starCredits >= item.cost) { starCredits -= item.cost; item.action(); localStorage.setItem('starCredits', starCredits); sfx.buy.triggerAttackRelease("C4", "8n"); refreshCallback(); }}); pauseBuyGridEl.appendChild(card);}); } }
     function buyUpgrade(key) { const upg = upgrades[key]; const creditCost = upg.cost + upg.costIncrease * upg.level; const matCost = upg.matCost + upg.matIncrease * upg.level; if (starCredits >= creditCost && rawMaterials >= matCost && upg.level < upg.maxLevel) { starCredits -= creditCost; rawMaterials -= matCost; upg.level++; localStorage.setItem('starCredits', starCredits); localStorage.setItem('rawMaterials', rawMaterials); localStorage.setItem('upgrades', JSON.stringify(upgrades)); sfx.buy.triggerAttackRelease("E4", "8n"); return true; } return false; }
     function showInGameShop() { isPaused = true; Tone.Transport.pause(); shopCreditsEl.textContent = waveCredits; shopItemsEl.innerHTML = ''; const items = [ { name: 'Repair Hull', cost: shopCosts.health, action: () => { player.health++; shopCosts.health = Math.floor(shopCosts.health * 1.8); } }, { name: 'Add Shield', cost: shopCosts.shield, action: () => { player.shield++; shopCosts.shield = Math.floor(shopCosts.shield * 1.5); } }, { name: 'Add Bomb', cost: shopCosts.bomb, action: () => { player.bombs++; shopCosts.bomb = Math.floor(shopCosts.bomb * 1.6); } }, { name: 'Add Minion', cost: shopCosts.minion, action: () => { player.addMinion(); shopCosts.minion = Math.floor(shopCosts.minion * 2); } } ]; items.forEach(item => { const itemEl = document.createElement('div'); itemEl.className = 'upgrade-card p-3 rounded-lg text-center flex flex-col justify-between'; itemEl.innerHTML = `<h4 class="text-base text-amber-400">${item.name}</h4>`; const buyButton = document.createElement('button'); buyButton.className = 'menu-button bg-blue-600 text-white font-bold py-1 px-3 mt-2 rounded-lg text-sm w-full'; buyButton.textContent = `BUY (${item.cost} CR)`; if (waveCredits < item.cost) buyButton.disabled = true; buyButton.onclick = () => { if(waveCredits >= item.cost) { waveCredits -= item.cost; item.action(); sfx.buy.triggerAttackRelease("C4", "8n"); showInGameShop(); } }; itemEl.appendChild(buyButton); shopItemsEl.appendChild(itemEl); }); showModal(inGameShop); }
     function updateFusionLabUI() { fusionCreditsEl.textContent = starCredits.toLocaleString(); const slotsUnlocked = (highScore >= 50000 ? 5 : highScore >= 40000 ? 4 : highScore >= 30000 ? 3 : highScore >= 20000 ? 2 : 1); fusionSlotsAvailableEl.textContent = `${fusionConfig.length} / ${slotsUnlocked}`; fusionSlotsContainer.innerHTML = ''; for (let i = 0; i < 5; i++) { const slot = document.createElement('div'); slot.className = 'fusion-slot rounded-lg p-2 flex items-center justify-center text-center'; if (i < slotsUnlocked) { const ufoKey = fusionConfig[i]; if (ufoKey) { const ufo = UFO_TYPES[ufoKey]; slot.classList.add('filled'); slot.innerHTML = `<div class="text-sm"><h4 style="color:${ufo.color}">${ufo.name}</h4></div>`; } else { slot.innerHTML = `<p class="text-xs text-gray-500">SLOT ${i+1}</p>`; } } else { slot.classList.add('locked'); slot.innerHTML = `<p class="text-xs text-gray-600">LOCKED<br/>(Score > ${(i)*10000+10000})</p>`; } fusionSlotsContainer.appendChild(slot); } fusionShipSource.innerHTML = ''; Object.keys(UFO_TYPES).forEach(key => { if(key === 'omega') return; const ufo = UFO_TYPES[key]; if (!unlockedUFOs.has(key)) return; const card = document.createElement('div'); const isFused = fusionConfig.includes(key); card.className = `ship-select-card p-2 rounded-lg text-center fusion-source-ship ${isFused ? 'fused' : ''}`; card.innerHTML = `<h4 class="text-sm font-bold" style="color:${ufo.color}">${ufo.name}</h4>`; if (!isFused) { card.addEventListener('click', () => addShipToFusion(key)); } fusionShipSource.appendChild(card); }); combineAllButton.style.display = highScore >= 100000 ? 'inline-flex' : 'none'; }
