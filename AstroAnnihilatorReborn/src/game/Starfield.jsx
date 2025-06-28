@@ -1,33 +1,40 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
-function Starfield({ count = 5000 }) {
+function Starfield({ count = 500 }) { // Further reduced count
   const mesh = useRef();
+  const { viewport } = useThree(); // Only viewport needed for 2D scroll
 
-  const stars = useMemo(() => {
-    const positions = [];
+  const positions = useMemo(() => {
+    const positions = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      const x = (Math.random() - 0.5) * 200;
-      const y = (Math.random() - 0.5) * 200;
-      const z = (Math.random() - 0.5) * 200;
-      positions.push(x, y, z);
+      // Spawn stars across the visible screen area
+      positions[i * 3] = (Math.random() - 0.5) * viewport.width * 2; // X
+      positions[i * 3 + 1] = (Math.random() - 0.5) * viewport.height * 2; // Y
+      positions[i * 3 + 2] = 0; // Fixed Z for a flat, 2D feel
     }
-    return new Float32Array(positions);
-  }, [count]);
+    return positions;
+  }, [count, viewport.width, viewport.height]);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (mesh.current) {
-      // Only move along Y-axis for scrolling effect
-      mesh.current.position.y -= 0.1; // Increased speed slightly for better effect
-      
-      // Reset position to create infinite scrolling effect
-      // When a star goes off the bottom of the screen, move it to the top
-      // The camera is at Z=15, and the scene is centered at 0,0,0.
-      // The visible height of the viewport needs to be considered.
-      const viewportHeight = state.viewport.height;
-      if (mesh.current.position.y < -viewportHeight / 2) {
-        mesh.current.position.y = viewportHeight / 2;
+      const positionsArray = mesh.current.geometry.attributes.position.array;
+      const speed = 0.08; // Reduced speed significantly, about 1.5x enemy speed (0.05)
+      const resetYOffset = viewport.height / 2 + 5; // Offset to ensure stars spawn above screen
+      const resetYRange = viewport.height * 0.5; // Random range for Y reset
+
+      for (let i = 0; i < count; i++) {
+        // Move star downwards
+        positionsArray[i * 3 + 1] -= speed;
+
+        // If star goes below the screen, reset it to the top with new random X and Y
+        if (positionsArray[i * 3 + 1] < -viewport.height / 2 - 5) { // Reset just below viewport
+          positionsArray[i * 3 + 1] = resetYOffset + (Math.random() * resetYRange); // Reset to top with random offset
+          positionsArray[i * 3] = (Math.random() - 0.5) * viewport.width * 3; // Wider random X spread
+        }
       }
+      mesh.current.geometry.attributes.position.needsUpdate = true; // Important for updating BufferGeometry
     }
   });
 
@@ -36,12 +43,13 @@ function Starfield({ count = 5000 }) {
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={stars.length / 3}
-          array={stars}
+          count={positions.length / 3}
+          array={positions}
           itemSize={3}
         />
       </bufferGeometry>
-      <pointsMaterial color="white" size={0.1} sizeAttenuation={true} transparent opacity={0.8} />
+      {/* Simple, uniform stars */}
+      <pointsMaterial color="white" size={0.4} sizeAttenuation={false} transparent opacity={0.8} depthWrite={false} renderOrder={1000} /> {/* Increased size again */}
     </points>
   );
 }

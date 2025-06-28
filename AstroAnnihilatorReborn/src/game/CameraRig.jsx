@@ -5,8 +5,7 @@ function CameraRig() {
   const { camera } = useThree();
 
   useEffect(() => {
-    // Set a fixed camera position and make it look at the origin
-    camera.position.set(0, 0, 15); // Consistent with Canvas camera prop
+    // Ensure camera looks at the origin (0,0,0)
     camera.lookAt(0, 0, 0);
   }, [camera]);
 

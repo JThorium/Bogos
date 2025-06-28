@@ -1,20 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGame } from '../../game/GameProvider';
 import GameEntity from './GameEntity';
+import { ufos } from '../UFOData'; // Import UFO data
+import * as THREE from 'three'; // Import THREE for Color
 
-function PlayerShip() {
+function PlayerShip({ onShoot }) {
   const { gameState, updateGameState } = useGame();
-  const { viewport } = useThree();
-  const [position, setPosition] = useState([0, 0, 0]); // Initial default position
+  const { size, viewport } = useThree();
+  const [position, setPosition] = useState([0, 0, 0]);
+
+  // Get player UFO data (e.g., 'scout' for now)
+  const playerUfoData = ufos.find(ufo => ufo.id === 'scout');
+
+  // Autofire cooldown
+  const shootCooldown = 0.2; // seconds between shots (half speed)
+  const lastShootTime = useRef(0);
 
   // Update initial position once viewport is ready
   useEffect(() => {
-    if (viewport.height && gameState.currentScreen === 'mainMenu') {
-      // Position at the bottom center of the screen
-      setPosition([0, -viewport.height / 2 + 1, 0]);
+    if (size.height && gameState.currentScreen === 'mainMenu') {
+      // Position at the bottom center of the screen, using viewport dimensions
+      setPosition([0, -viewport.height / 2 + 0.4 / 2, 0]); // Player height is 0.4
     }
-  }, [viewport.height, gameState.currentScreen]);
+  }, [size.height, gameState.currentScreen, viewport.height, playerUfoData]);
 
   const handleClick = (event) => {
     if (gameState.currentScreen === 'mainMenu') {
@@ -25,33 +34,33 @@ function PlayerShip() {
 
   useFrame((state) => {
     if (gameState.currentScreen === 'playing') {
-      // Get normalized mouse coordinates (-1 to 1)
-      const mouseX = state.mouse.x;
-      const mouseY = state.mouse.y;
+      // Autofire logic
+      if (state.clock.elapsedTime - lastShootTime.current > shootCooldown) {
+        onShoot([position[0], position[1] + (playerUfoData.geometry.parameters.height || 0.4) / 2 + 0.1, position[2]]); // Shoot from above player
+        lastShootTime.current = state.clock.elapsedTime;
+      }
 
-      // Map normalized mouse coordinates to viewport dimensions
-      // This creates a direct 1:1 tracking within the visible game area
-      // Directly use mouse coordinates as position, scaled by viewport dimensions
-      // This should provide 1:1 tracking
-      const x = mouseX * (viewport.width / 2);
-      const y = mouseY * (viewport.height / 2);
+      // Map normalized mouse coordinates (-1 to 1) to world coordinates directly.
+      const x = state.mouse.x * (viewport.width / 2);
+      const y = state.mouse.y * (viewport.height / 2);
       
-      // Player size is 0.2 units, so half size is 0.1
-      const playerHalfSize = 0.1; 
+      // Player size is 0.4 units, so half size is 0.2
+      const playerHalfSize = 0.2; // Fixed half size for clamping
 
-      // Clamping to ensure player stays within the visible viewport
+      // Clamping to ensure player stays within screen bounds
       const clampedX = Math.max(-viewport.width / 2 + playerHalfSize, Math.min(viewport.width / 2 - playerHalfSize, x));
       const clampedY = Math.max(-viewport.height / 2 + playerHalfSize, Math.min(viewport.height / 2 - playerHalfSize, y));
 
-      setPosition([clampedX, clampedY, 0]); // Always keep player at Z=0
+      setPosition([clampedX, clampedY, 0]);
     }
   });
 
   return (
     <GameEntity 
-      color="cyan" 
+      geometry={playerUfoData.geometry} // Pass geometry
+      colors={playerUfoData.colors} // Pass colors
       position={position} 
-      args={[0.4, 0.4, 0.4]} // Player size (twice the current size)
+      // args={[0.4, 0.4, 0.4]} // No longer needed as geometry is passed
       onClick={handleClick}
     />
   );

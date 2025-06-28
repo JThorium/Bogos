@@ -11,7 +11,7 @@ const LeaderboardScreen = ({ onBack }) => {
   ];
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-70 text-white p-4">
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
       <h1 className="text-4xl font-bold mb-8 text-green-400">Leaderboard</h1>
       <div className="w-80 bg-gray-800 p-4 rounded-lg shadow-lg">
         {leaderboardData.map((entry, index) => (

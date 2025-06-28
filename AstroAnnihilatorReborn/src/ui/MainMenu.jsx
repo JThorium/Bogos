@@ -2,7 +2,7 @@ import React from 'react';
 
 const MainMenu = ({ onStartGame, onShowOptions, onShowLeaderboard, onQuit }) => {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-70 text-white p-4">
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
       <h1 className="text-6xl font-extrabold mb-8 text-yellow-400 drop-shadow-lg">Astro Annihilator Reborn</h1>
       <div className="flex flex-col space-y-4 w-64">
         <button

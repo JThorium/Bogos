@@ -2,7 +2,7 @@ import React from 'react';
 
 const OptionsMenu = ({ onBack }) => {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-70 text-white p-4">
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
       <h1 className="text-4xl font-bold mb-8 text-blue-400">Options</h1>
       <div className="flex flex-col space-y-4 w-64">
         {/* Placeholder for options settings */}

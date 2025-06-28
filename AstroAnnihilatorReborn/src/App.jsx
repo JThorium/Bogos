@@ -5,7 +5,9 @@ import OptionsMenu from './ui/OptionsMenu';
 import LeaderboardScreen from './ui/LeaderboardScreen';
 import { useGame } from './game/GameProvider';
 import GameScene from './game/GameScene';
-import CameraRig from './game/CameraRig'; // Import CameraRig component
+import CameraRig from './game/CameraRig';
+import Starfield from './game/Starfield'; // Import Starfield
+import * as THREE from 'three'; // Corrected import
 
 function App() {
   const { gameState, updateGameState } = useGame();
@@ -19,10 +21,11 @@ function App() {
 
   return (
     <div className="w-screen h-screen">
-      <Canvas style={{ background: 'black' }}> {/* Removed camera prop, CameraRig will handle it */}
+      <Canvas camera={{ position: [0, 0, 10], fov: 90 }} style={{ background: 'black' }}>
+        <Starfield /> {/* Render Starfield unconditionally */}
         {/* Render GameScene only when currentScreen is 'playing' */}
         {currentScreen === 'playing' && <GameScene />}
-        <CameraRig /> {/* CameraRig will set the camera position */}
+        <CameraRig /> {/* CameraRig will ensure camera looks at origin */}
       </Canvas>
 
       {/* UI Overlay */}
