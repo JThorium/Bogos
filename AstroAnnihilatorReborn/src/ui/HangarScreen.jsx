@@ -163,7 +163,7 @@ const HangarScreen = ({ onBack }) => {
 
       {/* Back Button (positioned outside the main content div to ensure visibility) */}
       <button
-        className="mt-2 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-lg transition-colors duration-200 shadow-lg" /* Adjusted margins, padding, font-size */
+        className="mt-2 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-lg transition-colors duration-200 shadow-lg"
         onClick={onBack}
       >
         Back to Main Menu
