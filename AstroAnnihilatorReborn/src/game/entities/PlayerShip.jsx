@@ -55,40 +55,34 @@ const getUfoDimensions = (geometry) => {
 };
 
 
-function PlayerShip({ onShoot }) {
+const PlayerShip = React.forwardRef(({ onShoot, isShooting }, ref) => {
   const { gameState, updateGameState, currentUFO } = useGame();
   const { size, viewport } = useThree();
   const [position, setPosition] = useState([0, 0, 0]);
-  const playerMeshRef = useRef();
-
-  const shootCooldown = currentUFO ? currentUFO.stats.shotCooldown : 0.2;
-  const lastShootTime = useRef(0);
+  const shootCooldown = useRef(0);
 
   // Set initial position and mark as player
   useEffect(() => {
     if (size.height && currentUFO && currentUFO.geometry) {
-      if (playerMeshRef.current) {
-        playerMeshRef.current.userData.isPlayer = true;
+      if (ref && ref.current) {
+        ref.current.userData.isPlayer = true;
       }
       const { height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
       setPosition([0, -viewport.height / 2 + ufoHeight / 2 + 0.5, 0]);
     }
-  }, [size.height, viewport.height, currentUFO]);
-
-  const handleClick = (event) => {
-    if (gameState.currentScreen === 'mainMenu') {
-      updateGameState({ currentScreen: 'playing' });
-      event.stopPropagation();
-    }
-  };
+  }, [size.height, viewport.height, currentUFO, ref]);
 
   useFrame((state) => {
     if (gameState.currentScreen === 'playing' && currentUFO && currentUFO.geometry) {
       const { height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
-      // Autofire logic
-      if (state.clock.elapsedTime - lastShootTime.current > shootCooldown) {
+      
+      if (shootCooldown.current > 0) {
+        shootCooldown.current -= 1;
+      }
+
+      if (isShooting && shootCooldown.current <= 0) {
         onShoot([position[0], position[1] + ufoHeight / 2 + 0.1, position[2]]);
-        lastShootTime.current = state.clock.elapsedTime;
+        shootCooldown.current = currentUFO.stats.shotCooldown * 60; // Convert to frames
       }
 
       // Map normalized mouse coordinates (-1 to 1) to world coordinates
@@ -112,13 +106,12 @@ function PlayerShip({ onShoot }) {
 
   return (
     <GameEntity 
-      ref={playerMeshRef}
+      ref={ref}
       geometry={currentUFO.geometry}
       colors={currentUFO.colors}
       position={position} 
-      onClick={handleClick}
     />
   );
-}
+});
 
 export default PlayerShip;

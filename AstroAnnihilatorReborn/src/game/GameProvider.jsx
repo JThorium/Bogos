@@ -10,13 +10,15 @@ export const GameProvider = ({ children }) => {
     const savedUnlockedUFOIds = new Set(JSON.parse(localStorage.getItem('unlockedUFOIds') || '["scout"]'));
     const savedHasPurchasedScoreBoost = JSON.parse(localStorage.getItem('hasPurchasedScoreBoost') || 'false');
     const savedSpawnMultiplier = parseInt(localStorage.getItem('spawnMultiplier') || '1');
+    const selectedUFOId = localStorage.getItem('selectedUFOId') || 'scout';
+    const initialUFO = ufos.find(ufo => ufo.id === selectedUFOId);
     
     return {
       currentScreen: 'mainMenu', // 'mainMenu', 'playing', 'options', 'leaderboard', 'gameOver', 'hangar'
       score: 0,
-      playerHealth: 3, // Default health, will be overridden by UFO stats
+      playerHealth: initialUFO ? initialUFO.stats.health : 3,
       starCredits: savedStarCredits, // Initial credits from localStorage
-      selectedUFOId: localStorage.getItem('selectedUFOId') || 'scout', // Default selected UFO from localStorage
+      selectedUFOId: selectedUFOId, // Default selected UFO from localStorage
       unlockedUFOIds: savedUnlockedUFOIds, // Default unlocked UFOs from localStorage
       hasPurchasedScoreBoost: savedHasPurchasedScoreBoost, // Score boost state
       spawnMultiplier: savedSpawnMultiplier, // Challenge mode spawn multiplier
@@ -50,7 +52,13 @@ export const GameProvider = ({ children }) => {
   // Function to select a UFO
   const selectUFO = (ufoId) => {
     if (gameState.unlockedUFOIds.has(ufoId)) {
-      updateGameState({ selectedUFOId: ufoId });
+      const newUFO = ufos.find(ufo => ufo.id === ufoId);
+      if (newUFO) {
+        updateGameState({ 
+          selectedUFOId: ufoId,
+          playerHealth: newUFO.stats.health 
+        });
+      }
     } else {
       console.warn(`UFO ${ufoId} is not unlocked!`);
     }
