@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded fired');
-    // Populate ufos array from global ufos (from ufoData.js)
-    ufos.push(...window.ufos);
 
     // --- Setup ---
     const canvas = document.getElementById('gameCanvas');
@@ -92,8 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let upgrades = JSON.parse(localStorage.getItem('upgrades')) || JSON.parse(JSON.stringify(defaultUpgrades));
 
     // --- Game Data ---
-    // SHIP_MODELS, ENEMY_MODELS, BOSS_MODEL_1, BOSS_MODEL_2, ASTEROID_MODEL are no longer used for rendering directly
-    // They are replaced by geometries from ufoData.js
     const UFO_TYPES = {
         interceptor: { name: 'Interceptor', color: '#34d399', fireRate: 10, ability: 'Hold for Rapid Fire burst.', model: 'scout' },
         destroyer:   { name: 'Destroyer', unlockMethod: 'score', unlockScore: 5000, color: '#f59e0b', fireRate: 8, ability: 'Starts with 1 Minion. Hold for homing minion fire.', model: 'destroyer' },
@@ -703,9 +699,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Game Management ---
     async function init() {
-        // Populate ufos array from global ufos (from ufoData.js)
-        ufos.push(...window.ufos);
-
         if (!musicInitialized) { await Tone.start(); initAudio(); audioStatusEl.textContent = 'Audio Ready!'; setTimeout(() => { audioStatusEl.textContent = ''; }, 2000); }
         setGameSize();
         score = 0; waveCount = 0; waveCredits = 0; materialsThisRun = 0;
@@ -844,7 +837,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function isColliding(a,b) { if(!a || !b) return false; const dx = a.x - b.x; const dy = a.y - b.y; return Math.hypot(dx, dy) < (a.size + b.size); }
     function triggerScreenShake(intensity, duration) { screenShake.intensity = Math.max(screenShake.intensity, intensity * 0.2); screenShake.duration = Math.max(screenShake.duration, duration); }
     function checkUnlocks() { let changed = false; for (const key in UFO_TYPES) { if(key === 'interceptor') continue; const ufo = UFO_TYPES[key]; if (ufo.unlockMethod === 'score' && score >= ufo.unlockScore && !unlockedUFOs.has(key)) { unlockedUFOs.add(key); sfx.unlock.triggerAttackRelease(['C5','E5','G5'],'4n'); changed = true; } } if(changed) localStorage.setItem('unlockedUFOs', JSON.stringify([...unlockedUFOs])); }
-    // Removed projectAndDrawWireframe as it's no longer used for 3D rendering
     
     // --- UI & Menu Management ---
     function hideAllModals() { [startScreen, pauseScreen, gameOverScreen, hangarScreen, inGameShop, devScreen].forEach(m => m.style.display = 'none'); modalContainer.style.pointerEvents = 'none'; }
@@ -880,44 +872,17 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('mousemove', e => { const rect = canvas.getBoundingClientRect(); mouse.x = (e.clientX-rect.left)*(canvas.width/rect.width); mouse.y = (e.clientY-rect.top)*(canvas.height/rect.height); });
     canvas.addEventListener('touchmove', e => { e.preventDefault(); const rect = canvas.getBoundingClientRect(); const touch = e.touches[0]; mouse.x = (touch.clientX-rect.left)*(canvas.width/rect.width); mouse.y = (touch.clientY-rect.top)*(canvas.height/rect.height); }, { passive: false });
     function useBombAction() { if (!isPaused && player) player.useBomb(); }
-    startButton.addEventListener('click', () => {
-        console.log('Start Button clicked');
-        init();
-    });
-    resumeButton.addEventListener('click', () => {
-        console.log('Resume Button clicked');
-        togglePause();
-    });
-    restartButton.addEventListener('click', () => {
-        console.log('Restart Button clicked');
-        init();
-    });
-    pauseButton.addEventListener('click', () => {
-        console.log('Pause Button clicked');
-        togglePause();
-    });
-    hangarButton.addEventListener('click', () => {
-        console.log('Hangar Button clicked');
-        updateHangarUI();
-        showModal(hangarScreen);
-    });
-    hangarBackButton.addEventListener('click', () => {
-        console.log('Hangar Back Button clicked');
-        showModal(startScreen);
-        updateStartScreenInfo();
-    });
-    continueButton.addEventListener('click', () => {
-        console.log('Continue Button clicked');
-        isPaused = false;
-        hideAllModals();
-        Tone.Transport.start();
-        gameLoop();
-        player.ghostTimer = 180;
-    });
-    quitButton.addEventListener('click', () => {
-        console.log('Quit Button clicked');
-        quitToMainMenu();
-    });
+    bombButtonLeft.addEventListener('click', useBombAction); bombButtonRight.addEventListener('click', useBombAction);
+    abilityButton.addEventListener('pointerdown', () => { isAbilityHeld = true; });
+    document.body.addEventListener('pointerup', () => { isAbilityHeld = false; if(player) player.releaseAbility(); });
+    startButton.addEventListener('click', init);
+    resumeButton.addEventListener('click', togglePause);
+    restartButton.addEventListener('click', init);
+    pauseButton.addEventListener('click', togglePause);
+    hangarButton.addEventListener('click', () => { updateHangarUI(); showModal(hangarScreen); });
+    hangarBackButton.addEventListener('click', () => { showModal(startScreen); updateStartScreenInfo(); });
+    continueButton.addEventListener('click', () => { isPaused = false; hideAllModals(); Tone.Transport.start(); gameLoop(); player.ghostTimer = 180; });
+    quitButton.addEventListener('click', quitToMainMenu);
     // Track active touches
     const activeTouches = {};
     let lastClickTime = 0;
@@ -1001,6 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !isGameOver && player) togglePause();
+        if (e.code === 'Space') useBombAction();
     });
     toFusionLabButton.addEventListener('click', () => { hangarView.style.display = 'none'; hangarViewHeader.style.display = 'none'; fusionLabView.style.display = 'block'; fusionLabViewHeader.style.display = 'block'; });
     toHangarButton.addEventListener('click', () => { fusionLabView.style.display = 'none'; fusionLabViewHeader.style.display = 'none'; hangarView.style.display = 'block'; hangarViewHeader.style.display = 'block'; });
