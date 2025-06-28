@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import GameEntity from './GameEntity';
 import { ufos } from '../UFOData';
 import * as THREE from 'three';
@@ -11,20 +11,19 @@ const invertColors = (colors) => {
   return [1 - colors[0], 1 - colors[1], 1 - colors[2]];
 };
 
-function EnemyShip({ position }) {
+function EnemyShip({ position, ufoData }) { // Accept ufoData prop
   const mesh = useRef();
+  const { viewport } = useThree(); // Use useThree to get viewport for rotation logic
 
-  // Get enemy UFO data (e.g., 'ufo4' for now)
-  const enemyUfoData = ufos.find(ufo => ufo.id === 'ufo4');
-  const invertedColorsArray = invertColors(enemyUfoData.colors);
+  // Use ufoData prop directly, fall back to a default if not provided
+  const effectiveUfoData = ufoData || ufos.find(ufo => ufo.id === 'ufo4'); 
+  const invertedColorsArray = invertColors(effectiveUfoData.colors);
 
   useFrame((state) => {
     if (mesh.current) {
-      mesh.current.position.y -= 0.05; // Move enemy downwards
-
       // Calculate angle towards player's X position (for Y-axis rotation)
       // Assuming player is generally at x=0 (center of the screen)
-      const playerX = state.mouse.x * (state.viewport.width / 2); // Get player's current X in world coords
+      const playerX = state.mouse.x * (viewport.width / 2); // Get player's current X in world coords
       const angleToPlayerX = Math.atan2(playerX - mesh.current.position.x, 0); // Angle based on X difference
 
       // Y-axis rotation: angle towards player's X position
@@ -32,7 +31,7 @@ function EnemyShip({ position }) {
       mesh.current.rotation.y = angleToPlayerX;
 
       // X-axis "lean" forward/back based on Y position
-      const viewportHeight = state.viewport.height;
+      const viewportHeight = viewport.height;
       const topOfScreen = viewportHeight / 2;
       const bottomOfScreen = -viewportHeight / 2;
       
@@ -53,19 +52,13 @@ function EnemyShip({ position }) {
 
       // No Z-axis rotation
       mesh.current.rotation.z = 0;
-
-      if (mesh.current.position.y < -10) {
-        // Reset enemy position if it goes off screen
-        mesh.current.position.y = 10;
-        mesh.current.position.x = (Math.random() - 0.5) * 8;
-      }
     }
   });
 
   return (
     <GameEntity 
       ref={mesh} 
-      geometry={enemyUfoData.geometry}
+      geometry={effectiveUfoData.geometry}
       colors={invertedColorsArray} 
       position={position} 
       enableRotation={false} 
