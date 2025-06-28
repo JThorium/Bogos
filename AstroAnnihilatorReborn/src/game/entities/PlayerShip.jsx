@@ -2,28 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGame } from '../../game/GameProvider';
 import GameEntity from './GameEntity';
-import { ufos } from '../UFOData'; // Import UFO data
-import * as THREE from 'three'; // Import THREE for Color
+// import { ufos } from '../UFOData'; // No longer needed, comes from GameProvider
+// import * as THREE from 'three'; // Not needed for this approach
 
 function PlayerShip({ onShoot }) {
-  const { gameState, updateGameState } = useGame();
+  const { gameState, updateGameState, currentUFO } = useGame(); // Get currentUFO from context
   const { size, viewport } = useThree();
   const [position, setPosition] = useState([0, 0, 0]);
 
-  // Get player UFO data (e.g., 'scout' for now)
-  const playerUfoData = ufos.find(ufo => ufo.id === 'scout');
-
-  // Autofire cooldown
-  const shootCooldown = 0.2; // seconds between shots (half speed)
+  // Autofire cooldown now comes from currentUFO stats
+  const shootCooldown = currentUFO ? currentUFO.stats.shotCooldown : 0.2; 
   const lastShootTime = useRef(0);
 
   // Update initial position once viewport is ready
   useEffect(() => {
-    if (size.height && gameState.currentScreen === 'mainMenu') {
+    if (size.height && gameState.currentScreen === 'mainMenu' && currentUFO) {
       // Position at the bottom center of the screen, using viewport dimensions
-      setPosition([0, -viewport.height / 2 + 0.4 / 2, 0]); // Player height is 0.4
+      // Use currentUFO's height for accurate positioning
+      setPosition([0, -viewport.height / 2 + (currentUFO.geometry.parameters.height || 0.4) / 2, 0]);
     }
-  }, [size.height, gameState.currentScreen, viewport.height, playerUfoData]);
+  }, [size.height, gameState.currentScreen, viewport.height, currentUFO]);
 
   const handleClick = (event) => {
     if (gameState.currentScreen === 'mainMenu') {
@@ -33,10 +31,10 @@ function PlayerShip({ onShoot }) {
   };
 
   useFrame((state) => {
-    if (gameState.currentScreen === 'playing') {
+    if (gameState.currentScreen === 'playing' && currentUFO) { // Ensure currentUFO is available
       // Autofire logic
       if (state.clock.elapsedTime - lastShootTime.current > shootCooldown) {
-        onShoot([position[0], position[1] + (playerUfoData.geometry.parameters.height || 0.4) / 2 + 0.1, position[2]]); // Shoot from above player
+        onShoot([position[0], position[1] + (currentUFO.geometry.parameters.height || 0.4) / 2 + 0.1, position[2]]); // Shoot from above player
         lastShootTime.current = state.clock.elapsedTime;
       }
 
@@ -44,8 +42,8 @@ function PlayerShip({ onShoot }) {
       const x = state.mouse.x * (viewport.width / 2);
       const y = state.mouse.y * (viewport.height / 2);
       
-      // Player size is 0.4 units, so half size is 0.2
-      const playerHalfSize = 0.2; // Fixed half size for clamping
+      // Player size is now dynamic based on currentUFO
+      const playerHalfSize = Math.max(currentUFO.geometry.parameters.radiusTop || 0, currentUFO.geometry.parameters.radiusBottom || 0, currentUFO.geometry.parameters.width / 2 || 0.2); 
 
       // Clamping to ensure player stays within screen bounds
       const clampedX = Math.max(-viewport.width / 2 + playerHalfSize, Math.min(viewport.width / 2 - playerHalfSize, x));
@@ -55,12 +53,13 @@ function PlayerShip({ onShoot }) {
     }
   });
 
+  if (!currentUFO) return null; // Don't render until currentUFO is loaded
+
   return (
     <GameEntity 
-      geometry={playerUfoData.geometry} // Pass geometry
-      colors={playerUfoData.colors} // Pass colors
+      geometry={currentUFO.geometry} // Pass geometry from currentUFO
+      colors={currentUFO.colors} // Pass colors from currentUFO
       position={position} 
-      // args={[0.4, 0.4, 0.4]} // No longer needed as geometry is passed
       onClick={handleClick}
     />
   );

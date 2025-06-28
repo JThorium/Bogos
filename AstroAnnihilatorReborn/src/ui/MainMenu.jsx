@@ -1,6 +1,6 @@
 import React from 'react';
 
-const MainMenu = ({ onStartGame, onShowOptions, onShowLeaderboard, onQuit }) => {
+const MainMenu = ({ onStartGame, onShowOptions, onShowLeaderboard, onQuit, onShowHangar }) => {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
       <h1 className="text-6xl font-extrabold mb-8 text-yellow-400 drop-shadow-lg">Astro Annihilator Reborn</h1>
@@ -10,6 +10,12 @@ const MainMenu = ({ onStartGame, onShowOptions, onShowLeaderboard, onQuit }) => 
           onClick={onStartGame}
         >
           Start Game
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-xl transition-colors duration-200 shadow-lg"
+          onClick={onShowHangar} // Hangar button
+        >
+          Hangar
         </button>
         <button
           className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-xl transition-colors duration-200 shadow-lg"

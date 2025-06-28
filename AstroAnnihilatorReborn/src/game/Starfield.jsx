@@ -2,9 +2,9 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
-function Starfield({ count = 500 }) { // Further reduced count
+function Starfield({ count = 500 }) { // Reduced count for better performance
   const mesh = useRef();
-  const { viewport } = useThree(); // Only viewport needed for 2D scroll
+  const { viewport } = useThree();
 
   const positions = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -20,9 +20,7 @@ function Starfield({ count = 500 }) { // Further reduced count
   useFrame(() => {
     if (mesh.current) {
       const positionsArray = mesh.current.geometry.attributes.position.array;
-      const speed = 0.08; // Reduced speed significantly, about 1.5x enemy speed (0.05)
-      const resetYOffset = viewport.height / 2 + 5; // Offset to ensure stars spawn above screen
-      const resetYRange = viewport.height * 0.5; // Random range for Y reset
+      const speed = 0.08; // Consistent speed for all stars
 
       for (let i = 0; i < count; i++) {
         // Move star downwards
@@ -30,7 +28,7 @@ function Starfield({ count = 500 }) { // Further reduced count
 
         // If star goes below the screen, reset it to the top with new random X and Y
         if (positionsArray[i * 3 + 1] < -viewport.height / 2 - 5) { // Reset just below viewport
-          positionsArray[i * 3 + 1] = resetYOffset + (Math.random() * resetYRange); // Reset to top with random offset
+          positionsArray[i * 3 + 1] = viewport.height / 2 + 5; // Reset just above viewport
           positionsArray[i * 3] = (Math.random() - 0.5) * viewport.width * 3; // Wider random X spread
         }
       }
@@ -49,7 +47,7 @@ function Starfield({ count = 500 }) { // Further reduced count
         />
       </bufferGeometry>
       {/* Simple, uniform stars */}
-      <pointsMaterial color="white" size={0.4} sizeAttenuation={false} transparent opacity={0.8} depthWrite={false} renderOrder={1000} /> {/* Increased size again */}
+      <pointsMaterial color="white" size={0.4} sizeAttenuation={false} transparent opacity={0.8} depthWrite={false} renderOrder={1000} /> {/* Increased size */}
     </points>
   );
 }

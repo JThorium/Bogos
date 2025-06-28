@@ -3,11 +3,12 @@ import { Canvas } from '@react-three/fiber';
 import MainMenu from './ui/MainMenu';
 import OptionsMenu from './ui/OptionsMenu';
 import LeaderboardScreen from './ui/LeaderboardScreen';
+import HangarScreen from './ui/HangarScreen'; // Import HangarScreen
 import { useGame } from './game/GameProvider';
 import GameScene from './game/GameScene';
 import CameraRig from './game/CameraRig';
-import Starfield from './game/Starfield'; // Import Starfield
-import * as THREE from 'three'; // Corrected import
+import Starfield from './game/Starfield';
+import * as THREE from 'three';
 
 function App() {
   const { gameState, updateGameState } = useGame();
@@ -16,6 +17,7 @@ function App() {
   const handleStartGame = () => updateGameState({ currentScreen: 'playing' });
   const handleShowOptions = () => updateGameState({ currentScreen: 'options' });
   const handleShowLeaderboard = () => updateGameState({ currentScreen: 'leaderboard' });
+  const handleShowHangar = () => updateGameState({ currentScreen: 'hangar' }); // New handler for Hangar
   const handleQuit = () => alert('Quitting game...'); // Simple alert for now
   const handleBackToMain = () => updateGameState({ currentScreen: 'mainMenu' });
 
@@ -35,6 +37,7 @@ function App() {
           onShowOptions={handleShowOptions}
           onShowLeaderboard={handleShowLeaderboard}
           onQuit={handleQuit}
+          onShowHangar={handleShowHangar} // Pass hangar handler
         />
       )}
       {currentScreen === 'playing' && (
@@ -44,6 +47,7 @@ function App() {
       )}
       {currentScreen === 'options' && <OptionsMenu onBack={handleBackToMain} />}
       {currentScreen === 'leaderboard' && <LeaderboardScreen onBack={handleBackToMain} />}
+      {currentScreen === 'hangar' && <HangarScreen onBack={handleBackToMain} />} {/* Render HangarScreen */}
     </div>
   );
 }
