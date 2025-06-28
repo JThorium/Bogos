@@ -54,62 +54,48 @@ const getUfoDimensions = (geometry) => {
   return { width, height };
 };
 
-
 const PlayerShip = React.forwardRef(({ onShoot }, ref) => {
-  const { gameState, updateGameState, currentUFO } = useGame();
-  const { size, viewport } = useThree();
+  const { gameState, currentUFO } = useGame();
+  const { viewport } = useThree();
   const [position, setPosition] = useState([0, 0, 0]);
-  const shootCooldown = useRef(0);
+  const lastShootTime = useRef(0);
 
-  // Set initial position and mark as player
   useEffect(() => {
-    if (size.height && currentUFO && currentUFO.geometry) {
-      if (ref && ref.current) {
-        ref.current.userData.isPlayer = true;
-      }
-      const { height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
-      setPosition([0, -viewport.height / 2 + ufoHeight / 2 + 0.5, 0]);
+    if (ref && ref.current) {
+      ref.current.userData.isPlayer = true;
     }
-  }, [size.height, viewport.height, currentUFO, ref]);
+  }, [ref]);
 
   useFrame((state) => {
-    if (gameState.currentScreen === 'playing' && currentUFO && currentUFO.geometry) {
-      const { height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
-      
-      if (shootCooldown.current > 0) {
-        shootCooldown.current -= 1;
-      }
+    if (gameState.currentScreen !== 'playing' || !currentUFO) return;
 
-      if (shootCooldown.current <= 0) {
-        onShoot([position[0], position[1] + ufoHeight / 2 + 0.1, position[2]]);
-        shootCooldown.current = currentUFO.stats.shotCooldown * 60; // Convert to frames
-      }
+    // Movement
+    const { width: ufoWidth, height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
+    const playerHalfSizeX = ufoWidth / 2;
+    const playerHalfSizeY = ufoHeight / 2;
+    const clampedX = Math.max(-viewport.width / 2 + playerHalfSizeX, Math.min(viewport.width / 2 - playerHalfSizeX, state.mouse.x * (viewport.width / 2)));
+    const clampedY = Math.max(-viewport.height / 2 + playerHalfSizeY, Math.min(viewport.height / 2 - playerHalfSizeY, state.mouse.y * (viewport.height / 2)));
+    setPosition([clampedX, clampedY, 0]);
+    if (ref.current) {
+        ref.current.position.set(clampedX, clampedY, 0);
+    }
 
-      // Map normalized mouse coordinates (-1 to 1) to world coordinates
-      const x = state.mouse.x * (viewport.width / 2);
-      const y = state.mouse.y * (viewport.height / 2);
-      
-      // Player size is dynamic based on currentUFO
-      const { width: ufoWidth, height: ufoHeightForClamping } = getUfoDimensions(currentUFO.geometry);
-      const playerHalfSizeX = ufoWidth / 2;
-      const playerHalfSizeY = ufoHeightForClamping / 2;
 
-      // Clamping to ensure player stays within screen bounds
-      const clampedX = Math.max(-viewport.width / 2 + playerHalfSizeX, Math.min(viewport.width / 2 - playerHalfSizeX, x));
-      const clampedY = Math.max(-viewport.height / 2 + playerHalfSizeY, Math.min(viewport.height / 2 - playerHalfSizeY, y));
-
-      setPosition([clampedX, clampedY, 0]);
+    // Autofire
+    if (state.clock.elapsedTime - lastShootTime.current > currentUFO.stats.shotCooldown) {
+      onShoot([clampedX, clampedY + ufoHeight / 2, 0]);
+      lastShootTime.current = state.clock.elapsedTime;
     }
   });
 
   if (!currentUFO) return null;
 
   return (
-    <GameEntity 
+    <GameEntity
       ref={ref}
       geometry={currentUFO.geometry}
       colors={currentUFO.colors}
-      position={position} 
+      position={position}
     />
   );
 });
