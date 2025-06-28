@@ -13,19 +13,29 @@ function GameScene() {
   const { gameState, updateGameState } = useGame();
   const [bullets, setBullets] = useState([]);
   const [enemies, setEnemies] = useState([]);
-  const [isShooting, setIsShooting] = useState(false);
+  const [isAbilityActive, setIsAbilityActive] = useState(false);
   const lastSpawnTime = useRef(0);
   const spawnInterval = 1;
   const playerRef = useRef();
 
+  const useBomb = () => {
+    // Implement bomb logic here
+    console.log("Bomb used!");
+  };
+
   useEffect(() => {
-    const handleMouseDown = () => setIsShooting(true);
-    const handleMouseUp = () => setIsShooting(false);
+    const handleMouseDown = () => setIsAbilityActive(true);
+    const handleMouseUp = () => setIsAbilityActive(false);
+    const handleDoubleClick = () => useBomb();
+
     window.addEventListener('pointerdown', handleMouseDown);
     window.addEventListener('pointerup', handleMouseUp);
+    window.addEventListener('dblclick', handleDoubleClick);
+
     return () => {
       window.removeEventListener('pointerdown', handleMouseDown);
       window.removeEventListener('pointerup', handleMouseUp);
+      window.removeEventListener('dblclick', handleDoubleClick);
     };
   }, []);
 
@@ -126,7 +136,7 @@ function GameScene() {
       <Starfield />
 
       {/* Player Ship */}
-      <PlayerShip ref={playerRef} onShoot={addBullet} isShooting={isShooting} />
+      <PlayerShip ref={playerRef} onShoot={addBullet} />
 
       {/* Render Bullets */}
       {bullets.map((bullet) => (

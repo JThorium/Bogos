@@ -55,7 +55,7 @@ const getUfoDimensions = (geometry) => {
 };
 
 
-const PlayerShip = React.forwardRef(({ onShoot, isShooting }, ref) => {
+const PlayerShip = React.forwardRef(({ onShoot }, ref) => {
   const { gameState, updateGameState, currentUFO } = useGame();
   const { size, viewport } = useThree();
   const [position, setPosition] = useState([0, 0, 0]);
@@ -80,7 +80,7 @@ const PlayerShip = React.forwardRef(({ onShoot, isShooting }, ref) => {
         shootCooldown.current -= 1;
       }
 
-      if (isShooting && shootCooldown.current <= 0) {
+      if (shootCooldown.current <= 0) {
         onShoot([position[0], position[1] + ufoHeight / 2 + 0.1, position[2]]);
         shootCooldown.current = currentUFO.stats.shotCooldown * 60; // Convert to frames
       }
