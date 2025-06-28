@@ -75,16 +75,21 @@ const PlayerShip = React.forwardRef(({ onShoot }, ref) => {
     const playerHalfSizeY = ufoHeight / 2;
     const clampedX = Math.max(-viewport.width / 2 + playerHalfSizeX, Math.min(viewport.width / 2 - playerHalfSizeX, state.mouse.x * (viewport.width / 2)));
     const clampedY = Math.max(-viewport.height / 2 + playerHalfSizeY, Math.min(viewport.height / 2 - playerHalfSizeY, state.mouse.y * (viewport.height / 2)));
-    setPosition([clampedX, clampedY, 0]);
+    
+    // Update Three.js object position directly
     if (ref.current) {
         ref.current.position.set(clampedX, clampedY, 0);
     }
+    // Set React state for rendering, though it might lag slightly
+    setPosition([clampedX, clampedY, 0]);
 
 
-    // Autofire
+    // Autofire - use the actual Three.js object's position for bullet origin
     if (state.clock.elapsedTime - lastShootTime.current > currentUFO.stats.shotCooldown) {
-      onShoot([clampedX, clampedY + ufoHeight / 2, 0]);
-      lastShootTime.current = state.clock.elapsedTime;
+      if (ref.current) {
+        onShoot([ref.current.position.x, ref.current.position.y + ufoHeight / 2, 0]);
+        lastShootTime.current = state.clock.elapsedTime;
+      }
     }
   });
 
