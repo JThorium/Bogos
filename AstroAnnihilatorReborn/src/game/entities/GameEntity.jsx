@@ -14,6 +14,7 @@ const GameEntity = forwardRef(({ position = [0, 0, 0], color = 'gray', enableRot
   });
 
   // Dynamically create the THREE.Geometry instance based on the geometry prop
+  // Dynamically create the THREE.Geometry instance based on the geometry prop
   const createdGeometry = useMemo(() => {
     if (!geometry || !geometry.type || !geometry.args) {
       return new THREE.BoxGeometry(0.5, 0.5, 0.5); // Default to a box if invalid

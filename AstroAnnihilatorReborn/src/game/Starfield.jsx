@@ -2,7 +2,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
-function Starfield({ count = 500 }) { // Reduced count for better performance
+function Starfield({ count = 250 }) { // Reduced count for better performance
   const mesh = useRef();
   const { viewport } = useThree();
 

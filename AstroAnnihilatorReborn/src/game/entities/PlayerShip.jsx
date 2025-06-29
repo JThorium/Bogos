@@ -3,8 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useGame } from '../../game/GameProvider';
 import GameEntity from './GameEntity';
 
-// Helper function to get dimensions based on geometry type and args
-const getUfoDimensions = (geometry) => {
+export const getUfoDimensions = (geometry) => {
   if (!geometry || !geometry.type || !geometry.args) {
     return { width: 0.4, height: 0.4 }; // Default fallback
   }
@@ -54,41 +53,64 @@ const getUfoDimensions = (geometry) => {
   return { width, height };
 };
 
-const PlayerShip = React.forwardRef(({ onShoot }, ref) => {
+const PlayerShip = React.forwardRef(({ onShoot, onAbilityHold }, ref) => {
   const { gameState, currentUFO } = useGame();
   const { viewport } = useThree();
-  const [position, setPosition] = useState([0, 0, 0]);
   const lastShootTime = useRef(0);
+  const isAbilityActive = useRef(false); // To track if ability is currently held/active
 
   useEffect(() => {
     if (ref && ref.current) {
       ref.current.userData.isPlayer = true;
+      // Set initial position
+      ref.current.position.set(0, -viewport.height / 2 + 1, 0);
     }
-  }, [ref]);
+
+    const handleMouseDown = (e) => {
+      if (e.button === 0) { // Left mouse button
+        isAbilityActive.current = true;
+      }
+    };
+    const handleMouseUp = (e) => {
+      if (e.button === 0) { // Left mouse button
+        isAbilityActive.current = false;
+      }
+    };
+
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [ref, viewport]);
 
   useFrame((state) => {
     if (gameState.currentScreen !== 'playing' || !currentUFO) return;
 
-    // Movement
-    const { width: ufoWidth, height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
-    const playerHalfSizeX = ufoWidth / 2;
-    const playerHalfSizeY = ufoHeight / 2;
-    const clampedX = Math.max(-viewport.width / 2 + playerHalfSizeX, Math.min(viewport.width / 2 - playerHalfSizeX, state.mouse.x * (viewport.width / 2)));
-    const clampedY = Math.max(-viewport.height / 2 + playerHalfSizeY, Math.min(viewport.height / 2 - playerHalfSizeY, state.mouse.y * (viewport.height / 2)));
+    // Movement: Player UFO follows the mouse pointer 1:1
+    const targetX = state.mouse.x * (viewport.width / 2);
+    const targetY = state.mouse.y * (viewport.height / 2);
     
-    // Update Three.js object position directly
     if (ref.current) {
-        ref.current.position.set(clampedX, clampedY, 0);
+        ref.current.position.set(targetX, targetY, 0);
     }
-    // Set React state for rendering, though it might lag slightly
-    setPosition([clampedX, clampedY, 0]);
 
-
-    // Autofire - use the actual Three.js object's position for bullet origin
-    if (state.clock.elapsedTime - lastShootTime.current > currentUFO.stats.shotCooldown) {
-      if (ref.current) {
-        onShoot([ref.current.position.x, ref.current.position.y + ufoHeight / 2, 0]);
-        lastShootTime.current = state.clock.elapsedTime;
+    // Ability Activation (Hold Left Click)
+    if (isAbilityActive.current) {
+      // Trigger ability logic from GameScene via prop
+      if (onAbilityHold) {
+        onAbilityHold();
+      }
+    } else {
+      // Autofire - use the actual Three.js object's position for bullet origin
+      const { height: ufoHeight } = getUfoDimensions(currentUFO.geometry);
+      if (state.clock.elapsedTime - lastShootTime.current > currentUFO.stats.shotCooldown) {
+        if (ref.current) {
+          onShoot([ref.current.position.x, ref.current.position.y + ufoHeight / 2, 0]);
+          lastShootTime.current = state.clock.elapsedTime;
+        }
       }
     }
   });
@@ -100,7 +122,8 @@ const PlayerShip = React.forwardRef(({ onShoot }, ref) => {
       ref={ref}
       geometry={currentUFO.geometry}
       colors={currentUFO.colors}
-      position={position}
+      // Position is now managed directly by ref.current in useFrame
+      // Initial position can be set in useEffect or left to default [0,0,0] if not critical
     />
   );
 });
