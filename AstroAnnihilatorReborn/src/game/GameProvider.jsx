@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useMemo } from 'react';
-import { ufos } from './UFOData'; // Import UFO data
+import { UFO_TYPES, DEFAULT_PLAYER_UFO_ID } from './UFOData'; // Import UFO_TYPES and DEFAULT_PLAYER_UFO_ID
 
 const GameContext = createContext();
 
@@ -7,20 +7,24 @@ export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState(() => {
     // Initialize from localStorage
     const savedStarCredits = parseInt(localStorage.getItem('starCredits') || '0');
-    const savedUnlockedUFOIds = new Set(JSON.parse(localStorage.getItem('unlockedUFOIds') || '["scout"]'));
+    // Ensure unlockedUFOIds correctly initializes with DEFAULT_PLAYER_UFO_ID if localStorage is empty
+    const defaultUnlocked = [DEFAULT_PLAYER_UFO_ID];
+    const savedUnlockedUFOIds = new Set(JSON.parse(localStorage.getItem('unlockedUFOIds') || JSON.stringify(defaultUnlocked)));
     const savedHasPurchasedScoreBoost = JSON.parse(localStorage.getItem('hasPurchasedScoreBoost') || 'false');
     const savedSpawnMultiplier = parseInt(localStorage.getItem('spawnMultiplier') || '1');
-    const selectedUFOId = localStorage.getItem('selectedUFOId') || 'scout';
-    const initialUFO = ufos.find(ufo => ufo.id === selectedUFOId);
+    // Use DEFAULT_PLAYER_UFO_ID from UFOData.js
+    const selectedUFOId = localStorage.getItem('selectedUFOId') || DEFAULT_PLAYER_UFO_ID;
+    const initialUFO = UFO_TYPES[selectedUFOId] || UFO_TYPES[DEFAULT_PLAYER_UFO_ID]; // Fallback to default if selected is invalid
     
     return {
       currentScreen: 'mainMenu', // 'mainMenu', 'playing', 'options', 'leaderboard', 'gameOver', 'hangar'
       score: 0,
       highScore: parseInt(localStorage.getItem('highScore') || '0'),
-      playerHealth: initialUFO ? initialUFO.stats.health : 3,
-      playerShield: initialUFO ? (initialUFO.id === 'sentinel' ? 1 : 0) : 0, // Initial shield based on Sentinel
-      playerBombs: 0, // Initial bombs
-      starCredits: savedStarCredits, // Initial credits from localStorage
+      playerHealth: initialUFO.stats.health,
+      // Use shield from stats or default for sentinel. Ensure stats.shield is checked.
+      playerShield: initialUFO.id === 'sentinel' ? (initialUFO.stats.shield !== undefined ? initialUFO.stats.shield : 1) : (initialUFO.stats.shield !== undefined ? initialUFO.stats.shield : 0),
+      playerBombs: initialUFO.stats.startBombs || 0, // Assuming stats might have startBombs from UFOData
+      starCredits: savedStarCredits,
       rawMaterials: parseInt(localStorage.getItem('rawMaterials') || '0'),
       materialsThisRun: 0,
       hasPurchasedScoreBoost: savedHasPurchasedScoreBoost, // Score boost state
@@ -84,17 +88,19 @@ export const GameProvider = ({ children }) => {
 
   // Derive current UFO data based on selectedUFOId
   const currentUFO = useMemo(() => {
-    return ufos.find(ufo => ufo.id === gameState.selectedUFOId);
+    return UFO_TYPES[gameState.selectedUFOId] || UFO_TYPES[DEFAULT_PLAYER_UFO_ID];
   }, [gameState.selectedUFOId]);
 
   // Function to select a UFO
   const selectUFO = (ufoId) => {
     if (gameState.unlockedUFOIds.has(ufoId)) {
-      const newUFO = ufos.find(ufo => ufo.id === ufoId);
+      const newUFO = UFO_TYPES[ufoId];
       if (newUFO) {
         updateGameState({ 
           selectedUFOId: ufoId,
-          playerHealth: newUFO.stats.health 
+          playerHealth: newUFO.stats.health,
+          playerShield: newUFO.id === 'sentinel' ? (newUFO.stats.shield !== undefined ? newUFO.stats.shield : 1) : (newUFO.stats.shield !== undefined ? newUFO.stats.shield : 0),
+          playerBombs: newUFO.stats.startBombs || 0,
         });
       }
     } else {
@@ -104,7 +110,7 @@ export const GameProvider = ({ children }) => {
 
   // Function to unlock a UFO
   const unlockUFO = (ufoId, cost) => {
-    const ufo = ufos.find(u => u.id === ufoId);
+    const ufo = UFO_TYPES[ufoId];
     if (!ufo) {
       console.error(`UFO with ID ${ufoId} not found.`);
       return false;

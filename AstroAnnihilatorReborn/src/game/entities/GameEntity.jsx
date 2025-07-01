@@ -21,25 +21,52 @@ const GameEntity = forwardRef(({ position = [0, 0, 0], color = 'gray', enableRot
     }
 
     const { type, args } = geometry;
+    // Ensure BufferGeometry variants are used
     switch (type) {
+      case 'CylinderBufferGeometry':
+        return new THREE.CylinderBufferGeometry(...args);
+      case 'SphereBufferGeometry':
+        return new THREE.SphereBufferGeometry(...args);
+      case 'BoxBufferGeometry':
+        return new THREE.BoxBufferGeometry(...args);
+      case 'TetrahedronBufferGeometry':
+        return new THREE.TetrahedronBufferGeometry(...args);
+      case 'DodecahedronBufferGeometry':
+        return new THREE.DodecahedronBufferGeometry(...args);
+      case 'ConeBufferGeometry':
+        return new THREE.ConeBufferGeometry(...args);
+      case 'TorusBufferGeometry':
+        return new THREE.TorusBufferGeometry(...args);
+      case 'IcosahedronBufferGeometry':
+        return new THREE.IcosahedronBufferGeometry(...args);
+      // Add fallbacks for non-BufferGeometry names if needed, or ensure UFOData uses Buffer versions
       case 'CylinderGeometry':
-        return new THREE.CylinderGeometry(...args);
+        console.warn(`GameEntity: Using CylinderGeometry instead of CylinderBufferGeometry for ${type}`);
+        return new THREE.CylinderBufferGeometry(...args);
       case 'SphereGeometry':
-        return new THREE.SphereGeometry(...args);
+        console.warn(`GameEntity: Using SphereGeometry instead of SphereBufferGeometry for ${type}`);
+        return new THREE.SphereBufferGeometry(...args);
       case 'BoxGeometry':
-        return new THREE.BoxGeometry(...args);
+        console.warn(`GameEntity: Using BoxGeometry instead of BoxBufferGeometry for ${type}`);
+        return new THREE.BoxBufferGeometry(...args);
       case 'TetrahedronGeometry':
-        return new THREE.TetrahedronGeometry(...args);
+        console.warn(`GameEntity: Using TetrahedronGeometry instead of TetrahedronBufferGeometry for ${type}`);
+        return new THREE.TetrahedronBufferGeometry(...args);
       case 'DodecahedronGeometry':
-        return new THREE.DodecahedronGeometry(...args);
+        console.warn(`GameEntity: Using DodecahedronGeometry instead of DodecahedronBufferGeometry for ${type}`);
+        return new THREE.DodecahedronBufferGeometry(...args);
       case 'ConeGeometry':
-        return new THREE.ConeGeometry(...args);
+        console.warn(`GameEntity: Using ConeGeometry instead of ConeBufferGeometry for ${type}`);
+        return new THREE.ConeBufferGeometry(...args);
       case 'TorusGeometry':
-        return new THREE.TorusGeometry(...args);
+        console.warn(`GameEntity: Using TorusGeometry instead of TorusBufferGeometry for ${type}`);
+        return new THREE.TorusBufferGeometry(...args);
       case 'IcosahedronGeometry':
-        return new THREE.IcosahedronGeometry(...args);
+        console.warn(`GameEntity: Using IcosahedronGeometry instead of IcosahedronBufferGeometry for ${type}`);
+        return new THREE.IcosahedronBufferGeometry(...args);
       default:
-        return new THREE.BoxGeometry(0.5, 0.5, 0.5); // Fallback
+        console.warn(`GameEntity: Unknown geometry type "${type}". Defaulting to BoxBufferGeometry.`);
+        return new THREE.BoxBufferGeometry(0.5, 0.5, 0.5); // Fallback
     }
   }, [geometry]);
 
