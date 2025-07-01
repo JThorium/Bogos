@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Astro Annihilator Reborn</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script>
+      // Test if JavaScript runs at all
+      console.log('HTML script tag executing...');
+      window.addEventListener('load', function() {
+        console.log('Page loaded');
+        // Show a test message if React doesn't load
+        setTimeout(function() {
+          const root = document.getElementById('root');
+          if (root && root.innerHTML.trim() === '') {
+            root.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: black; color: white; font-family: Arial;">JavaScript is working but React failed to mount</div>';
+          }
+        }, 3000);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
