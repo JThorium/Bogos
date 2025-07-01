@@ -41,10 +41,21 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Create staging directory for GitHub Pages
+        run: |
+          mkdir gh_pages_staging
+          git ls-files | xargs -I {} cp --parents -R {} gh_pages_staging/
+          # AstroAnnihilatorReborn/dist is already copied by the above command
+          # Now, set the game selection page as the root index.html
+          mv gh_pages_staging/src/static/index.html gh_pages_staging/index.html
+          # Optional: remove src/static if it's now empty or not needed at that path
+          # For now, we'll leave it to avoid accidental deletion of other static assets
+          # that might still be in src/static and referenced by other means.
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './AstroAnnihilatorReborn/dist'
+          path: './gh_pages_staging'
 
   deploy:
     environment:

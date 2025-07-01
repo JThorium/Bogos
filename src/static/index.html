@@ -1,45 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Bogos Games</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Selection</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            max-width: 800px; 
-            margin: 0 auto; 
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             padding: 20px;
-            background-color: #f5f5f5;
         }
-        h1 { color: #333; text-align: center; }
-        .game-list { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-            margin-top: 30px;
+        h1 {
+            margin-bottom: 30px;
         }
-        .game-link {
+        .game-list {
+            list-style: none;
+            padding: 0;
+            width: 100%;
+            max-width: 600px;
+        }
+        .game-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .game-item a {
             display: block;
-            padding: 15px;
-            background-color: #4CAF50;
-            color: white;
+            padding: 20px;
             text-decoration: none;
-            border-radius: 5px;
-            text-align: center;
+            color: #007bff;
             font-size: 1.2em;
             transition: background-color 0.3s;
         }
-        .game-link:hover {
-            background-color: #45a049;
+        .game-item a:hover {
+            background-color: #e9ecef;
         }
     </style>
 </head>
 <body>
-    <h1>Welcome to Bogos Games</h1>
-    <div class="game-list">
-        <a href="ufoShooter.html" class="game-link">UFO Shooter</a>
-        <a href="SpaceShooter.html" class="game-link">Space Shooter</a>
-        <a href="BogosV1.html" class="game-link">Bogos V1</a>
-        <a href="BogosV2.html" class="game-link">Bogos V2</a>
-    </div>
+    <h1>Choose a Game</h1>
+    <ul class="game-list">
+        <li class="game-item"><a href="/AdventureAliens/xenoscape-genesis.html">Adventure Aliens (Xenoscape Genesis)</a></li>
+        <li class="game-item"><a href="/AstroAnnihilatorInfinity/index.html">Astro Annihilator Infinity</a></li>
+        <li class="game-item"><a href="/AstroAnnihilatorReborn/dist/index.html">Astro Annihilator Reborn</a></li>
+        <li class="game-item"><a href="/HuntingGame/index.html">Hunting Game</a></li>
+        <li class="game-item"><a href="/src/static/BogosV1.html">BogosV1</a></li>
+        <li class="game-item"><a href="/src/static/BogosV2.html">BogosV2</a></li>
+        <li class="game-item"><a href="/src/static/SpaceShooter.html">Space Shooter</a></li>
+        <li class="game-item"><a href="/src/static/ufoShooter.html">UFO Shooter</a></li>
+    </ul>
 </body>
 </html>
