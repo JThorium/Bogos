@@ -11,6 +11,7 @@ import GameScene from './game/GameScene';
 import CameraRig from './game/CameraRig';
 import Starfield from './game/Starfield';
 import * as THREE from 'three';
+import ErrorBoundary from './ErrorBoundary'; // Import ErrorBoundary
 
 function App() {
   const { gameState, updateGameState } = useGame();
@@ -30,34 +31,36 @@ function App() {
   // Pause logic is now handled in GameScene.jsx useEffect
 
   return (
-    <div className="w-screen h-screen">
-      <Canvas camera={{ position: [0, 0, 10], fov: 90 }} style={{ background: 'black' }}>
-        <Starfield />
-        {currentScreen === 'playing' && <GameScene />}
-        <CameraRig />
-      </Canvas>
+    <ErrorBoundary>
+      <div className="w-screen h-screen">
+        <Canvas camera={{ position: [0, 0, 10], fov: 90 }} style={{ background: 'black' }}>
+          <Starfield />
+          {currentScreen === 'playing' && <GameScene />}
+          <CameraRig />
+        </Canvas>
 
-      {/* UI Overlay */}
-      {currentScreen === 'mainMenu' && (
-        <MainMenu
-          onStartGame={handleStartGame}
-          onShowOptions={handleShowOptions}
-          onShowLeaderboard={handleShowLeaderboard}
-          onQuit={handleQuit}
-          onShowHangar={handleShowHangar}
-        />
-      )}
-      {currentScreen === 'playing' && (
-        <div className="absolute top-4 left-4 text-white text-2xl font-bold">
-          Score: {score} | Health: {playerHealth}
-        </div>
-      )}
-      {currentScreen === 'options' && <OptionsMenu onBack={handleBackToMain} />}
-      {currentScreen === 'leaderboard' && <LeaderboardScreen onBack={handleBackToMain} />}
-      {currentScreen === 'hangar' && <HangarScreen onBack={handleBackToMain} />}
-      {currentScreen === 'gameOver' && <GameOverScreen onRestart={handleRestartGame} />}
-      {currentScreen === 'paused' && <PauseMenu onResume={handleResumeGame} onBackToMain={handleBackToMain} />}
-    </div>
+        {/* UI Overlay */}
+        {currentScreen === 'mainMenu' && (
+          <MainMenu
+            onStartGame={handleStartGame}
+            onShowOptions={handleShowOptions}
+            onShowLeaderboard={handleShowLeaderboard}
+            onQuit={handleQuit}
+            onShowHangar={handleShowHangar}
+          />
+        )}
+        {currentScreen === 'playing' && (
+          <div className="absolute top-4 left-4 text-white text-2xl font-bold">
+            Score: {score} | Health: {playerHealth}
+          </div>
+        )}
+        {currentScreen === 'options' && <OptionsMenu onBack={handleBackToMain} />}
+        {currentScreen === 'leaderboard' && <LeaderboardScreen onBack={handleBackToMain} />}
+        {currentScreen === 'hangar' && <HangarScreen onBack={handleBackToMain} />}
+        {currentScreen === 'gameOver' && <GameOverScreen onRestart={handleRestartGame} />}
+        {currentScreen === 'paused' && <PauseMenu onResume={handleResumeGame} onBackToMain={handleBackToMain} />}
+      </div>
+    </ErrorBoundary>
   );
 }
 

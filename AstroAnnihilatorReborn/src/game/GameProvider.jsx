@@ -7,10 +7,12 @@ export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState(() => {
     // Initialize from localStorage
     const savedStarCredits = parseInt(localStorage.getItem('starCredits') || '0');
-    const savedUnlockedUFOIds = new Set(JSON.parse(localStorage.getItem('unlockedUFOIds') || '["scout"]'));
+    const savedUnlockedUFOIds = new Set(JSON.parse(localStorage.getItem('unlockedUFOIds') || '["interceptor"]'));
     const savedHasPurchasedScoreBoost = JSON.parse(localStorage.getItem('hasPurchasedScoreBoost') || 'false');
     const savedSpawnMultiplier = parseInt(localStorage.getItem('spawnMultiplier') || '1');
-    const selectedUFOId = localStorage.getItem('selectedUFOId') || 'scout';
+    const selectedUFOId = localStorage.getItem('selectedUFOId') || 'interceptor';
+    // Ensure 'interceptor' is always unlocked
+    savedUnlockedUFOIds.add('interceptor');
     const initialUFO = ufos.find(ufo => ufo.id === selectedUFOId);
     
     return {
@@ -89,7 +91,7 @@ export const GameProvider = ({ children }) => {
 
   // Function to select a UFO
   const selectUFO = (ufoId) => {
-    if (gameState.unlockedUFOIds.has(ufoId)) {
+    if (ufoId === 'interceptor' || gameState.unlockedUFOIds.has(ufoId)) {
       const newUFO = ufos.find(ufo => ufo.id === ufoId);
       if (newUFO) {
         updateGameState({ 

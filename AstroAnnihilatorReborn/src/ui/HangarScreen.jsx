@@ -1,11 +1,92 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../game/GameProvider';
 import { ufos } from '../game/UFOData';
 import UFOPreview from './UFOPreview';
 
+const FusionLabModal = ({ open, onClose, ufos, unlockedUFOIds, fusionConfig, isCombineAllActive, updateGameState }) => {
+  if (!open) return null;
+  const slotsUnlocked = 5; // For now, always allow 5 slots (can be dynamic)
+  const canActivateChimera = unlockedUFOIds.size >= 5;
+  const handleAddToFusion = (ufoId) => {
+    if (fusionConfig.includes(ufoId) || fusionConfig.length >= slotsUnlocked) return;
+    updateGameState(prev => ({
+      fusionConfig: [...prev.fusionConfig, ufoId],
+      gameMode: 'fusion',
+      isCombineAllActive: false,
+    }));
+  };
+  const handleRemoveFromFusion = (ufoId) => {
+    updateGameState(prev => ({
+      fusionConfig: prev.fusionConfig.filter(id => id !== ufoId),
+      isCombineAllActive: false,
+    }));
+  };
+  const handleClearFusion = () => {
+    updateGameState(prev => ({
+      fusionConfig: [],
+      isCombineAllActive: false,
+      gameMode: 'classic',
+    }));
+  };
+  const handleActivateChimera = () => {
+    updateGameState(prev => ({
+      fusionConfig: [],
+      isCombineAllActive: true,
+      gameMode: 'fusion',
+    }));
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+      <div className="bg-gray-900 rounded-lg p-6 w-full max-w-2xl relative">
+        <button className="absolute top-2 right-2 text-white text-2xl" onClick={onClose}>&times;</button>
+        <h2 className="text-2xl font-bold mb-4 text-indigo-400">Fusion Lab</h2>
+        <div className="mb-4">
+          <div className="flex flex-row space-x-2 mb-2">
+            {Array.from({ length: slotsUnlocked }).map((_, i) => {
+              const ufoId = fusionConfig[i];
+              const ufo = ufos.find(u => u.id === ufoId);
+              return (
+                <div key={i} className={`w-24 h-24 border-2 rounded-lg flex items-center justify-center ${ufo ? 'border-yellow-400 bg-gray-700' : 'border-gray-600 bg-gray-800'}`}>
+                  {ufo ? (
+                    <div className="flex flex-col items-center">
+                      <UFOPreview ufoData={ufo} />
+                      <span className="text-xs mt-1">{ufo.name}</span>
+                      <button className="text-xs text-red-400 mt-1" onClick={() => handleRemoveFromFusion(ufoId)}>Remove</button>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500">Empty</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {ufos.filter(u => u.id !== 'omega' && unlockedUFOIds.has(u.id)).map(ufo => (
+              <button
+                key={ufo.id}
+                className={`py-1 px-2 rounded-lg text-xs font-bold ${fusionConfig.includes(ufo.id) ? 'bg-gray-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                onClick={() => handleAddToFusion(ufo.id)}
+                disabled={fusionConfig.includes(ufo.id) || fusionConfig.length >= slotsUnlocked}
+              >
+                {ufo.name}
+              </button>
+            ))}
+          </div>
+          <div className="flex space-x-2 mt-2">
+            <button className="py-1 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold" onClick={handleClearFusion}>Clear Fusion</button>
+            <button className={`py-1 px-3 ${canActivateChimera ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-500 cursor-not-allowed'} text-black rounded-lg text-sm font-bold`} onClick={handleActivateChimera} disabled={!canActivateChimera}>Activate Chimera</button>
+          </div>
+          {isCombineAllActive && <div className="mt-2 text-yellow-400 font-bold">Chimera Mode Active!</div>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const HangarScreen = ({ onBack }) => {
   const { gameState, selectUFO, unlockUFO, updateGameState } = useGame();
-  const { selectedUFOId, unlockedUFOIds, starCredits, hasPurchasedScoreBoost, spawnMultiplier } = gameState;
+  const { selectedUFOId, unlockedUFOIds, starCredits, hasPurchasedScoreBoost, spawnMultiplier, fusionConfig, isCombineAllActive } = gameState;
+  const [fusionLabOpen, setFusionLabOpen] = useState(false);
 
   // Score Boost Logic
   const scoreBoostCost = 1000;
@@ -15,7 +96,6 @@ const HangarScreen = ({ onBack }) => {
         starCredits: prev.starCredits - scoreBoostCost,
         hasPurchasedScoreBoost: true,
       }));
-      console.log('Score Boost purchased!');
     }
   };
 
@@ -28,14 +108,12 @@ const HangarScreen = ({ onBack }) => {
         starCredits: prev.starCredits - cost,
         spawnMultiplier: level * 2, // 2x or 4x
       }));
-      console.log(`Challenge Mode upgraded to ${level * 2}x spawn!`);
     }
   };
 
   // Fusion Lab Logic (Placeholder for now)
   const handleFusionLabClick = () => {
-    console.log('Fusion Lab button clicked!');
-    // Implement actual Fusion Lab logic here later
+    setFusionLabOpen(true);
   };
 
   return (
@@ -119,7 +197,7 @@ const HangarScreen = ({ onBack }) => {
           <h2 className="text-2xl font-bold mb-2">Select UFO</h2> {/* Adjusted margin-bottom */}
           <div className="flex flex-row overflow-x-auto space-x-2 pb-2"> {/* Adjusted space-x */}
             {ufos.map((ufo) => {
-              const isUnlocked = unlockedUFOIds.has(ufo.id);
+              const isUnlocked = ufo.id === 'interceptor' ? true : unlockedUFOIds.has(ufo.id);
               const isSelected = selectedUFOId === ufo.id;
               const canAfford = starCredits >= ufo.cost;
 
@@ -129,11 +207,11 @@ const HangarScreen = ({ onBack }) => {
                   className={`flex-shrink-0 w-96 border-2 p-2 rounded-lg text-center ${isSelected ? 'border-yellow-400 bg-gray-700' : 'border-gray-600 bg-gray-800'} ${!isUnlocked ? 'opacity-50' : ''}`}> {/* Adjusted padding */}
                   <h3 className="text-base font-bold whitespace-normal" style={{ color: ufo.colors && ufo.colors.length >= 3 ? `rgb(${ufo.colors[0]*255},${ufo.colors[1]*255},${ufo.colors[2]*255})` : 'white' }}>{ufo.name}</h3> {/* Adjusted font-size */}
                   <p className="text-xs text-gray-300 mb-1">{ufo.ability || 'No ability listed'}</p> {/* Adjusted font-size and margin-bottom */}
-                  
-                  {!isUnlocked ? (
+                  {/* Interceptor is always unlocked and cannot be purchased */}
+                  {ufo.id !== 'interceptor' && !isUnlocked ? (
                     <div className="mt-2"> {/* Adjusted margin-top */}
                       <p className="text-xs text-red-400 mb-1"> {/* Adjusted font-size and margin-bottom */}
-                        {ufo.unlockMethod === 'score' ? `Unlock at ${ufo.unlockScore.toLocaleString()} pts` : `Cost: ${ufo.cost.toLocaleString()} CR`}
+                        {ufo.unlockMethod === 'score' ? `Unlock at ${ufo.unlockScore?.toLocaleString?.() || ''} pts` : `Cost: ${ufo.cost?.toLocaleString?.() || ''} CR`}
                       </p>
                       {ufo.unlockMethod === 'credits' && (
                         <button 
@@ -168,6 +246,16 @@ const HangarScreen = ({ onBack }) => {
       >
         Back to Main Menu
       </button>
+
+      <FusionLabModal
+        open={fusionLabOpen}
+        onClose={() => setFusionLabOpen(false)}
+        ufos={ufos}
+        unlockedUFOIds={unlockedUFOIds}
+        fusionConfig={fusionConfig}
+        isCombineAllActive={isCombineAllActive}
+        updateGameState={updateGameState}
+      />
     </div>
   );
 };

@@ -6,14 +6,6 @@ import * as THREE from 'three';
 const UFOModel = ({ geometryType, geometryArgs, colors }) => {
   const meshRef = useRef();
 
-  // Removed automatic rotation for a static preview
-  // useFrame(() => {
-  //   if (meshRef.current) {
-  //     meshRef.current.rotation.y += 0.01;
-  //     meshRef.current.rotation.x += 0.005;
-  //   }
-  // });
-
   const generateGeometry = (type, args) => {
     switch (type) {
       case 'CylinderGeometry':
