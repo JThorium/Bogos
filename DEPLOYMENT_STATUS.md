@@ -2,7 +2,7 @@
 
 ## 🚀 **DEPLOYMENT COMPLETE** 
 
-**Game URL:** [https://jthorium.github.io/Bogos/AstroAnnihilatorReborn/](https://jthorium.github.io/Bogos/AstroAnnihilatorReborn/)
+**Game URL:** [https://jthorium.github.io/Bogos/](https://jthorium.github.io/Bogos/)
 
 ---
 
