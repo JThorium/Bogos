@@ -12,96 +12,133 @@ window.addEventListener('unhandledrejection', (event) => {
 
 console.log('Starting React app...');
 
-// Simple test component first
-function TestApp() {
-  return React.createElement('div', {
-    style: {
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      background: 'black',
-      color: 'white',
-      fontFamily: 'Arial',
-      fontSize: '24px'
-    }
-  }, 'React is working! Loading game...');
-}
-
-// Add a loading indicator
-const root = document.getElementById('root');
-root.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: black; color: white; font-family: Arial;">Loading AstroAnnihilator...</div>';
+// Test if we can even import React
+console.log('Script starting...');
 
 try {
-  console.log('Creating React root...');
-  const reactRoot = ReactDOM.createRoot(root);
-  console.log('React root created, rendering test app...');
+  console.log('Attempting to import React...');
   
-  reactRoot.render(React.createElement(TestApp));
-  
-  console.log('React render called successfully');
-  
-  // If the test app works, load the real app after a delay
-  setTimeout(async () => {
-    try {
-      console.log('Loading main app components...');
-      
-      const [
-        { default: App },
-        { GameProvider },
-        { default: ErrorBoundary }
-      ] = await Promise.all([
-        import('./App.jsx'),
-        import('./game/GameProvider.jsx'),
-        import('./ErrorBoundary.jsx')
-      ]);
-      
-      console.log('Components loaded, rendering main app...');
-      
-      reactRoot.render(
-        React.createElement(React.StrictMode, null,
-          React.createElement(ErrorBoundary, null,
-            React.createElement(GameProvider, null,
-              React.createElement(App)
-            )
-          )
-        )
-      );
-      
-      console.log('Main app rendered successfully');
-    } catch (loadError) {
-      console.error('Failed to load main app:', loadError);
-      reactRoot.render(
-        React.createElement('div', {
-          style: {
-            padding: '20px',
-            background: 'red',
-            color: 'white',
-            fontFamily: 'Arial'
-          }
-        }, 
-        React.createElement('h1', null, 'Component Load Error'),
-        React.createElement('pre', {
-          style: {
-            background: 'rgba(0,0,0,0.5)',
-            padding: '10px',
-            borderRadius: '4px'
-          }
-        }, loadError.message + '\n' + loadError.stack)
-        )
-      );
-    }
-  }, 1000);
-  
+  // Test basic imports first
+  import('./react-test.js').then(() => {
+    console.log('React test module loaded successfully');
+  }).catch(error => {
+    console.error('Failed to load React test module:', error);
+    
+    // Fallback - try direct React test
+    testReactDirectly();
+  });
+
 } catch (error) {
-  console.error('Failed to mount React app:', error);
+  console.error('Error in main script:', error);
+  document.getElementById('root').innerHTML = `
+    <div style="padding: 20px; background: red; color: white; font-family: Arial;">
+      <h1>Script Error</h1>
+      <pre>${error.message}\n${error.stack}</pre>
+    </div>
+  `;
+}
+
+function testReactDirectly() {
+  console.log('Testing React directly...');
+  
+  try {
+    // Test if React is available
+    if (typeof window.React === 'undefined') {
+      console.log('React not in window, trying dynamic import...');
+      
+      import('react').then(React => {
+        console.log('React imported:', React);
+        
+        import('react-dom/client').then(ReactDOM => {
+          console.log('ReactDOM imported:', ReactDOM);
+          
+          // Now try to create a simple component
+          const root = document.getElementById('root');
+          const reactRoot = ReactDOM.createRoot(root);
+          
+          const element = React.createElement('div', {
+            style: {
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100vh',
+              background: 'green',
+              color: 'white',
+              fontFamily: 'Arial',
+              fontSize: '24px'
+            }
+          }, '🎉 React is working! Game loading next...');
+          
+          reactRoot.render(element);
+          console.log('React mounted successfully!');
+          
+          // Now load the actual game
+          setTimeout(() => loadActualGame(React, ReactDOM), 2000);
+          
+        }).catch(err => {
+          console.error('ReactDOM import failed:', err);
+          showError('ReactDOM import failed', err);
+        });
+        
+      }).catch(err => {
+        console.error('React import failed:', err);
+        showError('React import failed', err);
+      });
+      
+    } else {
+      console.log('React found in window');
+    }
+    
+  } catch (error) {
+    console.error('Direct React test failed:', error);
+    showError('Direct React test failed', error);
+  }
+}
+
+function loadActualGame(React, ReactDOM) {
+  console.log('Loading actual game components...');
+  
+  Promise.all([
+    import('./App.jsx'),
+    import('./game/GameProvider.jsx'),
+    import('./ErrorBoundary.jsx')
+  ]).then(([
+    { default: App },
+    { GameProvider },
+    { default: ErrorBoundary }
+  ]) => {
+    console.log('Game components loaded, rendering...');
+    
+    const root = document.getElementById('root');
+    const reactRoot = ReactDOM.createRoot(root);
+    
+    const gameElement = React.createElement(React.StrictMode, null,
+      React.createElement(ErrorBoundary, null,
+        React.createElement(GameProvider, null,
+          React.createElement(App)
+        )
+      )
+    );
+    
+    reactRoot.render(gameElement);
+    console.log('Game rendered successfully!');
+    
+  }).catch(error => {
+    console.error('Failed to load game components:', error);
+    showError('Game component loading failed', error);
+  });
+}
+
+function showError(title, error) {
+  const root = document.getElementById('root');
   root.innerHTML = `
     <div style="padding: 20px; background: red; color: white; font-family: Arial;">
-      <h1>React Mount Error</h1>
-      <pre style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 4px;">
-        ${error.message}
-        ${error.stack}
-      </pre>
+      <h1>${title}</h1>
+      <p><strong>Error:</strong> ${error.message}</p>
+      <pre style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 4px; white-space: pre-wrap;">${error.stack}</pre>
+      <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: white; color: black; border: none; border-radius: 4px; cursor: pointer;">
+        Reload Page
+      </button>
     </div>
   `;
 }

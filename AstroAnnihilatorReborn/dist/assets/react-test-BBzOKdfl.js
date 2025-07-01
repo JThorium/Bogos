@@ -1,0 +1,1 @@
+import{R as e,c as t}from"./index-IUKJ2P7p.js";console.log("React test module loaded");console.log("React:",e);console.log("ReactDOM:",t);const o=e.createElement("div",null,"Test");console.log("Test element created:",o);export{e as React,t as ReactDOM};
