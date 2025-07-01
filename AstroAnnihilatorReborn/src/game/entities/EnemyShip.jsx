@@ -38,9 +38,9 @@ function EnemyShip({ position, ufoData, onEnemyShoot }) { // Accept ufoData and 
 
       switch (ufoData.id) { // Using ufoData.id as type
         case 'scout': // grunt
-          currentPosition.x += ufoData.stats.moveSpeed * delta * ufoData.speed; // Use ufoData.speed for x-movement
+          currentPosition.x += (ufoData.stats.moveSpeed || 0.5) * delta * (ufoData.speed || 1); // Use ufoData.speed for x-movement
           if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
-            ufoData.speed *= -1; // Reverse direction
+            if (ufoData.speed) ufoData.speed *= -1; // Reverse direction
           }
           break;
         case 'destroyer': // tank - no special x movement
@@ -48,7 +48,7 @@ function EnemyShip({ position, ufoData, onEnemyShoot }) { // Accept ufoData and 
         case 'ufo4': // dasher - no special x movement
           break;
         case 'ufo5': // weaver - sine wave movement
-          currentPosition.x += Math.sin(phase.current * 0.1) * ufoData.stats.moveSpeed * delta;
+          currentPosition.x += Math.sin(phase.current * 0.1) * (ufoData.stats.moveSpeed || 0.5) * delta;
           break;
         case 'ufo6': // dodger - evade player (needs player position)
           // const dx = player.x - currentPosition.x;
@@ -67,9 +67,9 @@ function EnemyShip({ position, ufoData, onEnemyShoot }) { // Accept ufoData and 
           // currentPosition.y += Math.sin(angle) * ufoData.stats.moveSpeed * delta;
           break;
         case 'ufo9': // sniper - similar to grunt
-          currentPosition.x += ufoData.stats.moveSpeed * delta * ufoData.speed;
+          currentPosition.x += (ufoData.stats.moveSpeed || 0.5) * delta * (ufoData.speed || 1);
           if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
-            ufoData.speed *= -1;
+            if (ufoData.speed) ufoData.speed *= -1;
           }
           break;
         case 'ufo10': // splitter - no special x movement
@@ -79,18 +79,18 @@ function EnemyShip({ position, ufoData, onEnemyShoot }) { // Accept ufoData and 
           break;
         default:
           // Default movement if no specific type is matched
-          currentPosition.x += ufoData.stats.moveSpeed * delta * ufoData.speed;
+          currentPosition.x += (ufoData.stats.moveSpeed || 0.5) * delta * (ufoData.speed || 1);
           if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
-            ufoData.speed *= -1;
+            if (ufoData.speed) ufoData.speed *= -1;
           }
           break;
       }
 
       // Enemy Autofire
-      if (onEnemyShoot && state.clock.elapsedTime - lastShootTime.current > effectiveUfoData.stats.shotCooldown) {
+      if (onEnemyShoot && state.clock.elapsedTime - lastShootTime.current > (effectiveUfoData.stats.shotCooldown || 1)) {
         const { height: ufoHeight } = getUfoDimensions(effectiveUfoData.geometry);
         // Implement specific shooting patterns based on enemy type
-        switch (ufoData.shoot) {
+        switch (ufoData.shoot || 'single') {
           case 'single':
             onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]);
             break;
@@ -155,7 +155,7 @@ function EnemyShip({ position, ufoData, onEnemyShoot }) { // Accept ufoData and 
       ref={mesh} 
       geometry={effectiveUfoData.geometry}
       colors={invertedColorsArray} 
-      position={new THREE.Vector3(...position)} // Explicitly create Vector3
+      position={position} // Pass position array directly
       enableRotation={false} 
     />
   );
