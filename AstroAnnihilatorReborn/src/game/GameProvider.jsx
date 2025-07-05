@@ -1,7 +1,25 @@
-import React, { createContext, useState, useContext, useMemo } from 'react';
+import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import { ufos } from './UFOData'; // Import UFO data
+import { auth, subscribeAuth, db } from '../services/firebase';
+import { doc, setDoc, getDoc, query, collection, orderBy, limit, getDocs } from 'firebase/firestore';
 
 const GameContext = createContext();
+
+// Helper to post score
+async function postScore(uid, displayName, score, avatarUrl) {
+  if (!uid) return;
+  const userRef = doc(db, 'leaderboard', uid);
+  const prev = await getDoc(userRef);
+  if (!prev.exists() || prev.data().score < score) {
+    await setDoc(userRef, { displayName, score, timestamp: Date.now(), avatarUrl });
+  }
+}
+
+export async function fetchTopScores(count = 10) {
+  const q = query(collection(db, 'leaderboard'), orderBy('score', 'desc'), limit(count));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data());
+}
 
 export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState(() => {
@@ -48,6 +66,13 @@ export const GameProvider = ({ children }) => {
       shopCosts: { shield: 75, bomb: 125, minion: 200, health: 150 }, // In-game shop costs
     };
   });
+
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsub = subscribeAuth(setUser);
+    return unsub;
+  }, []);
 
   const updateGameState = (updates) => {
     setGameState((prev) => {
@@ -120,7 +145,7 @@ export const GameProvider = ({ children }) => {
         starCredits: prev.starCredits - cost,
         unlockedUFOIds: new Set(prev.unlockedUFOIds).add(ufoId),
       }));
-      console.log(`UFO ${ufoId} unlocked for ${cost} credits!`);
+      // console.log(`UFO ${ufoId} unlocked for ${cost} credits!`);
       return true;
     } else {
       console.warn(`Not enough credits to unlock UFO ${ufoId}. Needed: ${cost}, Have: ${gameState.starCredits}`);
@@ -134,7 +159,9 @@ export const GameProvider = ({ children }) => {
     currentUFO,
     selectUFO,
     unlockUFO,
-  }), [gameState, currentUFO, selectUFO, unlockUFO]); // Include functions in dependencies
+    user,
+    postScore,
+  }), [gameState, currentUFO, selectUFO, unlockUFO, user, postScore]); // Include functions in dependencies
 
   return (
     <GameContext.Provider value={contextValue}>

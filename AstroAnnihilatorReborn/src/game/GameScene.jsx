@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Box3, Vector3 } from 'three';
 import { useGame } from './GameProvider';
-import PlayerShip from './entities/PlayerShip';
 import EnemyShip from './entities/EnemyShip';
 import Bullet from './entities/Bullet';
 import BombPickup from './entities/BombPickup';
@@ -12,6 +11,9 @@ import { getUfoDimensions } from './entities/PlayerShip'; // Reusing the helper 
 import Particle from './entities/Particle';
 import Powerup from './entities/Powerup';
 import { ParticleSystem } from './entities/Particle';
+import GameEntity from './entities/GameEntity';
+import * as THREE from 'three';
+import Player from './entities/Player.js';
 
 // Reusable Three.js objects to minimize GC
 const _vector3 = new Vector3();
@@ -27,6 +29,8 @@ function GameScene() {
     const [enemies, setEnemies] = useState([]);
     const [bombPickups, setBombPickups] = useState([]);
     const playerRef = useRef();
+    const playerInstance = useRef(null);
+    const [playerState, setPlayerState] = useState({ x: 0, y: 0, health: 3, shield: 0, bombs: 0 });
     const lastSpawnTime = useRef(0);
     const spawnInterval = 1; 
     const [isPaused, setIsPaused] = useState(false);
@@ -45,6 +49,7 @@ function GameScene() {
     const bossSpawnScore = useRef(7500);
     const [particles, setParticles] = useState([]);
     const [powerups, setPowerups] = useState([]);
+    const enemiesRef = useRef([]);
 
     const addBullet = useCallback((position) => {
         setBullets(prev => [...prev, { id: Date.now(), position, firedByPlayer: true, speed: 10, color: 'yellow' }]);
@@ -97,7 +102,7 @@ function GameScene() {
         abilityState.current.active = true;
         abilityState.current.duration = 0;
         // TODO: Add visual feedback for ability activation (e.g., pulsing effect on player ship)
-        console.log(`Ability '${abilityToUse}' activated!`);
+        // console.log(`Ability '${abilityToUse}' activated!`);
       }
     }, [gameState.currentUFO, gameState.selectedUFOId, gameState.playerShield]);
 
@@ -117,7 +122,7 @@ function GameScene() {
       abilityState.current.cooldown = 60; // Example cooldown
       abilityState.current.name = null;
       // TODO: Remove visual feedback for ability activation
-      console.log("Ability released!");
+      // console.log("Ability released!");
     }, []);
 
     useEffect(() => {
@@ -219,6 +224,27 @@ function GameScene() {
         };
     }, [useBomb, togglePause, openHangar, handleAbilityHold, releaseAbility]);
 
+    // Initialize player on mount or when UFO/Upgrades change
+    useEffect(() => {
+      const ufo = gameState.currentUFO || { id: 'interceptor', color: '#34d399', stats: { shotCooldown: 0.25 } };
+      playerInstance.current = new Player({
+        x: 0,
+        y: -viewport.height / 2 + 2,
+        ufo,
+        upgrades: gameState.upgrades,
+        gameMode: gameState.gameMode,
+        fusionConfig: gameState.fusionConfig,
+        isCombineAllActive: gameState.isCombineAllActive,
+      });
+      setPlayerState({
+        x: playerInstance.current.x,
+        y: playerInstance.current.y,
+        health: playerInstance.current.health,
+        shield: playerInstance.current.shield,
+        bombs: playerInstance.current.bombs,
+      });
+    }, [gameState.currentUFO, gameState.upgrades, gameState.gameMode, gameState.fusionConfig, gameState.isCombineAllActive, viewport.height]);
+
     useFrame((state, delta) => {
         if (gameState.currentScreen !== 'playing' || isPaused || showHangar) return; // Pause game logic if hangar is open
 
@@ -236,7 +262,7 @@ function GameScene() {
         const updatedBullets = bullets.map(b => ({ ...b, position: [b.position[0], b.position[1] + b.speed * delta, b.position[2]] }))
                                         .filter(b => b.position[1] < viewport.height / 2 + 1 && b.position[1] > -viewport.height / 2 - 1);
 
-        let currentEnemies = enemies.map(e => ({ ...e, position: [e.position[0], e.position[1] - e.speed * delta, e.position[2]] })) // Apply delta for frame-rate independent movement
+        let currentEnemies = enemiesRef.current.map(e => ({ ...e, position: [e.position[0], e.position[1] - e.speed * delta, e.position[2]] })) // Apply delta for frame-rate independent movement
                                         .filter(e => e.position[1] > -viewport.height / 2 - 5);
 
         const updatedBombPickups = bombPickups.map(p => ({ ...p, position: [p.position[0], p.position[1] - p.speed * delta, p.position[2]] })) // Apply delta
@@ -316,7 +342,7 @@ function GameScene() {
                 shootCooldown: stats.shootCooldown,
             };
             currentEnemies.push(newEnemy);
-            console.log("Spawning enemy:", newEnemy);
+            // console.log("Spawning enemy:", newEnemy);
             lastSpawnTime.current = state.clock.elapsedTime;
         }
         
@@ -406,7 +432,7 @@ function GameScene() {
             if (playerBoundingBox && playerBoundingBox.intersectsBox(_bulletBox)) {
                 pickupsToCollect.add(pickup.id);
                 newBombsCollected += 1;
-                console.log("Bomb collected!"); 
+                // console.log("Bomb collected!"); 
             }
         }
 
@@ -444,7 +470,7 @@ function GameScene() {
         if (gameState.currentUFO && gameState.currentUFO.id === 'spectre') {
             spectreTimer.current = (gameState.gameFrame + 1) % 600;
         } else if (!gameState.currentUFO) {
-            console.warn('currentUFO is undefined in GameScene, skipping spectreTimer logic.');
+            // console.warn('currentUFO is undefined in GameScene, skipping spectreTimer logic.');
         }
 
         if (abilityState.current.active) {
@@ -742,156 +768,95 @@ function GameScene() {
             }]);
         };
         // --- Asteroid and Boss Collision Logic ---
-        useEffect(() => {
-            // Asteroid collision with bullets
-            setAsteroids(prevAsteroids => prevAsteroids.map(asteroid => {
-                let hit = false;
-                setBullets(prevBullets => prevBullets.filter(bullet => {
-                    const dx = bullet.position[0] - asteroid.position[0];
-                    const dy = bullet.position[1] - asteroid.position[1];
-                    const dist = Math.hypot(dx, dy);
-                    if (dist < asteroid.size / 2 + 2.5) {
-                        hit = true;
-                        asteroid.health -= bullet.damage || 1;
-                        return false;
-                    }
-                    return true;
-                }));
-                if (hit && asteroid.health <= 0) {
-                    addExplosion(asteroid.position, '#a1a1aa', 5);
-                    if (Math.random() < 0.3) addPowerup(asteroid.position);
-                }
-                return asteroid;
-            }).filter(a => a.health > 0));
-
-            // Boss collision with bullets
-            if (boss) {
-                let bossHit = false;
-                setBullets(prevBullets => prevBullets.filter(bullet => {
-                    const dx = bullet.position[0] - boss.position[0];
-                    const dy = bullet.position[1] - boss.position[1];
-                    const dist = Math.hypot(dx, dy);
-                    if (dist < boss.size / 2 + 2.5) {
-                        bossHit = true;
-                        boss.health -= bullet.damage || 1;
-                        return false;
-                    }
-                    return true;
-                }));
-                if (bossHit && boss.health <= 0) {
-                    addExplosion(boss.position, '#ec4899', 80);
-                    // Boss defeat rewards
-                    updateGameState(prev => ({ score: prev.score + 5000, waveCredits: prev.waveCredits + 1 }));
-                    setWaveCount(prev => prev + 1);
-                    // TODO: Add credits/materials to player
-                    console.log('Boss defeated! Score +5000, wave advanced.');
-                }
-            }
-        }, [bullets, asteroids, boss, updateGameState]);
-
-        // --- Powerup Collection Logic ---
-        useFrame(() => {
-            if (!playerRef.current) return;
-            setPowerups(prev => prev.filter(p => {
-                const dx = playerRef.current.position.x - p.position[0];
-                const dy = playerRef.current.position.y - p.position[1];
-                const dz = (playerRef.current.position.z || 0) - (p.position[2] || 0);
-                const dist = Math.hypot(dx, dy, dz);
-                if (dist < 1.2) {
-                    // Apply powerup effect to player
-                    switch (p.type) {
-                        case 'shield':
-                            updateGameState(prev => ({ ...prev, playerShield: (prev.playerShield || 0) + 1 }));
-                            break;
-                        case 'minion':
-                            updateGameState(prev => ({ ...prev, minions: [...(prev.minions || []), { id: Date.now() + Math.random() }] }));
-                            break;
-                        case 'ghost':
-                            if (typeof ghostTimer !== 'undefined' && ghostTimer.current !== undefined) ghostTimer.current = 300;
-                            break;
-                        case 'bomb':
-                            updateGameState(prev => ({ ...prev, playerBombs: (prev.playerBombs || 0) + 1 }));
-                            break;
-                        case 'material':
-                            updateGameState(prev => ({ ...prev, rawMaterials: (prev.rawMaterials || 0) + 1 }));
-                            break;
-                        default:
-                            break;
-                    }
+        setAsteroids(prevAsteroids => prevAsteroids.map(asteroid => {
+            let hit = false;
+            setBullets(prevBullets => prevBullets.filter(bullet => {
+                const dx = bullet.position[0] - asteroid.position[0];
+                const dy = bullet.position[1] - asteroid.position[1];
+                const dist = Math.hypot(dx, dy);
+                if (dist < asteroid.size / 2 + 2.5) {
+                    hit = true;
+                    asteroid.health -= bullet.damage || 1;
                     return false;
                 }
                 return true;
             }));
-        });
+            if (hit && asteroid.health <= 0) {
+                addExplosion(asteroid.position, '#a1a1aa', 5);
+                if (Math.random() < 0.3) addPowerup(asteroid.position);
+            }
+            return asteroid;
+        }).filter(a => a.health > 0));
 
-        // 2024-06-09T22:30Z: Integrated player collision with asteroids and boss. Damage, explosion, and game over logic.
-        // --- Player Collision with Asteroids ---
-        if (playerRef.current) {
-            asteroids.forEach(asteroid => {
-                const dx = playerRef.current.position.x - asteroid.position[0];
-                const dy = playerRef.current.position.y - asteroid.position[1];
-                const dz = (playerRef.current.position.z || 0) - (asteroid.position[2] || 0);
-                const dist = Math.hypot(dx, dy, dz);
-                if (dist < (asteroid.size / 2 + 0.7)) {
-                    addExplosion(asteroid.position, '#a1a1aa', 8);
-                    setAsteroids(prev => prev.filter(a => a.id !== asteroid.id));
-                    // Shield logic
-                    updateGameState(prev => {
-                        if (prev.playerShield > 0) {
-                            return { ...prev, playerShield: prev.playerShield - 1 };
-                        } else {
-                            return { ...prev, playerHealth: prev.playerHealth - 1 };
-                        }
-                    });
+        // Boss collision with bullets
+        if (boss) {
+            let bossHit = false;
+            setBullets(prevBullets => prevBullets.filter(bullet => {
+                const dx = bullet.position[0] - boss.position[0];
+                const dy = bullet.position[1] - boss.position[1];
+                const dist = Math.hypot(dx, dy);
+                if (dist < boss.size / 2 + 2.5) {
+                    bossHit = true;
+                    boss.health -= bullet.damage || 1;
+                    return false;
                 }
-            });
-            if (boss) {
-                const dx = playerRef.current.position.x - boss.position[0];
-                const dy = playerRef.current.position.y - boss.position[1];
-                const dz = (playerRef.current.position.z || 0) - (boss.position[2] || 0);
-                const dist = Math.hypot(dx, dy, dz);
-                if (dist < (boss.size / 2 + 0.7)) {
-                    addExplosion(boss.position, '#ec4899', 12);
-                    setAsteroids(prev => prev.filter(a => a.id !== boss.id));
-                    // Shield logic
-                    updateGameState(prev => {
-                        if (prev.playerShield > 0) {
-                            return { ...prev, playerShield: prev.playerShield - 1 };
-                        } else {
-                            return { ...prev, playerHealth: prev.playerHealth - 1 };
-                        }
-                    });
-                }
+                return true;
+            }));
+            if (bossHit && boss.health <= 0) {
+                addExplosion(boss.position, '#ec4899', 80);
+                // Boss defeat rewards
+                updateGameState(prev => ({ score: prev.score + 5000, waveCredits: prev.waveCredits + 1 }));
+                setWaveCount(prev => prev + 1);
+                // TODO: Add credits/materials to player
+                // console.log('Boss defeated! Score +5000, wave advanced.');
             }
         }
 
-        // 2024-06-09T23:50Z: Implemented RawMaterialPickup and powerup drops for Reaper/Alchemist. Added visual feedback for ability fields.
-        // ... in per-ability effects for Reaper/Alchemist ...
-        // When removing enemy/bullet in Reaper/Alchemist, add:
-        addPowerup(e.position); // or addPowerup(b.position) for bullets
-        // ...
-        // For Chronomancer/Reaper fields, render a transparent sphere around player when ability is active:
-        {abilityState.current.active && (abilityState.current.name === 'chronomancer' || abilityState.current.name === 'reaper') && playerRef.current && (
-          <mesh position={[playerRef.current.position.x, playerRef.current.position.y, 0]}>
-            <sphereGeometry args={[4, 24, 24]} />
-            <meshStandardMaterial color={abilityState.current.name === 'reaper' ? '#9ca3af' : '#818cf8'} transparent opacity={0.2} />
-          </mesh>
-        )}
+        // --- Player update ---
+        const mouseX = state.mouse.x * (viewport.width / 2);
+        const mouseY = state.mouse.y * (viewport.height / 2);
+        const player = playerInstance.current;
+        if (player) {
+          player.update(mouseX, mouseY, false, gameState.upgrades, gameState.gameFrame, bullets);
+          player.tickCooldown();
+          if (player.canShoot()) {
+            player.shoot(bullets);
+          }
+          setPlayerState({
+            x: player.x,
+            y: player.y,
+            health: player.health,
+            shield: player.shield,
+            bombs: player.bombs,
+          });
+        }
 
-        // In useFrame, update bullets with velocity if present
-        setBullets(prevBullets => prevBullets.map(b => {
-            if (b.velocity) {
-                return {
-                    ...b,
-                    position: [
-                        b.position[0] + b.velocity[0] * delta,
-                        b.position[1] + b.velocity[1] * delta,
-                        b.position[2] + (b.velocity[2] || 0) * delta,
-                    ],
-                };
-            }
-            return b;
-        }));
+        // --- Enemy update ---
+        const enemies = enemiesRef.current;
+        const newEnemyBullets = [];
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i];
+          // Example: simple downward movement
+          enemy.position[1] -= (enemy.stats?.speedY || 1) * delta * 60;
+          // Example: simple shooting
+          enemy.shootCooldown--;
+          if (enemy.shootCooldown <= 0) {
+            newEnemyBullets.push({
+              position: [enemy.position[0], enemy.position[1], 0],
+              firedByPlayer: false,
+              speed: -6,
+              color: 'red',
+              damage: 1,
+            });
+            enemy.shootCooldown = enemy.stats?.shootCooldown || 60;
+          }
+          // Remove if offscreen or dead
+          if (enemy.health <= 0 || enemy.position[1] < -viewport.height / 2 - 5) {
+            enemies.splice(i, 1);
+          }
+        }
+        // Add new enemy bullets
+        bullets.push(...newEnemyBullets);
     });
 
     // Handle game over screen logic
@@ -916,31 +881,21 @@ function GameScene() {
             <pointLight position={[0, 0, 5]} intensity={0.5} />
             
             {/* Render PlayerShip */}
-            {gameState.currentScreen === 'playing' && <PlayerShip ref={playerRef} onShoot={addBullet} onAbilityHold={handleAbilityHold} />}
+            {gameState.currentScreen === 'playing' && (
+                <GameEntity
+                    position={[playerState.x, playerState.y, 0]}
+                    geometry={gameState.currentUFO?.geometry || { type: 'SphereGeometry', args: [1, 16, 16] }}
+                    color={gameState.currentUFO?.color || '#34d399'}
+                />
+            )}
 
             {/* Render Enemies */}
-            {enemies.map(enemy => (
-                <EnemyShip
-                    key={enemy.id}
-                    enemy={enemy}
-                    onEnemyShoot={addEnemyBullet}
-                    playerPosition={playerRef.current ? [playerRef.current.position.x, playerRef.current.position.y] : null}
-                    onSplitterDeath={pos => {
-                        // Spawn 3 new grunts at splitter's position
-                        setEnemies(prev => [
-                            ...prev,
-                            ...Array.from({ length: 3 }).map(() => ({
-                                id: Date.now() + Math.random(),
-                                position: [pos.x, pos.y, 0],
-                                type: 'grunt',
-                                model: ENEMY_MODELS['grunt'],
-                                stats: { ...ENEMY_MODELS['grunt'].stats },
-                                health: ENEMY_MODELS['grunt'].stats.health,
-                                phase: 0,
-                                shootCooldown: ENEMY_MODELS['grunt'].stats.shootCooldown,
-                            })),
-                        ]);
-                    }}
+            {enemiesRef.current.map((enemy, i) => (
+                <GameEntity
+                    key={enemy.id || i}
+                    position={enemy.position}
+                    geometry={enemy.model?.geometry || { type: 'BoxGeometry', args: [1, 1, 1] }}
+                    color={enemy.model?.color || '#f87171'}
                 />
             ))}
 
@@ -977,9 +932,9 @@ function GameScene() {
                 </div>
             )}
 
-            {/* Render Bullets */}
-            {bullets.map(bullet => (
-                <Bullet key={bullet.id} position={bullet.position} speed={bullet.speed} color={bullet.color} firedByPlayer={bullet.firedByPlayer} />
+            {/* Render player bullets */}
+            {bullets.filter(b => b.firedByPlayer).map((b, i) => (
+                <Bullet key={b.id || i} position={b.position} speed={b.speed} color={b.color} firedByPlayer={true} />
             ))}
 
             {/* Render Bomb Pickups */}
@@ -1022,6 +977,35 @@ function GameScene() {
                     type={p.type}
                     onCollect={() => setPowerups(prev => prev.filter(q => q.id !== p.id))}
                 />
+            ))}
+
+            {/* Render Chronomancer/Reaper Sphere */}
+            {abilityState.current.active &&
+                (abilityState.current.name === 'chronomancer' || abilityState.current.name === 'reaper') &&
+                playerRef.current && (
+                    <mesh position={[playerRef.current.position.x, playerRef.current.position.y, 0]}>
+                        <sphereGeometry args={[4, 24, 24]} />
+                        <meshStandardMaterial
+                            color={abilityState.current.name === 'reaper' ? '#9ca3af' : '#818cf8'}
+                            transparent
+                            opacity={0.2}
+                        />
+                    </mesh>
+                )}
+
+            {/* Render minions */}
+            {playerInstance.current && playerInstance.current.minions.map((m, i) => (
+                <GameEntity
+                    key={`minion-${i}`}
+                    position={[m.x, m.y, 0]}
+                    geometry={{ type: 'SphereGeometry', args: [0.25, 8, 8] }}
+                    color={'#a78bfa'}
+                />
+            ))}
+
+            {/* Render enemy bullets */}
+            {bullets.filter(b => !b.firedByPlayer).map((b, i) => (
+                <Bullet key={b.id || i} position={b.position} speed={b.speed} color={b.color} firedByPlayer={false} />
             ))}
         </>
     );
