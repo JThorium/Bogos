@@ -26,12 +26,21 @@ function EnemyShip({ enemy, onEnemyShoot, playerPosition, onSplitterDeath }) {
       mesh.current.rotation.y += 0.02;
       phase.current++;
       let currentPosition = mesh.current.position;
+<<<<<<< HEAD
       // Movement patterns
       switch (type) {
         case 'grunt':
           currentPosition.x += stats.speedX * delta;
           if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
             stats.speedX *= -1;
+=======
+
+      switch (ufoData.id) { // Using ufoData.id as type
+        case 'scout': // grunt
+          currentPosition.x += (ufoData.stats.moveSpeed || 0.5) * delta * (ufoData.speed || 1); // Use ufoData.speed for x-movement
+          if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
+            if (ufoData.speed) ufoData.speed *= -1; // Reverse direction
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
           }
           break;
         case 'tank':
@@ -40,6 +49,7 @@ function EnemyShip({ enemy, onEnemyShoot, playerPosition, onSplitterDeath }) {
         case 'dasher':
           // No special x movement
           break;
+<<<<<<< HEAD
         case 'weaver':
           currentPosition.x += Math.sin(phase.current * 0.1) * stats.speedX * delta;
           break;
@@ -47,6 +57,31 @@ function EnemyShip({ enemy, onEnemyShoot, playerPosition, onSplitterDeath }) {
           if (playerPosition) {
             const dx = playerPosition[0] - currentPosition.x;
             if (Math.abs(dx) < 100) currentPosition.x -= Math.sign(dx) * 2 * delta;
+=======
+        case 'ufo5': // weaver - sine wave movement
+          currentPosition.x += Math.sin(phase.current * 0.1) * (ufoData.stats.moveSpeed || 0.5) * delta;
+          break;
+        case 'ufo6': // dodger - evade player (needs player position)
+          // const dx = player.x - currentPosition.x;
+          // if (Math.abs(dx) < 100) currentPosition.x -= Math.sign(dx) * 2 * delta;
+          break;
+        case 'ufo7': // orbiter - stops at targetY, then moves horizontally
+          // if (currentPosition.y > ufoData.targetY) { // targetY needs to be defined in ufoData
+          //   currentPosition.y = ufoData.targetY;
+          //   ufoData.speed = 0; // Stop vertical movement
+          //   currentPosition.x += Math.cos(phase.current * 0.05) * 2 * delta;
+          // }
+          break;
+        case 'ufo8': // kamikaze - homes in on player (needs player position)
+          // const angle = Math.atan2(player.y - currentPosition.y, player.x - currentPosition.x);
+          // currentPosition.x += Math.cos(angle) * ufoData.stats.moveSpeed * delta;
+          // currentPosition.y += Math.sin(angle) * ufoData.stats.moveSpeed * delta;
+          break;
+        case 'ufo9': // sniper - similar to grunt
+          currentPosition.x += (ufoData.stats.moveSpeed || 0.5) * delta * (ufoData.speed || 1);
+          if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
+            if (ufoData.speed) ufoData.speed *= -1;
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
           }
           break;
         case 'orbiter':
@@ -80,6 +115,7 @@ function EnemyShip({ enemy, onEnemyShoot, playerPosition, onSplitterDeath }) {
           // TODO: Implement transparency in material
           break;
         default:
+<<<<<<< HEAD
           currentPosition.x += stats.speedX * delta;
           if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
             stats.speedX *= -1;
@@ -91,6 +127,75 @@ function EnemyShip({ enemy, onEnemyShoot, playerPosition, onSplitterDeath }) {
         const { height: enemyHeight } = getUfoDimensions(model.geometry);
         // For now, just fire a single bullet downward
         onEnemyShoot([currentPosition.x, currentPosition.y - enemyHeight / 2, 0]);
+=======
+          // Default movement if no specific type is matched
+          currentPosition.x += (ufoData.stats.moveSpeed || 0.5) * delta * (ufoData.speed || 1);
+          if (currentPosition.x < -viewport.width / 2 || currentPosition.x > viewport.width / 2) {
+            if (ufoData.speed) ufoData.speed *= -1;
+          }
+          break;
+      }
+
+      // Enemy Autofire
+      if (onEnemyShoot && state.clock.elapsedTime - lastShootTime.current > (effectiveUfoData.stats.shotCooldown || 1)) {
+        const { height: ufoHeight } = getUfoDimensions(effectiveUfoData.geometry);
+        // Implement specific shooting patterns based on enemy type
+        switch (ufoData.shoot || 'single') {
+          case 'single':
+            onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]);
+            break;
+          case 'spread':
+            for (let i = -1; i <= 1; i++) {
+              onEnemyShoot([currentPosition.x + i * 0.2, currentPosition.y - ufoHeight / 2, 0]);
+            }
+            break;
+          case 'homing':
+            onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]); // Homing bullet logic will be in GameScene
+            break;
+          case 'burst':
+            // Fire multiple bullets in quick succession
+            for (let i = 0; i < 3; i++) {
+              setTimeout(() => {
+                onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]);
+              }, i * 100); // Small delay between bullets
+            }
+            break;
+          case 'laser':
+            // Single powerful shot, maybe wider
+            onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]);
+            break;
+          case 'wave':
+            // Bullets move in a wave pattern
+            for (let i = 0; i < 5; i++) {
+              const angle = (i / 5) * Math.PI - Math.PI / 2; // Fan out
+              onEnemyShoot([currentPosition.x + Math.sin(angle) * 0.5, currentPosition.y - ufoHeight / 2 + Math.cos(angle) * 0.5, 0]);
+            }
+            break;
+          case 'explosive':
+            onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]); // Bullet explodes on impact
+            break;
+          case 'triple':
+            onEnemyShoot([currentPosition.x - 0.3, currentPosition.y - ufoHeight / 2, 0]);
+            onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]);
+            onEnemyShoot([currentPosition.x + 0.3, currentPosition.y - ufoHeight / 2, 0]);
+            break;
+          case 'arc':
+            for (let i = -2; i <= 2; i++) {
+              const angle = i * 0.3; // Arc spread
+              onEnemyShoot([currentPosition.x + Math.sin(angle) * 0.5, currentPosition.y - ufoHeight / 2 + Math.cos(angle) * 0.5, 0]);
+            }
+            break;
+          case 'spiral':
+            for (let i = 0; i < 8; i++) {
+              const angle = (i / 8) * Math.PI * 2 + phase.current * 0.1;
+              onEnemyShoot([currentPosition.x + Math.cos(angle) * 0.5, currentPosition.y + Math.sin(angle) * 0.5, 0]);
+            }
+            break;
+          default:
+            onEnemyShoot([currentPosition.x, currentPosition.y - ufoHeight / 2, 0]);
+            break;
+        }
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
         lastShootTime.current = state.clock.elapsedTime;
       }
       // Splitter logic: if health <= 0, spawn 3 grunts
@@ -101,12 +206,21 @@ function EnemyShip({ enemy, onEnemyShoot, playerPosition, onSplitterDeath }) {
   });
 
   return (
+<<<<<<< HEAD
     <GameEntity
       ref={mesh}
       geometry={model.geometry}
       colors={invertedColorsArray}
       position={new THREE.Vector3(...position)}
       enableRotation={false}
+=======
+    <GameEntity 
+      ref={mesh} 
+      geometry={effectiveUfoData.geometry}
+      colors={invertedColorsArray} 
+      position={position} // Pass position array directly
+      enableRotation={false} 
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
     />
   );
 }

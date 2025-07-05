@@ -1,10 +1,15 @@
+<<<<<<< HEAD
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
+=======
+import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
 import { ufos } from './UFOData'; // Import UFO data
 import { auth, subscribeAuth, db } from '../services/firebase';
 import { doc, setDoc, getDoc, query, collection, orderBy, limit, getDocs } from 'firebase/firestore';
 
 const GameContext = createContext();
 
+<<<<<<< HEAD
 // Helper to post score
 async function postScore(uid, displayName, score, avatarUrl) {
   if (!uid) return;
@@ -31,6 +36,47 @@ export const GameProvider = ({ children }) => {
     const selectedUFOId = localStorage.getItem('selectedUFOId') || 'interceptor';
     // Ensure 'interceptor' is always unlocked
     savedUnlockedUFOIds.add('interceptor');
+=======
+// Safe localStorage helper
+const safeGetLocalStorage = (key, defaultValue) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem(key) || defaultValue;
+    }
+  } catch (error) {
+    console.warn('localStorage not available:', error);
+  }
+  return defaultValue;
+};
+
+const safeParseJSON = (str, defaultValue) => {
+  try {
+    return JSON.parse(str);
+  } catch (error) {
+    console.warn('JSON parse error:', error);
+    return defaultValue;
+  }
+};
+
+const safeSetLocalStorage = (key, value) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(key, value);
+    }
+  } catch (error) {
+    console.warn('localStorage setItem failed:', error);
+  }
+};
+
+export const GameProvider = ({ children }) => {
+  const [gameState, setGameState] = useState(() => {
+    // Initialize from localStorage with safety checks
+    const savedStarCredits = parseInt(safeGetLocalStorage('starCredits', '0'));
+    const savedUnlockedUFOIds = new Set(safeParseJSON(safeGetLocalStorage('unlockedUFOIds', '["scout"]'), ['scout']));
+    const savedHasPurchasedScoreBoost = safeParseJSON(safeGetLocalStorage('hasPurchasedScoreBoost', 'false'), false);
+    const savedSpawnMultiplier = parseInt(safeGetLocalStorage('spawnMultiplier', '1'));
+    const selectedUFOId = safeGetLocalStorage('selectedUFOId', 'scout');
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
     const initialUFO = ufos.find(ufo => ufo.id === selectedUFOId);
     
     return {
@@ -41,7 +87,7 @@ export const GameProvider = ({ children }) => {
       playerShield: initialUFO ? (initialUFO.id === 'sentinel' ? 1 : 0) : 0, // Initial shield based on Sentinel
       playerBombs: 0, // Initial bombs
       starCredits: savedStarCredits, // Initial credits from localStorage
-      rawMaterials: parseInt(localStorage.getItem('rawMaterials') || '0'),
+      rawMaterials: parseInt(safeGetLocalStorage('rawMaterials', '0')),
       materialsThisRun: 0,
       hasPurchasedScoreBoost: savedHasPurchasedScoreBoost, // Score boost state
       spawnMultiplier: savedSpawnMultiplier, // Challenge mode spawn multiplier
@@ -52,17 +98,24 @@ export const GameProvider = ({ children }) => {
       waveCredits: 0,
       isGameOver: false,
       scoreMultiplier: 1,
-      gameMode: localStorage.getItem('gameMode') || 'classic',
-      fusionConfig: JSON.parse(localStorage.getItem('fusionConfig') || '[]'),
-      isCombineAllActive: JSON.parse(localStorage.getItem('isCombineAllActive') || 'false'),
-      upgrades: JSON.parse(localStorage.getItem('upgrades') || JSON.stringify({
+      gameMode: safeGetLocalStorage('gameMode', 'classic'),
+      fusionConfig: safeParseJSON(safeGetLocalStorage('fusionConfig', '[]'), []),
+      isCombineAllActive: safeParseJSON(safeGetLocalStorage('isCombineAllActive', 'false'), false),
+      upgrades: safeParseJSON(safeGetLocalStorage('upgrades', JSON.stringify({
         startShield: { level: 0, maxLevel: 10, cost: 100, costIncrease: 150, matCost: 1, matIncrease: 1, name: "Start Shield" },
         startMinion: { level: 0, maxLevel: 10, cost: 500, costIncrease: 500, matCost: 5, matIncrease: 2, name: "Start Minion" },
         fireRate: { level: 0, maxLevel: 10, cost: 250, costIncrease: 250, matCost: 2, matIncrease: 2, name: "Fire Rate" },
         startBomb: { level: 0, maxLevel: 10, cost: 750, costIncrease: 750, matCost: 3, matIncrease: 1, name: "Start Bomb" },
         powerupDuration: { level: 0, maxLevel: 10, cost: 400, costIncrease: 400, matCost: 2, matIncrease: 1, name: "Powerup Duration" },
         creditBonus: { level: 0, maxLevel: 10, cost: 1000, costIncrease: 1000, matCost: 10, matIncrease: 5, name: "Credit Bonus" }
-      })),
+      })), {
+        startShield: { level: 0, maxLevel: 10, cost: 100, costIncrease: 150, matCost: 1, matIncrease: 1, name: "Start Shield" },
+        startMinion: { level: 0, maxLevel: 10, cost: 500, costIncrease: 500, matCost: 5, matIncrease: 2, name: "Start Minion" },
+        fireRate: { level: 0, maxLevel: 10, cost: 250, costIncrease: 250, matCost: 2, matIncrease: 2, name: "Fire Rate" },
+        startBomb: { level: 0, maxLevel: 10, cost: 750, costIncrease: 750, matCost: 3, matIncrease: 1, name: "Start Bomb" },
+        powerupDuration: { level: 0, maxLevel: 10, cost: 400, costIncrease: 400, matCost: 2, matIncrease: 1, name: "Powerup Duration" },
+        creditBonus: { level: 0, maxLevel: 10, cost: 1000, costIncrease: 1000, matCost: 10, matIncrease: 5, name: "Credit Bonus" }
+      }),
       shopCosts: { shield: 75, bomb: 125, minion: 200, health: 150 }, // In-game shop costs
     };
   });
@@ -92,18 +145,18 @@ export const GameProvider = ({ children }) => {
         newState.upgrades = { ...prev.upgrades };
       }
       
-      // Save relevant states to localStorage
-      localStorage.setItem('highScore', newState.highScore.toString());
-      localStorage.setItem('starCredits', newState.starCredits.toString());
-      localStorage.setItem('rawMaterials', newState.rawMaterials.toString());
-      localStorage.setItem('hasPurchasedScoreBoost', JSON.stringify(newState.hasPurchasedScoreBoost));
-      localStorage.setItem('spawnMultiplier', newState.spawnMultiplier.toString());
-      localStorage.setItem('selectedUFOId', newState.selectedUFOId);
-      localStorage.setItem('unlockedUFOIds', JSON.stringify(Array.from(newState.unlockedUFOIds)));
-      localStorage.setItem('gameMode', newState.gameMode);
-      localStorage.setItem('fusionConfig', JSON.stringify(newState.fusionConfig));
-      localStorage.setItem('isCombineAllActive', JSON.stringify(newState.isCombineAllActive));
-      localStorage.setItem('upgrades', JSON.stringify(newState.upgrades));
+      // Save relevant states to localStorage safely
+      safeSetLocalStorage('highScore', newState.highScore.toString());
+      safeSetLocalStorage('starCredits', newState.starCredits.toString());
+      safeSetLocalStorage('rawMaterials', newState.rawMaterials.toString());
+      safeSetLocalStorage('hasPurchasedScoreBoost', JSON.stringify(newState.hasPurchasedScoreBoost));
+      safeSetLocalStorage('spawnMultiplier', newState.spawnMultiplier.toString());
+      safeSetLocalStorage('selectedUFOId', newState.selectedUFOId);
+      safeSetLocalStorage('unlockedUFOIds', JSON.stringify(Array.from(newState.unlockedUFOIds)));
+      safeSetLocalStorage('gameMode', newState.gameMode);
+      safeSetLocalStorage('fusionConfig', JSON.stringify(newState.fusionConfig));
+      safeSetLocalStorage('isCombineAllActive', JSON.stringify(newState.isCombineAllActive));
+      safeSetLocalStorage('upgrades', JSON.stringify(newState.upgrades));
 
       return newState;
     });
@@ -115,8 +168,13 @@ export const GameProvider = ({ children }) => {
   }, [gameState.selectedUFOId]);
 
   // Function to select a UFO
+<<<<<<< HEAD
   const selectUFO = (ufoId) => {
     if (ufoId === 'interceptor' || gameState.unlockedUFOIds.has(ufoId)) {
+=======
+  const selectUFO = useCallback((ufoId) => {
+    if (gameState.unlockedUFOIds.has(ufoId)) {
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
       const newUFO = ufos.find(ufo => ufo.id === ufoId);
       if (newUFO) {
         updateGameState({ 
@@ -127,10 +185,10 @@ export const GameProvider = ({ children }) => {
     } else {
       console.warn(`UFO ${ufoId} is not unlocked!`);
     }
-  };
+  }, [gameState.unlockedUFOIds, updateGameState]);
 
   // Function to unlock a UFO
-  const unlockUFO = (ufoId, cost) => {
+  const unlockUFO = useCallback((ufoId, cost) => {
     const ufo = ufos.find(u => u.id === ufoId);
     if (!ufo) {
       console.error(`UFO with ID ${ufoId} not found.`);
@@ -151,7 +209,7 @@ export const GameProvider = ({ children }) => {
       console.warn(`Not enough credits to unlock UFO ${ufoId}. Needed: ${cost}, Have: ${gameState.starCredits}`);
       return false;
     }
-  };
+  }, [gameState.unlockedUFOIds, gameState.starCredits, updateGameState]);
 
   const contextValue = useMemo(() => ({
     gameState,
@@ -159,9 +217,13 @@ export const GameProvider = ({ children }) => {
     currentUFO,
     selectUFO,
     unlockUFO,
+<<<<<<< HEAD
     user,
     postScore,
   }), [gameState, currentUFO, selectUFO, unlockUFO, user, postScore]); // Include functions in dependencies
+=======
+  }), [gameState, currentUFO, selectUFO, unlockUFO]);
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
 
   return (
     <GameContext.Provider value={contextValue}>

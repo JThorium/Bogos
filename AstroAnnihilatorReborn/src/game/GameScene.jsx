@@ -334,12 +334,25 @@ function GameScene() {
             const newEnemy = {
                 id: Date.now(),
                 position: [(Math.random() - 0.5) * (viewport.width - 2), viewport.height / 2 + 1, 0],
+<<<<<<< HEAD
                 type,
                 model: baseModel,
                 stats: { ...stats },
                 health: stats.health,
                 phase: 0,
                 shootCooldown: stats.shootCooldown,
+=======
+                ufoData: {
+                    ...randomUfo,
+                    speed: Math.random() > 0.5 ? 1 : -1, // Random direction for horizontal movement
+                    shoot: 'single' // Default shooting pattern
+                },
+                speed: 0.15, // Base speed, will be multiplied by delta
+                health: randomUfo.stats.health,
+                type: randomUfo.id, // Add type for enemy behavior
+                shootCooldown: randomUfo.stats.shotCooldown * 60, // Convert to frames
+                phase: 0, // For enemy movement patterns
+>>>>>>> 7fe7e9491e8d5350fb7b344e1a3549bd2afe174e
             };
             currentEnemies.push(newEnemy);
             // console.log("Spawning enemy:", newEnemy);
@@ -875,10 +888,10 @@ function GameScene() {
 
     return (
         <>
-            <ambientLight intensity={0.8} />
-            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
-            <pointLight position={[-10, -10, -10]} intensity={0.8} />
-            <pointLight position={[0, 0, 5]} intensity={0.5} />
+            <ambientLight intensity={0.6} />
+            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1.2} castShadow />
+            <pointLight position={[-10, -10, -10]} intensity={0.6} />
+            <pointLight position={[0, 0, 5]} intensity={0.8} color="#ffffff" />
             
             {/* Render PlayerShip */}
             {gameState.currentScreen === 'playing' && (

@@ -5,9 +5,10 @@ import * as THREE from 'three'; // Import THREE
 function BombPickup({ position, speed, color }) {
   return (
     <GameEntity
-      position={new THREE.Vector3(...position)} // Explicitly create Vector3
-      color={color}
+      position={position} // Pass position array directly
+      color={color || 'red'}
       geometry={{ type: 'SphereGeometry', args: [0.3, 16, 16] }}
+      enableRotation={true}
     />
   );
 }
