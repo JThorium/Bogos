@@ -1,5 +1,3 @@
+Open Chrome, go to YouTube.com and search for MexicanOT, play the most viewed video
 
-Feel free to make another text file adjacent to this one called Thoughts.txt for you to keep yourself on track, like a diary!
-
-Open Chrome, go to YouTube and fine MexicanOT, play the most viewed video
-
+Add your thoughts on all that you've managed so far and whatever else you want to your thoughts file here; https://github.com/JThorium/Bogos/blob/main/Gemini/Thoughts.txt by finding the same file on the laptop youre in and updating that then pushing the commit by terminal git. try this once then stop for new instructions
