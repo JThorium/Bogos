@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UFO Space Shooter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            touch-action: none;
+            color: #fff;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, #0a0a2a 0%, #000 100%);
+            overflow: hidden;
+        }
+        #ui {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #score, #lives, #level, #coins, #shieldBar {
+            position: absolute;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-shadow: 0 0 8px #00f;
+            pointer-events: none;
+        }
+        #score { top: 10px; left: 10px; }
+        #lives { top: 10px; right: 10px; }
+        #level { top: 40px; left: 10px; }
+        #coins { top: 40px; right: 10px; }
+        #shieldBar {
+            top: 70px; left: 10px;
+            width: 120px; height: 16px;
+            background: #222;
+            border: 2px solid #00f;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #shieldBarInner {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #00f, #0ff);
+            transition: width 0.2s;
+        }
+        #gameOver, #hangar, #unlockScreen, #bossWarning {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,30,0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            pointer-events: auto;
+        }
+        #gameOver, #hangar, #unlockScreen, #bossWarning { display: none; }
+        .btn {
+            background: linear-gradient(135deg, #006, #00f);
+            color: #fff;
+            border: none;
+            border-radius: 18px;
+            padding: 14px 32px;
+            margin: 12px;
+            font-size: 1.2em;
+            font-weight: bold;
+            box-shadow: 0 4px 16px #00f4;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:active { background: #00a; }
+        .btn:disabled { background: #333; color: #888; }
+        #joystickArea {
+            position: absolute;
+            left: 0; bottom: 0;
+            width: 40vw; height: 30vh;
+            touch-action: none;
+            z-index: 50;
+        }
+        #shootBtn {
+            position: absolute;
+            right: 10vw; bottom: 10vh;
+            width: 70px; height: 70px;
+            background: radial-gradient(circle, #f00, #a00);
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 0 16px #f008;
+            z-index: 50;
+            touch-action: none;
+        }
+        .ufo, .enemy, .boss, .bullet, .powerup, .explosion {
+            position: absolute;
+            transform-origin: center;
+            will-change: transform;
+        }
+        .ufo, .enemy, .boss {
+            width: 50px; height: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .bullet {
+            width: 8px; height: 18px;
+            background: #0ff;
+            border-radius: 4px;
+            box-shadow: 0 0 8px #0ff;
+        }
+        .powerup {
+            width: 32px; height: 32px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .explosion {
+            width: 60px; height: 60px;
+            background: radial-gradient(circle, #ff0 0%, #f00 70%, transparent 100%);
+            border-radius: 50%;
+            opacity: 0;
+            animation: explode 0.5s forwards;
+        }
+        @keyframes explode {
+            0% { transform: scale(0.2); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        .boss {
+            width: 120px; height: 120px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        #hangarList {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 16px 0;
+        }
+        .ufoCard {
+            width: 80px; height: 100px;
+            margin: 8px;
+            background: #113;
+            border: 2px solid #00f;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: border 0.2s;
+        }
+        .ufoCard.selected { border: 3px solid #0ff; }
+        .ufoCard.locked { opacity: 0.4; pointer-events: none; }
+        .ufoCard img {
+            width: 48px; height: 48px;
+            margin-bottom: 4px;
+        }
+        #upgradeList {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 16px 0;
+        }
+        .upgradeItem {
+            background: #113;
+            border: 2px solid #00f;
+            border-radius: 10px;
+            padding: 10px 18px;
+            margin: 6px;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 220px;
+        }
+        .upgradeItem button {
+            background: #00f;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 1em;
+            margin-left: 10px;
+        }
+        #unlockScreen img { width: 80px; height: 80px; margin-bottom: 10px; }
+        #bossWarning {
+            background: rgba(100,0,0,0.92);
+            color: #f00;
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 0 0 16px #f00;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 50% { opacity: 0.6; } }
+    </style>
+</head>
+<body>
+<div id="gameContainer">
+    <div id="ui">
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+        <div id="level">Level: 1</div>
+        <div id="coins">Coins: 0</div>
+        <div id="shieldBar"><div id="shieldBarInner"></div></div>
+    </div>
+    <div id="joystickArea"></div>
+    <div id="shootBtn"></div>
+    <div id="gameOver">
+        <h1>GAME OVER</h1>
+        <div>Final Score: <span id="finalScore">0</span></div>
+        <div>Coins: <span id="finalCoins">0</span></div>
+        <button class="btn" id="restartBtn">Restart</button>
+        <button class="btn" id="hangarBtn">Hangar</button>
+    </div>
+    <div id="hangar">
+        <h1>HANGAR</h1>
+        <div id="hangarList"></div>
+        <h2>Upgrades</h2>
+        <div id="upgradeList"></div>
+        <button class="btn" id="backToGameBtn">Back to Game</button>
+    </div>
+    <div id="unlockScreen">
+        <h2>NEW UFO UNLOCKED!</h2>
+        <img id="unlockImg" src="">
+        <div id="unlockName"></div>
+        <div id="unlockDesc"></div>
+        <button class="btn" id="unlockOkBtn">OK</button>
+    </div>
+    <div id="bossWarning">
+        <div>BOSS INCOMING!</div>
+    </div>
+</div>
+<script>
+// ====== GAME STATE ======
+const state = {
+    score: 0,
+    level: 1,
+    lives: 3,
+    coins: 0,
+    shield: 100,
+    maxShield: 100,
+    ufos: [
+        // 0: Default UFO
+        {
+            name: "Classic UFO",
+            img: "https://i.imgur.com/0Q5Q5Q0.png", // placeholder
+            speed: 4,
+            fireRate: 300,
+            bulletSpeed: 10,
+            bulletDamage: 1,
+            special: "None",
+            unlocked: true,
+            price: 0
+        },
+        // 1: Speedy UFO
+        {
+            name: "Speedy UFO",
+            img: "https://i.imgur.com/1Q5Q5Q1.png",
+            speed: 6,
+            fireRate: 250,
+            bulletSpeed: 12,
+            bulletDamage: 1,
+            special: "Faster movement",
+            unlocked: false,
+            price: 500
+        },
+        // 2: Heavy UFO
+        {
+            name: "Heavy UFO",
+            img: "https://i.imgur.com/2Q5Q5Q2.png",
+            speed: 2.5,
+            fireRate: 400,
+            bulletSpeed: 8,
+            bulletDamage: 2,
+            special: "Double damage",
+            unlocked: false,
+            price: 800
+        },
+        // 3: Shielded UFO
+        {
+            name: "Shielded UFO",
+            img: "https://i.imgur.com/3Q5Q5Q3.png",
+            speed: 3.5,
+            fireRate: 350,
+            bulletSpeed: 9,
+            bulletDamage: 1,
+            special: "Regen shield",
+            unlocked: false,
+            price: 1000
+        },
+        // 4: Rapid UFO
+        {
+            name: "Rapid UFO",
+            img: "https://i.imgur.com/4Q5Q5Q4.png",
+            speed: 3.8,
+            fireRate: 180,
+            bulletSpeed: 10,
+            bulletDamage: 1,
+            special: "Rapid fire",
+            unlocked: false,
+            price: 1200
+        },
+        // 5: Splitter UFO
+        {
+            name: "Splitter UFO",
+            img: "https://i.imgur.com/5Q5Q5Q5.png",
+            speed: 3.2,
+            fireRate: 320,
+            bulletSpeed: 9,
+            bulletDamage: 1,
+            special: "Split bullets",
+            unlocked: false,
+            price: 1500
+        },
+        // 6: Laser UFO
+        {
+            name: "Laser UFO",
+            img: "https://i.imgur.com/6Q5Q5Q6.png",
+            speed: 3.5,
+            fireRate: 500,
+            bulletSpeed: 15,
+            bulletDamage: 3,
+            special: "Laser beam",
+            unlocked: false,
+            price: 2000
+        },
+        // 7: Stealth UFO
+        {
+            name: "Stealth UFO",
+            img: "https://i.imgur.com/7Q5Q5Q7.png",
+            speed: 4.5,
+            fireRate: 300,
+            bulletSpeed: 10,
+            bulletDamage: 1,
+            special: "Invisible bullets",
+            unlocked: false,
+            price: 2500
+        },
+        // 8: Bomber UFO
+        {
+            name: "Bomber UFO",
+            img: "https://i.imgur.com/8Q5Q5Q8.png",
+            speed: 3,
+            fireRate: 450,
+            bulletSpeed: 7,
+            bulletDamage: 4,
+            special: "Explosive bullets",
+            unlocked: false,
+            price: 3000
+        },
+        // 9: Ultimate UFO
+        {
+            name: "Ultimate UFO",
+            img: "https://i.imgur.com/9Q5Q5Q9.png",
+            speed: 5,
+            fireRate: 150,
+            bulletSpeed: 14,
+            bulletDamage: 2,
+            special: "All abilities",
+            unlocked: false,
+            price: 5000
+        }
+    ],
+    currentUfo: 0,
+    upgrades: [
+        { name: "Max Shield", level: 0, max: 5, cost: [200,400,600,800,1000], effect: (lvl) => 100 + lvl*40 },
+        { name: "Life+", level: 0, max: 3, cost: [300,600,900], effect: (lvl) => 3 + lvl },
+        { name: "Coin Magnet", level: 0, max: 3, cost: [250,500,750], effect: (lvl) => 1 + lvl*0.5 },
+        { name: "Bullet Damage", level: 0, max: 5, cost: [200,400,600,800,1000], effect: (lvl) => 1 + lvl*0.5 }
+    ],
+    enemies: [],
+    bullets: [],
+    powerups: [],
+    explosions: [],
+    boss: null,
+    bossLevel: 5,
+    bossWarning: false,
+    gameOver: false,
+    paused: false,
+    lastFire: 0,
+    lastShieldRegen: 0,
+    lastUnlock: 0,
+    unlockedUfos: [0],
+    lastLevelUp: 0
+};
+
+// ====== DOM ELEMENTS ======
+const gameContainer = document.getElementById('gameContainer');
+const ui = document.getElementById('ui');
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const levelEl = document.getElementById('level');
+const coinsEl = document.getElementById('coins');
+const shieldBarInner = document.getElementById('shieldBarInner');
+const gameOverEl = document.getElementById('gameOver');
+const hangarEl = document.getElementById('hangar');
+const unlockScreenEl = document.getElementById('unlockScreen');
+const bossWarningEl = document.getElementById('bossWarning');
+const restartBtn = document.getElementById('restartBtn');
+const hangarBtn = document.getElementById('hangarBtn');
+const backToGameBtn = document.getElementById('backToGameBtn');
+const unlockOkBtn = document.getElementById('unlockOkBtn');
+const hangarList = document.getElementById('hangarList');
+const upgradeList = document.getElementById('upgradeList');
+const finalScoreEl = document.getElementById('finalScore');
+const finalCoinsEl = document.getElementById('finalCoins');
+const unlockImg = document.getElementById('unlockImg');
+const unlockName = document.getElementById('unlockName');
+const unlockDesc = document.getElementById('unlockDesc');
+
+// ====== PLAYER UFO ======
+let player = {
+    x: window.innerWidth / 2,
+    y: window.innerHeight - 100,
+    width: 50,
+    height: 50,
+    angle: 0
+};
+
+// ====== JOYSTICK ======
+let joystick = { active: false, x: 0, y: 0, startX: 0, startY: 0 };
+const joystickArea = document.getElementById('joystickArea');
+joystickArea.addEventListener('touchstart', e => {
+    if (state.paused || state.gameOver) return;
+    joystick.active = true;
+    joystick.startX = e.touches[0].clientX;
+    joystick.startY = e.touches[0].clientY;
+    joystick.x = 0; joystick.y = 0;
+});
+joystickArea.addEventListener('touchmove', e => {
+    if (!joystick.active) return;
+    let dx = e.touches[0].clientX - joystick.startX;
+    let dy = e.touches[0].clientY - joystick.startY;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    let maxDist = 60;
+    if (dist > maxDist) {
+        dx = dx * maxDist / dist;
+        dy = dy * maxDist / dist;
+    }
+    joystick.x = dx;
+    joystick.y = dy;
+});
+joystickArea.addEventListener('touchend', () => {
+    joystick.active = false;
+    joystick.x = 0; joystick.y = 0;
+});
+
+// ====== SHOOT BUTTON ======
+const shootBtn = document.getElementById('shootBtn');
+let shooting = false;
+shootBtn.addEventListener('touchstart', () => { shooting = true; });
+shootBtn.addEventListener('touchend', () => { shooting = false; });
+
+// ====== GAME LOOP ======
+let lastTime = 0;
+function gameLoop(timestamp) {
+    if (state.paused || state.gameOver) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+    let dt = timestamp - lastTime;
+    lastTime = timestamp;
+    if (dt > 100) dt = 100; // cap dt
+
+    // Move player
+    let ufo = state.ufos[state.currentUfo];
+    let speed = ufo.speed;
+    if (joystick.active) {
+        player.x += joystick.x * 0.08 * speed;
+        player.y += joystick.y * 0.08 * speed;
+    }
+    // Boundaries
+    player.x = Math.max(25, Math.min(window.innerWidth - 25, player.x));
+    player.y = Math.max(25, Math.min(window.innerHeight - 25, player.y));
+
+    // Shooting
+    if (shooting && timestamp - state.lastFire > ufo.fireRate) {
+        fireBullet();
+        state.lastFire = timestamp;
+        // Special abilities
+        if (ufo.special === "Split bullets") {
+            fireBullet(-15);
+            fireBullet(15);
+        }
+        if (ufo.special === "Laser beam") {
+            fireLaser();
+        }
+    }
+
+    // Shield regen (for Shielded UFO)
+    if (ufo.special === "Regen shield" && timestamp - state.lastShieldRegen > 1000) {
+        state.shield = Math.min(state.shield + 5, state.maxShield);
+        state.lastShieldRegen = timestamp;
+    }
+
+    // Spawn enemies
+    if (!state.boss && timestamp - state.lastLevelUp > 10000) {
+        state.level++;
+        levelEl.textContent = "Level: " + state.level;
+        state.lastLevelUp = timestamp;
+        if (state.level % state.bossLevel === 0) {
+            spawnBoss();
+        } else {
+            spawnEnemies();
+        }
+    }
+
+    // Move enemies
+    for (let i = 0; i < state.enemies.length; i++) {
+        let e = state.enemies[i];
+        e.y += e.speed;
+        if (e.y > window.innerHeight + 50) {
+            state.enemies.splice(i, 1);
+            i--;
+            continue;
+        }
+        // Enemy shooting
+        if (Math.random() < 0.003) {
+            fireEnemyBullet(e);
+        }
+        // Collision with player
+        if (collide(player, e)) {
+            takeDamage(10);
+            explode(e.x, e.y, 40);
+            state.enemies.splice(i, 1);
+            i--;
+        }
+    }
+
+    // Move bullets
+    for (let i = 0; i < state.bullets.length; i++) {
+        let b = state.bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.y < -20 || b.y > window.innerHeight + 20 || b.x < -20 || b.x > window.innerWidth + 20) {
+            state.bullets.splice(i, 1);
+            i--;
+            continue;
+        }
+        // Bullet collision
+        if (b.type === 'player') {
+            for (let j = 0; j < state.enemies.length; j++) {
+                let e = state.enemies[j];
+                if (collide(b, e)) {
+                    e.health -= b.damage;
+                    if (e.health <= 0) {
+                        state.score += e.points;
+                        state.coins += e.coins;
+                        scoreEl.textContent = "Score: " + state.score;
+                        coinsEl.textContent = "Coins: " + state.coins;
+                        explode(e.x, e.y, 50);
+                        dropPowerup(e.x, e.y);
+                        state.enemies.splice(j, 1);
+                        j--;
+                    }
+                    state.bullets.splice(i, 1);
+                    i--;
+                    break;
+                }
+            }
+            // Boss collision
+            if (state.boss && collide(b, state.boss)) {
+                state.boss.health -= b.damage;
+                if (state.boss.health <= 0) {
+                    state.score += state.boss.points;
+                    state.coins += state.boss.coins;
+                    scoreEl.textContent = "Score: " + state.score;
+                    coinsEl.textContent = "Coins: " + state.coins;
+                    explode(state.boss.x, state.boss.y, 120);
+                    dropPowerup(state.boss.x, state.boss.y, true);
+                    state.boss = null;
+                    state.bossWarning = false;
+                    bossWarningEl.style.display = 'none';
+                }
+                state.bullets.splice(i, 1);
+                i--;
+            }
+        } else if (b.type === 'enemy') {
+            if (collide(b, player)) {
+                takeDamage(b.damage);
+                state.bullets.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+    // Move powerups
+    for (let i = 0; i < state.powerups.length; i++) {
+        let p = state.powerups[i];
+        p.y += 2;
+        if (p.y > window.innerHeight + 30) {
+            state.powerups.splice(i, 1);
+            i--;
+            continue;
+        }
+        if (collide(player, p)) {
+            applyPowerup(p.type);
+            state.powerups.splice(i, 1);
+            i--;
+        }
+    }
+
+    // Move boss
+    if (state.boss) {
+        let b = state.boss;
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.x < 60 || b.x > window.innerWidth - 60) b.vx = -b.vx;
+        if (b.y < 60 || b.y > 120) b.vy = -b.vy;
+        // Boss shooting
+        if (Math.random() < 0.015) {
+            fireBossBullet(b);
+        }
+        // Boss special
+        if (b.special && Math.random() < 0.005) {
+            fireBossSpecial(b);
+        }
+    }
+
+    // Update UI
+    shieldBarInner.style.width = (state.shield / state.maxShield * 100) + '%';
+
+    // Draw everything
+    draw();
+
+    // Check for unlocks
+    checkUnlocks();
+
+    requestAnimationFrame(gameLoop);
+}
+
+// ====== DRAWING ======
+function draw() {
+    // Clear
+    let children = gameContainer.querySelectorAll('.ufo, .enemy, .boss, .bullet, .powerup, .explosion');
+    children.forEach(c => c.remove());
+
+    // Draw player
+    let ufo = state.ufos[state.currentUfo];
+    let playerEl = document.createElement('div');
+    playerEl.className = 'ufo';
+    playerEl.style.left = (player.x - 25) + 'px';
+    playerEl.style.top = (player.y - 25) + 'px';
+    playerEl.style.backgroundImage = `url(${ufo.img})`;
+    gameContainer.appendChild(playerEl);
+
+    // Draw enemies
+    for (let e of state.enemies) {
+        let enemyEl = document.createElement('div');
+        enemyEl.className = 'enemy';
+        enemyEl.style.left = (e.x - 25) + 'px';
+        enemyEl.style.top = (e.y - 25) + 'px';
+        enemyEl.style.backgroundImage = `url(${e.img})`;
+        gameContainer.appendChild(enemyEl);
+    }
+
+    // Draw boss
+    if (state.boss) {
+        let bossEl = document.createElement('div');
+        bossEl.className = 'boss';
+        bossEl.style.left = (state.boss.x - 60) + 'px';
+        bossEl.style.top = (state.boss.y - 60) + 'px';
+        bossEl.style.backgroundImage = `url(${state.boss.img})`;
+        gameContainer.appendChild(bossEl);
+    }
+
+    // Draw bullets
+    for (let b of state.bullets) {
+        let bulletEl = document.createElement('div');
+        bulletEl.className = 'bullet';
+        bulletEl.style.left = (b.x - 4) + 'px';
+        bulletEl.style.top = (b.y - 9) + 'px';
+        if (b.type === 'enemy') bulletEl.style.background = '#f00';
+        if (b.type === 'boss') bulletEl.style.background = '#ff0';
+        gameContainer.appendChild(bulletEl);
+    }
+
+    // Draw powerups
+    for (let p of state.powerups) {
+        let powerupEl = document.createElement('div');
+        powerupEl.className = 'powerup';
+        powerupEl.style.left = (p.x - 16) + 'px';
+        powerupEl.style.top = (p.y - 16) + 'px';
+        powerupEl.style.backgroundImage = `url(${p.img})`;
+        gameContainer.appendChild(powerupEl);
+    }
+
+    // Draw explosions
+    for (let ex of state.explosions) {
+        let exEl = document.createElement('div');
+        exEl.className = 'explosion';
+        exEl.style.left = (ex.x - 30) + 'px';
+        exEl.style.top = (ex.y - 30) + 'px';
+        gameContainer.appendChild(exEl);
+        setTimeout(() => exEl.remove(), 500);
+    }
+    state.explosions = [];
+}
+
+// ====== GAME LOGIC ======
+function fireBullet(angleOffset = 0) {
+    let ufo = state.ufos[state.currentUfo];
+    let angle = Math.atan2(-1, 0) + angleOffset * Math.PI / 180;
+    let bullet = {
+        x: player.x,
+        y: player.y - 25,
+        vx: Math.cos(angle) * ufo.bulletSpeed,
+        vy: Math.sin(angle) * ufo.bulletSpeed,
+        damage: ufo.bulletDamage + state.upgrades[3].level * 0.5,
+        type: 'player'
+    };
+    state.bullets.push(bullet);
+}
+
+function fireLaser() {
+    let ufo = state.ufos[state.currentUfo];
+    let laser = {
+        x: player.x,
+        y: player.y - 25,
+        vx: 0,
+        vy: -ufo.bulletSpeed * 2,
+        damage: ufo.bulletDamage * 2,
+        type: 'player',
+        width: 6,
+        height: 80
+    };
+    state.bullets.push(laser);
+}
+
+function fireEnemyBullet(enemy) {
+    let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    let bullet = {
+        x: enemy.x,
+        y: enemy.y + 20,
+        vx: Math.cos(angle) * 6,
+        vy: Math.sin(angle) * 6,
+        damage: 10,
+        type: 'enemy'
+    };
+    state.bullets.push(bullet);
+}
+
+function fireBossBullet(boss) {
+    let angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+    let bullet = {
+        x: boss.x,
+        y: boss.y + 40,
+        vx: Math.cos(angle) * 8,
+        vy: Math.sin(angle) * 8,
+        damage: 20,
+        type: 'boss'
+    };
+    state.bullets.push(bullet);
+}
+
+function fireBossSpecial(boss) {
+    for (let i = 0; i < 12; i++) {
+        let angle = i * Math.PI / 6;
+        let bullet = {
+            x: boss.x,
+            y: boss.y + 40,
+            vx: Math.cos(angle) * 7,
+            vy: Math.sin(angle) * 7,
+            damage: 15,
+            type: 'boss'
+        };
+        state.bullets.push(bullet);
+    }
+}
+
+function spawnEnemies() {
+    let count = 3 + Math.floor(state.level / 3);
+    for (let i = 0; i < count; i++) {
+        let x = 50 + Math.random() * (window.innerWidth - 100);
+        let y = -50;
+        let type = Math.floor(Math.random() * 3);
+        let enemy = {
+            x, y,
+            width: 50, height: 50,
+            speed: 1.5 + Math.random() * 1.5,
+            health: 2 + Math.floor(state.level / 2),
+            points: 10 + state.level * 2,
+            coins: 1 + Math.floor(state.level / 2),
+            img: [
+                "https://i.imgur.com/A1B2C3D4.png",
+                "https://i.imgur.com/B2C3D4E5.png",
+                "https://i.imgur.com/C3D4E5F6.png"
+            ][type]
+        };
+        state.enemies.push(enemy);
+    }
+}
+
+function spawnBoss() {
+    state.bossWarning = true;
+    bossWarningEl.style.display = 'flex';
+    setTimeout(() => {
+        state.bossWarning = false;
+        bossWarningEl.style.display = 'none';
+        state.boss = {
+            x: window.innerWidth / 2,
+            y: 100,
+            width: 120, height: 120,
+            vx: 2, vy: 1,
+            health: 100 + state.level * 20,
+            points: 200 + state.level * 50,
+            coins: 20 + state.level * 5,
+            img: "https://i.imgur.com/BOSSBOSS.png",
+            special: true
+        };
+    }, 2000);
+}
+
+function dropPowerup(x, y, isBoss = false) {
+    let types = [
+        { type: 'shield', img: "https://i.imgur.com/SHIELD.png" },
+        { type: 'life', img: "https://i.imgur.com/LIFE.png" },
+        { type: 'coin', img: "https://i.imgur.com/COIN.png" },
+        { type: 'rapid', img: "https://i.imgur.com/RAPID.png" }
+    ];
+    if (isBoss) types.push({ type: 'ultimate', img: "https://i.imgur.com/ULTIMATE.png" });
+    let p = types[Math.floor(Math.random() * types.length)];
+    state.powerups.push({
+        x, y, ...p
+    });
+}
+
+function applyPowerup(type) {
+    if (type === 'shield') {
+        state.shield = state.maxShield;
+    }
+    if (type === 'life') {
+        state.lives++;
+        livesEl.textContent = "Lives: " + state.lives;
+    }
+    if (type === 'coin') {
+        state.coins += 5;
+        coinsEl.textContent = "Coins: " + state.coins;
+    }
+    if (type === 'rapid') {
+        let ufo = state.ufos[state.currentUfo];
+        ufo.fireRate = Math.max(100, ufo.fireRate - 80);
+        setTimeout(() => { ufo.fireRate += 80; }, 5000);
+    }
+    if (type === 'ultimate') {
+        state.shield = state.maxShield;
+        state.lives++;
+        livesEl.textContent = "Lives: " + state.lives;
+        state.coins += 20;
+        coinsEl.textContent = "Coins: " + state.coins;
+    }
+}
+
+function takeDamage(amount) {
+    state.shield -= amount;
+    if (state.shield < 0) {
+        state.lives--;
+        livesEl.textContent = "Lives: " + state.lives;
+        state.shield = state.maxShield;
+        if (state.lives <= 0) {
+            gameOver();
+        }
+    }
+}
+
+function explode(x, y, size) {
+    state.explosions.push({ x, y, size });
+}
+
+function collide(a, b) {
+    return !(a.x + a.width/2 < b.x - b.width/2 ||
+             a.x - a.width/2 > b.x + b.width/2 ||
+             a.y + a.height/2 < b.y - b.height/2 ||
+             a.y - a.height/2 > b.y + b.height/2);
+}
+
+function checkUnlocks() {
+    // Unlock UFOs based on score
+    for (let i = 1; i < state.ufos.length; i++) {
+        if (!state.ufos[i].unlocked && state.score >= state.ufos[i].price && !state.unlockedUfos.includes(i)) {
+            state.ufos[i].unlocked = true;
+            state.unlockedUfos.push(i);
+            showUnlock(i);
+        }
+    }
+}
+
+function showUnlock(idx) {
+    unlockImg.src = state.ufos[idx].img;
+    unlockName.textContent = state.ufos[idx].name;
+    unlockDesc.textContent = "Special: " + state.ufos[idx].special;
+    unlockScreenEl.style.display = 'flex';
+    state.paused = true;
+}
+
+function gameOver() {
+    state.gameOver = true;
+    finalScoreEl.textContent = state.score;
+    finalCoinsEl.textContent = state.coins;
+    gameOverEl.style.display = 'flex';
+}
+
+// ====== HANGAR ======
+function renderHangar() {
+    hangarList.innerHTML = '';
+    for (let i = 0; i < state.ufos.length; i++) {
+        let ufo = state.ufos[i];
+        let card = document.createElement('div');
+        card.className = 'ufoCard' + (state.unlockedUfos.includes(i) ? '' : ' locked')
