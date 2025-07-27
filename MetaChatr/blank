@@ -1,0 +1,71 @@
+[20:49:25] [Core] [ERRO] [discord.client:43]: [Discord] on_ready_once_callback 执行失败: 429 Too Many Requests (error code: 30034): Max number of daily application command creates has been reached (200) 
+Traceback (most recent call last):
+  File "C:\Users\angus\AstrBot\astrbot\core\platform\sources\discord\client.py", line 41, in on_ready
+    await self.on_ready_once_callback()
+  File "C:\Users\angus\AstrBot\astrbot\core\platform\sources\discord\discord_platform_adapter.py", line 132, in callback
+    await self._collect_and_register_commands()
+  File "C:\Users\angus\AstrBot\astrbot\core\platform\sources\discord\discord_platform_adapter.py", line 372, in _collect_and_register_commands
+    await self.client.sync_commands()
+  File "C:\Users\angus\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\bot.py", line 742, in sync_commands
+    registered_commands = await self.register_commands(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\bot.py", line 606, in register_commands
+    registered = await register("bulk", data, _log=False)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AppData\Local\Programs\Python\Python311\Lib\site-packages\discord\http.py", line 389, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 429 Too Many Requests (error code: 30034): Max number of daily application command creates has been reached (200)
+ [21:04:13] [Core] [ERRO] [sources.openai_source:214]: API 返回的 completion 无法解析：ChatCompletion(id=None, choices=[Choice(finish_reason='function_call_filter: MALFORMED_FUNCTION_CALL', index=0, logprobs=None, message=ChatCompletionMessage(content=None, refusal=None, role='assistant', annotations=None, audio=None, function_call=None, tool_calls=None))], created=1753616129, model='gemini-2.5-flash', object='chat.completion', service_tier=None, system_fingerprint=None, usage=CompletionUsage(completion_tokens=0, prompt_tokens=23117, total_tokens=23117, completion_tokens_details=None, prompt_tokens_details=None))。 
+ [21:04:13] [Core] [ERRO] [sources.openai_source:330]: 发生了错误。Provider 配置如下: {'id': 'gemini-2.5-flash', 'provider': 'google', 'type': 'openai_chat_completion', 'provider_type': 'chat_completion', 'enable': True, 'key': ['AIzaSyAWvyvgxM4A2bpDfYVWnPbokdYscumwn2c', 'AIzaSyB9HJmIzMVkamvXeNcw0G9ZKetZoLFnkcs', 'AIzaSyDsHejmNgctibnupgTIyJKInjZYovneFzk'], 'api_base': 'https://generativelanguage.googleapis.com/v1beta/openai/', 'timeout': 120, 'model_config': {'model': 'gemini-2.5-flash'}} 
+ [21:04:13] [Core] [ERRO] [method.llm_request:231]: Traceback (most recent call last):
+  File "C:\Users\angus\AstrBot\astrbot\core\pipeline\process_stage\method\llm_request.py", line 186, in requesting
+    async for resp in tool_loop_agent.step():
+  File "C:\Users\angus\AstrBot\astrbot\core\pipeline\process_stage\agent_runner\tool_loop_agent.py", line 85, in step
+    async for llm_response in self._iter_llm_responses():
+  File "C:\Users\angus\AstrBot\astrbot\core\pipeline\process_stage\agent_runner\tool_loop_agent.py", line 70, in _iter_llm_responses
+    yield await self.provider.text_chat(**self.req.__dict__)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 393, in text_chat
+    ) = await self._handle_api_error(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 342, in _handle_api_error
+    raise e
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 376, in text_chat
+    llm_response = await self._query(payloads, func_tool)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 113, in _query
+    llm_response = await self.parse_openai_completion(completion, tools)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 215, in parse_openai_completion
+    raise Exception(f"API 返回的 completion 无法解析：{completion}。")
+Exception: API 返回的 completion 无法解析：ChatCompletion(id=None, choices=[Choice(finish_reason='function_call_filter: MALFORMED_FUNCTION_CALL', index=0, logprobs=None, message=ChatCompletionMessage(content=None, refusal=None, role='assistant', annotations=None, audio=None, function_call=None, tool_calls=None))], created=1753616129, model='gemini-2.5-flash', object='chat.completion', service_tier=None, system_fingerprint=None, usage=CompletionUsage(completion_tokens=0, prompt_tokens=23117, total_tokens=23117, completion_tokens_details=None, prompt_tokens_details=None))。
+ 
+ [21:05:24] [Core] [ERRO] [sources.openai_source:214]: API 返回的 completion 无法解析：ChatCompletion(id=None, choices=[Choice(finish_reason='function_call_filter: MALFORMED_FUNCTION_CALL', index=0, logprobs=None, message=ChatCompletionMessage(content=None, refusal=None, role='assistant', annotations=None, audio=None, function_call=None, tool_calls=None))], created=1753616200, model='gemini-2.5-flash', object='chat.completion', service_tier=None, system_fingerprint=None, usage=CompletionUsage(completion_tokens=0, prompt_tokens=23009, total_tokens=23009, completion_tokens_details=None, prompt_tokens_details=None))。 
+ [21:05:24] [Core] [ERRO] [sources.openai_source:330]: 发生了错误。Provider 配置如下: {'id': 'gemini-2.5-flash', 'provider': 'google', 'type': 'openai_chat_completion', 'provider_type': 'chat_completion', 'enable': True, 'key': ['AIzaSyAWvyvgxM4A2bpDfYVWnPbokdYscumwn2c', 'AIzaSyB9HJmIzMVkamvXeNcw0G9ZKetZoLFnkcs', 'AIzaSyDsHejmNgctibnupgTIyJKInjZYovneFzk'], 'api_base': 'https://generativelanguage.googleapis.com/v1beta/openai/', 'timeout': 120, 'model_config': {'model': 'gemini-2.5-flash'}} 
+ [21:05:24] [Core] [ERRO] [method.llm_request:231]: Traceback (most recent call last):
+  File "C:\Users\angus\AstrBot\astrbot\core\pipeline\process_stage\method\llm_request.py", line 186, in requesting
+    async for resp in tool_loop_agent.step():
+  File "C:\Users\angus\AstrBot\astrbot\core\pipeline\process_stage\agent_runner\tool_loop_agent.py", line 85, in step
+    async for llm_response in self._iter_llm_responses():
+  File "C:\Users\angus\AstrBot\astrbot\core\pipeline\process_stage\agent_runner\tool_loop_agent.py", line 70, in _iter_llm_responses
+    yield await self.provider.text_chat(**self.req.__dict__)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 393, in text_chat
+    ) = await self._handle_api_error(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 342, in _handle_api_error
+    raise e
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 376, in text_chat
+    llm_response = await self._query(payloads, func_tool)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 113, in _query
+    llm_response = await self.parse_openai_completion(completion, tools)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\angus\AstrBot\astrbot\core\provider\sources\openai_source.py", line 215, in parse_openai_completion
+    raise Exception(f"API 返回的 completion 无法解析：{completion}。")
+Exception: API 返回的 completion 无法解析：ChatCompletion(id=None, choices=[Choice(finish_reason='function_call_filter: MALFORMED_FUNCTION_CALL', index=0, logprobs=None, message=ChatCompletionMessage(content=None, refusal=None, role='assistant', annotations=None, audio=None, function_call=None, tool_calls=None))], created=1753616200, model='gemini-2.5-flash', object='chat.completion', service_tier=None, system_fingerprint=None, usage=CompletionUsage(completion_tokens=0, prompt_tokens=23009, total_tokens=23009, completion_tokens_details=None, prompt_tokens_details=None))。
+ 
+ [22:19:13] [Core] [ERRO] [utils.log_pipe:31]: [MCPServer-fetch] Warning: A working NPM installation was not found. The package will use Python-based article extraction. 
+ [22:19:13] [Core] [ERRO] [utils.log_pipe:31]: [MCPServer-fetch] Warning: node executable not found, reverting to pure-Python mode. Install Node.js v10 or newer to use Readability.js. 
+ [22:19:25] [Core] [ERRO] [utils.log_pipe:31]: [MCPServer-fetch] Warning: A working NPM installation was not found. The package will use Python-based article extraction. 
+ [22:19:25] [Core] [ERRO] [utils.log_pipe:31]: [MCPServer-fetch] Warning: node executable not found, reverting to pure-Python mode. Install Node.js v10 or newer to use Readability.js.
